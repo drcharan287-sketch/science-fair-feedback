@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Science Fair Feedback</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f6ff;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 22px;
+      border-radius: 15px;
+      box-shadow: 0 2px 10px #ccc;
+    }
+    h2 { text-align: center; color: #174ea6; }
+    label { display: block; margin-top: 16px; font-weight: bold; }
+    select, textarea, input, button {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      margin-top: 8px;
+      font-size: 16px;
+      border-radius: 8px;
+    }
+    textarea, input, select { border: 1px solid #aaa; }
+    textarea { min-height: 110px; }
+    button {
+      border: 0;
+      background: #1769e0;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .stars {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .star {
+      width: auto;
+      padding: 4px;
+      background: none;
+      color: #aaa;
+      font-size: 34px;
+    }
+    .star.selected { color: #f5a623; }
+    #status { text-align: center; margin-top: 15px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Science Fair Feedback</h2>
+    <p>Thank you for visiting our science fair project!</p>
+
+    <label for="language">Choose your language</label>
+    <select id="language">
+      <option value="en-US">English</option>
+      <option value="te-IN">తెలుగు (Telugu)</option>
+      <option value="hi-IN">हिन्दी (Hindi)</option>
+      <option value="ta-IN">தமிழ் (Tamil)</option>
+      <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
+    </select>
+
+    <label for="project">Project name</label>
+    <input id="project" type="text" placeholder="Enter project name">
+
+    <label for="feedback">Your feedback</label>
+    <textarea id="feedback" placeholder="Type your feedback here..."></textarea>
+
+    <button type="button" id="speakButton" onclick="startSpeaking()">
+      🎤 Start Speaking
+    </button>
+
+    <p id="voiceStatus" aria-live="polite"></p>
+
+    <label>Give a rating</label>
+    <div class="stars">
+      <button class="star" type="button" onclick="setRating(1)">★</button>
+      <button class="star" type="button" onclick="setRating(2)">★</button>
+      <button class="star" type="button" onclick="setRating(3)">★</button>
+      <button class="star" type="button" onclick="setRating(4)">★</button>
+      <button class="star" type="button" onclick="setRating(5)">★</button>
+    </div>
+
+    <button type="button" onclick="submitFeedback()">Submit Feedback</button>
+    <p id="status" aria-live="polite"></p>
+  </div>
+
+  <script>
+    let rating = 0;
+
+    function setRating(value) {
+      rating = value;
+      document.querySelectorAll(".star").forEach((star, index) => {
+        star.classList.toggle("selected", index < value);
+      });
+    }
+
+    function startSpeaking() {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        document.getElementById("voiceStatus").textContent =
+          "Voice typing is not supported in this browser. Please type your feedback.";
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = document.getElementById("language").value;
+      recognition.interimResults = false;
+      recognition.continuous = false;
+
+      document.getElementById("voiceStatus").textContent =
+        "Listening... Please speak.";
+
+      recognition.onresult = function(event) {
+        const spokenText = event.results[0][0].transcript;
+        const box = document.getElementById("feedback");
+        box.value += (box.value ? " " : "") + spokenText;
+        document.getElementById("voiceStatus").textContent =
+          "Speech converted to text.";
+      };
+
+      recognition.onerror = function(event) {
+        document.getElementById("voiceStatus").textContent =
+          "Voice recognition error: " + event.error +
+          ". You can type your feedback instead.";
+      };
+
+      recognition.onend = function() {
+        document.getElementById("speakButton").disabled = false;
+      };
+
+      document.getElementById("speakButton").disabled = true;
+      recognition.start();
+    }
+
+    async function submitFeedback() {
+      const project = document.getElementById("project").value.trim();
+      const feedback = document.getElementById("feedback").value.trim();
+      const language = document.getElementById("language").value;
+
+      if (!project || !feedback || rating === 0) {
+        document.getElementById("status").textContent =
+          "Please enter the project name, feedback and rating.";
+        return;
+      }
+
+      const status = document.getElementById("status");
+      status.textContent = "Preparing your feedback...";
+
+      const endpoint =
+        "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+      const params = new URLSearchParams({
+        action: "submit",
+        project: project,
+        feedback: feedback,
+        language: language,
+        rating: String(rating)
+      });
+
+      try {
+        await fetch(endpoint + "?" + params.toString(), {
+          method: "GET",
+          mode: "no-cors"
+        });
+
+        status.textContent =
+          "Feedback sent. Please wait for the next setup step to verify saving.";
+      } catch (error) {
+        status.textContent =
+          "Could not send feedback. Please try again.";
+      }
+    }
+  </script>
+</body>
+</html>
