@@ -122,6 +122,25 @@ test('browser sends one secure POST form with all feedback fields, not a JSONP G
   assert.equal(a.forms.length, 1, 'Repeated clicks while navigating may not send duplicates');
 });
 
+test('submit prevents POST when a star rating or required selection is absent', async () => {
+  const a = app();
+  respond(a, { success: true, projects: [{grade:'6',section:'Heidelberg',project:'XenoChat'}] });
+  await tick();
+  a.elements.studentClass.value = '6';
+  a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value = 'Heidelberg';
+  a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value = 'XenoChat';
+  a.elements.feedback.value = 'Useful project';
+  a.context.submitFeedback();
+  assert.equal(a.forms.length, 0, 'No rating should prevent form submission');
+  assert.match(a.elements.status.textContent, /select a star rating/);
+  a.stars[4].dispatchEvent(new a.context.Event('click'));
+  a.elements.project.value = '';
+  a.context.submitFeedback();
+  assert.equal(a.forms.length, 0, 'Missing project should prevent submission');
+});
+
 // Run the versioned Apps Script with in-memory services, then execute its real
 // JSONP response in the frontend VM. No Google services are contacted.
 function backend(rows) {
