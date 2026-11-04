@@ -240,7 +240,7 @@ button:hover {
 
 <script src="voicevote-catalog.js"></script>
 <script>
-// 1. Replace this placeholder with the Google Apps Script WEB APP /exec URL.
+// Google Apps Script web app URL. Use exactly one /exec suffix.
 //    Do NOT use the Deployment ID, Library URL, Apps Script editor URL or Google Sheet URL.
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxk-Ex6bd0l3V9fiUrPoCGVHNmkUAm_4yY7xlGLHWFRZBSn6lCo0Pw0vZ0C-vgyIC26/exec";
 
@@ -272,6 +272,7 @@ function updateSectionLabels() {
 
 let catalogReady = false;
 function startCatalog() {
+  classSelect.disabled = true;
   if (!hasValidWebAppUrl()) {
     catalogStatus.textContent = "Setup needed: paste the Google Apps Script Web app /exec URL into index.html.";
     return;
@@ -286,7 +287,7 @@ function startCatalog() {
     sectionSelector: "#section",
     projectSelector: "#project",
     statusSelector: "#catalogStatus",
-    preserveExistingGrades: true
+    preserveExistingGrades: false
   }).then(function() {
     catalogReady = true;
     submitButton.disabled = false;
@@ -388,9 +389,9 @@ function saveFeedback(data) {
       if (response && response.success === true) finish(null, response);
       else finish(new Error((response && response.message) || "The backend did not confirm the save."));
     };
-    tag.onerror = function() { finish(new Error("Cannot reach Apps Script. Check the /exec URL and deployment access.")); };
+    tag.onerror = function() { finish(new Error("Cannot reach Apps Script. Check the Feedback sheet before retrying; the request may have been saved.")); };
     tag.onload = function() {
-      if (!settled) finish(new Error("Apps Script returned no valid save confirmation."));
+      if (!settled) finish(new Error("Apps Script returned no valid save confirmation. Check the Feedback sheet before retrying; the request may have been saved."));
     };
 
     const params = new URLSearchParams({
