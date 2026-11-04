@@ -9,10 +9,11 @@ function app() {
     add(option) { this.options.push(option); }
     replaceChildren() { this.options = []; this.value = ''; }
     addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
+    setAttribute(name, value) { (this.attributes ||= {})[name] = String(value); }
     dispatchEvent(event) { for (const fn of this.listeners[event.type] || []) fn.call(this, event); }
     remove() { this.removed = true; }
   }
-  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'submitBtn', 'status', 'language', 'feedback'].map(id => [id, new Element()]));
+  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback'].map(id => [id, new Element()]));
   elements.language.value = 'hi-IN';
   elements.submitBtn.disabled = true;
   const stars = Array.from({ length: 5 }, (_, i) => { const e = new Element(); e.dataset.value = String(i + 1); return e; });
@@ -24,6 +25,7 @@ function app() {
   };
   const context = { document, console: { error() {} }, URLSearchParams, Option: function(text, value) { this.textContent = text; this.value = value; }, Event: function(type) { this.type = type; }, setTimeout, clearTimeout };
   context.window = context;
+  context.location = { reload() { context.__reloaded = true; } };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('voicevote-catalog.js', 'utf8'), context);
   const html = fs.readFileSync('index.html', 'utf8');
@@ -41,6 +43,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 test('catalog URL and dependent selections reflect sheet rows, including numeric grades', async () => {
   const a = app();
   assert.equal(a.elements.studentClass.disabled, true);
+  assert.match(fs.readFileSync('index.html', 'utf8'), /type="button" class="star" data-value="5" aria-label="5 stars"/);
   const { url, tag } = respond(a, { success: true, projects: [
     { grade: 6, section: ' A ', project: ' Volcano ' },
     { grade: '6', section: 'B', project: 'Solar' },
@@ -73,6 +76,7 @@ test('catalog errors leave submission disabled with actionable status', async ()
     if (mode === 'network') tag.onerror();
     await tick();
     assert.equal(a.elements.submitBtn.disabled, true, mode);
+    assert.equal(a.elements.retryCatalogBtn.hidden, false, mode);
     assert.equal(a.elements.studentClass.disabled, true, mode);
     assert.match(a.elements.catalogStatus.textContent, /Unable to load projects:/, mode);
     assert.equal(tag.removed, true);
@@ -86,6 +90,7 @@ test('save uses existing JSONP fields, preserves feedback on failure, and clears
   a.elements.section.value = 'A'; a.elements.section.dispatchEvent(new a.context.Event('change'));
   a.elements.project.value = 'Robot'; a.elements.feedback.value = 'Great & clever';
   a.stars[3].dispatchEvent(new a.context.Event('click'));
+  assert.equal(a.stars[3].attributes['aria-pressed'], 'true');
   let pending = a.context.submitFeedback();
   const { url } = respond(a, { success: false, message: 'Save failed' });
   await pending;
@@ -101,6 +106,7 @@ test('save uses existing JSONP fields, preserves feedback on failure, and clears
   pending = a.context.submitFeedback(); respond(a, { success: true }); await pending;
   assert.equal(a.elements.feedback.value, '');
   assert.match(a.elements.status.textContent, /saved successfully/);
+  assert.equal(a.stars[3].attributes['aria-pressed'], 'false');
 });
 
 // Run the versioned Apps Script with in-memory services, then execute its real
