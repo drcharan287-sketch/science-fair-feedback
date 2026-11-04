@@ -24,7 +24,7 @@ jobs:
       - name: Check out candidate branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.candidate_ref || 'fix/voicevote-form-post-ui' }}
+          ref: ${{ inputs.candidate_ref || '3a8998c2eeac4cf391fe73720f20f5253583988d' }}
           persist-credentials: false
       - name: Use Node.js 22
         uses: actions/setup-node@v4
@@ -33,6 +33,7 @@ jobs:
       - name: Run full VoiceVote tests
         run: |
           set -euo pipefail
+          git rev-parse HEAD
           node --test
           node --check scripts/verify-post-probe.mjs
           node --check scripts/smoke-catalog.mjs
