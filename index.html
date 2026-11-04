@@ -1,186 +1,398 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Science Fair Feedback</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f6ff;
-      padding: 20px;
-      margin: 0;
-    }
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: white;
-      padding: 22px;
-      border-radius: 15px;
-      box-shadow: 0 2px 10px #ccc;
-    }
-    h2 { text-align: center; color: #174ea6; }
-    label { display: block; margin-top: 16px; font-weight: bold; }
-    select, textarea, input, button {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 12px;
-      margin-top: 8px;
-      font-size: 16px;
-      border-radius: 8px;
-    }
-    textarea, input, select { border: 1px solid #aaa; }
-    textarea { min-height: 110px; }
-    button {
-      border: 0;
-      background: #1769e0;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .stars {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      margin: 12px 0;
-    }
-    .star {
-      width: auto;
-      padding: 4px;
-      background: none;
-      color: #aaa;
-      font-size: 34px;
-    }
-    .star.selected { color: #f5a623; }
-    #status { text-align: center; margin-top: 15px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoiceVote | Science Fair</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(135deg,#08152e,#102b50,#075985);
+  color: #fff;
+  padding: 25px 15px;
+}
+
+.container {
+  max-width: 650px;
+  margin: 25px auto;
+  padding: 30px;
+  border: 1px solid #ffffff25;
+  border-radius: 24px;
+  background: #ffffff12;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 20px 60px #0005;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.logo {
+  font-size: 35px;
+  font-weight: 800;
+  color: #67e8f9;
+}
+
+.header p {
+  color: #cbd5e1;
+  margin-top: 8px;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin: 20px 0 9px;
+}
+
+select, textarea {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #ffffff30;
+  background: #102b50;
+  color: white;
+  font-size: 15px;
+  outline: none;
+}
+
+select:focus, textarea:focus {
+  border-color: #67e8f9;
+}
+
+select option {
+  background: #102b50;
+  color: white;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 130px;
+}
+
+.buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+button {
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  transition: .2s;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+.record {
+  flex: 1;
+  background: #0891b2;
+  color: white;
+}
+
+.stop {
+  flex: 1;
+  background: #334155;
+  color: white;
+}
+
+.submit {
+  width: 100%;
+  margin-top: 25px;
+  background: linear-gradient(90deg,#06b6d4,#2563eb);
+  color: white;
+  font-size: 17px;
+}
+
+.stars {
+  display: flex;
+  gap: 12px;
+  font-size: 38px;
+  margin-top: 10px;
+}
+
+.star {
+  cursor: pointer;
+  color: #64748b;
+}
+
+.star.active {
+  color: #facc15;
+}
+
+#status {
+  text-align: center;
+  margin-top: 18px;
+  color: #a5f3fc;
+  line-height: 1.5;
+}
+
+.footer {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 12px;
+  margin-top: 25px;
+}
+
+@media(max-width:500px) {
+  .container { padding: 22px 17px; }
+  .stars { font-size: 34px; }
+}
+</style>
 </head>
+
 <body>
-  <div class="container">
+
+<div class="container">
+
+  <div class="header">
+    <div class="logo">VoiceVote</div>
     <h2>Science Fair Feedback</h2>
-    <p>Thank you for visiting our science fair project!</p>
-
-    <label for="language">Choose your language</label>
-    <select id="language">
-      <option value="en-US">English</option>
-      <option value="te-IN">తెలుగు (Telugu)</option>
-      <option value="hi-IN">हिन्दी (Hindi)</option>
-      <option value="ta-IN">தமிழ் (Tamil)</option>
-      <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
-    </select>
-
-    <label for="project">Project name</label>
-    <input id="project" type="text" placeholder="Enter project name">
-
-    <label for="feedback">Your feedback</label>
-    <textarea id="feedback" placeholder="Type your feedback here..."></textarea>
-
-    <button type="button" id="speakButton" onclick="startSpeaking()">
-      🎤 Start Speaking
-    </button>
-
-    <p id="voiceStatus" aria-live="polite"></p>
-
-    <label>Give a rating</label>
-    <div class="stars">
-      <button class="star" type="button" onclick="setRating(1)">★</button>
-      <button class="star" type="button" onclick="setRating(2)">★</button>
-      <button class="star" type="button" onclick="setRating(3)">★</button>
-      <button class="star" type="button" onclick="setRating(4)">★</button>
-      <button class="star" type="button" onclick="setRating(5)">★</button>
-    </div>
-
-    <button type="button" onclick="submitFeedback()">Submit Feedback</button>
-    <p id="status" aria-live="polite"></p>
+    <p>Your voice matters. Share your experience!</p>
   </div>
 
-  <script>
-    let rating = 0;
+  <label for="studentClass">Select Class</label>
+  <select id="studentClass">
+    <option value="">Choose Class</option>
+    <option value="6">Class 6</option>
+    <option value="7">Class 7</option>
+    <option value="8">Class 8</option>
+    <option value="9">Class 9</option>
+    <option value="10">Class 10</option>
+  </select>
 
-    function setRating(value) {
-      rating = value;
-      document.querySelectorAll(".star").forEach((star, index) => {
-        star.classList.toggle("selected", index < value);
-      });
+  <label for="section">Select Section</label>
+  <select id="section">
+    <option value="">Choose Section</option>
+  </select>
+
+  <label for="project">Select Project</label>
+  <select id="project">
+    <option value="">Choose Project</option>
+    <option>Solar Energy Model</option>
+    <option>Rainwater Harvesting</option>
+    <option>Smart Irrigation System</option>
+    <option>Water Purification</option>
+    <option>Electricity Generation</option>
+  </select>
+
+  <label for="language">Feedback Language</label>
+  <select id="language">
+    <option value="en-IN">English</option>
+    <option value="te-IN">Telugu</option>
+    <option value="hi-IN">Hindi</option>
+    <option value="ta-IN">Tamil</option>
+    <option value="kn-IN">Kannada</option>
+  </select>
+
+  <label>Voice Feedback</label>
+
+  <div class="buttons">
+    <button class="record" id="startBtn" onclick="startRecording()">🎙 Start</button>
+    <button class="stop" onclick="stopRecording()">■ Stop</button>
+  </div>
+
+  <label for="feedback">Your Feedback</label>
+  <textarea id="feedback" placeholder="Speak or type your feedback here..."></textarea>
+
+  <label>Rate the Project</label>
+  <div class="stars" id="stars">
+    <span class="star" data-value="1">★</span>
+    <span class="star" data-value="2">★</span>
+    <span class="star" data-value="3">★</span>
+    <span class="star" data-value="4">★</span>
+    <span class="star" data-value="5">★</span>
+  </div>
+
+  <button class="submit" id="submitBtn" onclick="submitFeedback()">
+    Submit Feedback →
+  </button>
+
+  <div id="status"></div>
+
+  <div class="footer">
+    VoiceVote • Smart Science Fair Feedback System
+  </div>
+
+</div>
+
+<script>
+const SCRIPT_URL = "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+const sections = {
+  "6": ["A","B","C"],
+  "7": ["A","B","C"],
+  "8": ["A","B","C"],
+  "9": ["A","B","C"],
+  "10": ["A","B","C"]
+};
+
+const classSelect = document.getElementById("studentClass");
+const sectionSelect = document.getElementById("section");
+
+classSelect.addEventListener("change", function() {
+  sectionSelect.innerHTML = '<option value="">Choose Section</option>';
+
+  (sections[this.value] || []).forEach(function(section) {
+    const option = document.createElement("option");
+    option.value = section;
+    option.textContent = "Section " + section;
+    sectionSelect.appendChild(option);
+  });
+});
+
+let rating = 0;
+let recognition = null;
+let isRecording = false;
+
+document.querySelectorAll(".star").forEach(function(star) {
+  star.addEventListener("click", function() {
+    rating = Number(this.dataset.value);
+
+    document.querySelectorAll(".star").forEach(function(item) {
+      item.classList.toggle(
+        "active",
+        Number(item.dataset.value) <= rating
+      );
+    });
+  });
+});
+
+function startRecording() {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    document.getElementById("status").textContent =
+      "Speech recognition is not supported in this browser. Please type your feedback.";
+    return;
+  }
+
+  if (isRecording) return;
+
+  recognition = new SpeechRecognition();
+  recognition.lang = document.getElementById("language").value;
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  let finalTranscript = document.getElementById("feedback").value.trim();
+
+  recognition.onresult = function(event) {
+    let interim = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+
+      if (event.results[i].isFinal) {
+        finalTranscript += (finalTranscript ? " " : "") + transcript;
+      } else {
+        interim += transcript;
+      }
     }
 
-    function startSpeaking() {
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
+    document.getElementById("feedback").value =
+      finalTranscript + (interim ? " " + interim : "");
+  };
 
-      if (!SpeechRecognition) {
-        document.getElementById("voiceStatus").textContent =
-          "Voice typing is not supported in this browser. Please type your feedback.";
-        return;
-      }
+  recognition.onerror = function(event) {
+    document.getElementById("status").textContent =
+      "Voice error: " + event.error +
+      ". Check browser microphone permission.";
+    isRecording = false;
+  };
 
-      const recognition = new SpeechRecognition();
-      recognition.lang = document.getElementById("language").value;
-      recognition.interimResults = false;
-      recognition.continuous = false;
+  recognition.onend = function() {
+    isRecording = false;
+    document.getElementById("status").textContent = "Recording stopped.";
+  };
 
-      document.getElementById("voiceStatus").textContent =
-        "Listening... Please speak.";
+  try {
+    recognition.start();
+    isRecording = true;
+    document.getElementById("status").textContent = "Listening...";
+  } catch(error) {
+    document.getElementById("status").textContent =
+      "Could not start recording: " + error.message;
+  }
+}
 
-      recognition.onresult = function(event) {
-        const spokenText = event.results[0][0].transcript;
-        const box = document.getElementById("feedback");
-        box.value += (box.value ? " " : "") + spokenText;
-        document.getElementById("voiceStatus").textContent =
-          "Speech converted to text.";
-      };
+function stopRecording() {
+  if (recognition && isRecording) {
+    recognition.stop();
+  }
+}
 
-      recognition.onerror = function(event) {
-        document.getElementById("voiceStatus").textContent =
-          "Voice recognition error: " + event.error +
-          ". You can type your feedback instead.";
-      };
+async function submitFeedback() {
+  const data = {
+    studentClass: classSelect.value,
+    section: sectionSelect.value,
+    project: document.getElementById("project").value,
+    language: document.getElementById("language").value,
+    feedback: document.getElementById("feedback").value.trim(),
+    rating: rating
+  };
 
-      recognition.onend = function() {
-        document.getElementById("speakButton").disabled = false;
-      };
+  if (!data.studentClass || !data.section ||
+      !data.project || !data.feedback || !data.rating) {
+    alert("Please complete all fields and select a star rating.");
+    return;
+  }
 
-      document.getElementById("speakButton").disabled = true;
-      recognition.start();
-    }
+  if (!SCRIPT_URL.startsWith("https://script.google.com/")) {
+    alert("Please add your Google Apps Script Web App URL first.");
+    return;
+  }
 
-    async function submitFeedback() {
-      const project = document.getElementById("project").value.trim();
-      const feedback = document.getElementById("feedback").value.trim();
-      const language = document.getElementById("language").value;
+  stopRecording();
 
-      if (!project || !feedback || rating === 0) {
-        document.getElementById("status").textContent =
-          "Please enter the project name, feedback and rating.";
-        return;
-      }
+  const button = document.getElementById("submitBtn");
+  button.disabled = true;
+  button.textContent = "Submitting...";
 
-      const status = document.getElementById("status");
-      status.textContent = "Preparing your feedback...";
+  try {
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
 
-      const endpoint =
-        "https://script.google.com/macros/s/AKfycbxk-Ex6bd0l3V9fiUrPoCGVHNmkUAm_4yY7xlGLHWFRZBSn6lCo0Pw0vZ0C-vgyIC26/exec";
+    document.getElementById("status").textContent =
+      "Thank you! Your feedback has been submitted.";
 
-      const params = new URLSearchParams({
-        action: "submit",
-        project: project,
-        feedback: feedback,
-        language: language,
-        rating: String(rating)
-      });
+    document.getElementById("feedback").value = "";
+    document.getElementById("studentClass").value = "";
+    document.getElementById("section").innerHTML =
+      '<option value="">Choose Section</option>';
+    document.getElementById("project").value = "";
+    rating = 0;
 
-      try {
-        await fetch(endpoint + "?" + params.toString(), {
-          method: "GET",
-          mode: "no-cors"
-        });
+    document.querySelectorAll(".star").forEach(function(star) {
+      star.classList.remove("active");
+    });
 
-        status.textContent =
-          "Feedback sent. Please wait for the next setup step to verify saving.";
-      } catch (error) {
-        status.textContent =
-          "Could not send feedback. Please try again.";
-      }
-    }
-  </script>
+  } catch(error) {
+    document.getElementById("status").textContent =
+      "Submission failed. Please try again.";
+  }
+
+  button.disabled = false;
+  button.textContent = "Submit Feedback →";
+}
+</script>
+
 </body>
 </html>
