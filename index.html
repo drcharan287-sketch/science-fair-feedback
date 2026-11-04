@@ -164,6 +164,21 @@ button:hover {
 .star.active {
   color: #facc15;
 }
+.vote-info {
+  margin: 14px 0 4px;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.vote-lock {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid #67e8f977;
+  border-radius: 12px;
+  color: #a5f3fc;
+  background: #0e3c53;
+  line-height: 1.5;
+}
 
 #status {
   text-align: center;
@@ -216,6 +231,8 @@ button:hover {
     <option value="">Select class and section first</option>
   </select>
   <p id="catalogStatus" role="status" aria-live="polite">Loading available projects…</p>
+  <p class="vote-info">One feedback submission per browser on this device for the science fair. Shared devices should not be used for multiple visitors.</p>
+  <p id="voteGuardStatus" class="vote-lock" role="status" aria-live="polite" hidden></p>
   <button type="button" id="retryCatalogBtn" hidden>Retry loading projects</button>
 
   <label for="language">Feedback Language</label>
@@ -251,7 +268,7 @@ button:hover {
   </button>
 
   <div id="status" role="status" aria-live="polite"></div>
-  <p id="receiptHint" style="margin-top:10px;font-size:12px;color:#cbd5e1;text-align:center;">After submitting, Google displays a confirmation receipt. Return here to give more feedback.</p>
+  <p id="receiptHint" style="margin-top:10px;font-size:12px;color:#cbd5e1;text-align:center;">Google will display a confirmation receipt. If it confirms success, this browser cannot submit another vote.</p>
 
   <div class="footer">
     VoiceVote • Smart Science Fair Feedback System
@@ -264,6 +281,59 @@ button:hover {
 // Google Apps Script web app URL. Use exactly one /exec suffix.
 //    Do NOT use the Deployment ID, Library URL, Apps Script editor URL or Google Sheet URL.
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxk-Ex6bd0l3V9fiUrPoCGVHNmkUAm_4yY7xlGLHWFRZBSn6lCo0Pw0vZ0C-vgyIC26/exec";
+
+// The browser token is random; it is NOT a hardware fingerprint or personal ID.
+// Server-side enforcement of the token is implemented in the next backend stage.
+const DEVICE_STORAGE_KEY = "voicevote_device_token_v1";
+const VOTED_STORAGE_KEY = "voicevote_voted_v1";
+
+function hasLocalVote() {
+  try { return window.localStorage?.getItem(VOTED_STORAGE_KEY) === "1"; }
+  catch (_) { return false; }
+}
+
+function getOrCreateDeviceToken() {
+  let storage;
+  try { storage = window.localStorage; }
+  catch (_) { throw new Error("Browser storage is disabled. Enable site storage to vote."); }
+  if (!storage) throw new Error("Browser storage is unavailable. Enable site storage to vote.");
+  try {
+    const previous = storage.getItem(DEVICE_STORAGE_KEY);
+    if (previous && /^[a-f0-9-]{36}$/i.test(previous)) return previous;
+    const token = secureSubmissionId();
+    storage.setItem(DEVICE_STORAGE_KEY, token);
+    if (storage.getItem(DEVICE_STORAGE_KEY) !== token) {
+      throw new Error("Browser storage is not saving correctly.");
+    }
+    return token;
+  } catch (error) {
+    throw new Error("Unable to save the browser voting token. Check site storage permissions.");
+  }
+}
+
+function syncVoteStatus() {
+  const notice = document.getElementById("voteGuardStatus");
+  const voted = hasLocalVote();
+  notice.hidden = !voted;
+  notice.textContent = voted
+    ? "Thank you for voting! This browser has already submitted feedback and cannot vote again."
+    : "";
+  if (voted) {
+    submitButton.disabled = true;
+    const startButton = document.getElementById("startBtn");
+    if (startButton) startButton.disabled = true;
+    document.querySelectorAll(".star").forEach(function(star) { star.disabled = true; });
+  }
+}
+
+function readReceiptReturn() {
+  const search = new URLSearchParams(window.location?.search || "");
+  if (search.get("vote") === "success") {
+    try { window.localStorage?.setItem(VOTED_STORAGE_KEY, "1"); }
+    catch (_) { /* Server rejects repeat submissions even if storage is blocked. */ }
+  }
+  syncVoteStatus();
+}
 
 const classSelect = document.getElementById("studentClass");
 const sectionSelect = document.getElementById("section");
@@ -318,8 +388,9 @@ function startCatalog() {
   }).then(function() {
     catalogReady = true;
     retryCatalogBtn.hidden = true;
-    submitButton.disabled = false;
+    submitButton.disabled = !hasLocalVote();
     updateGradeLabels();
+    syncVoteStatus();
   }).catch(function(error) {
     catalogStatus.textContent = "Unable to load projects: " + error.message + " Check your Projects sheet or deployment, then retry.";
     retryCatalogBtn.hidden = false;
@@ -328,6 +399,7 @@ function startCatalog() {
 }
 
 // Initialize the catalog first so its filtering runs before label formatting.
+readReceiptReturn();
 startCatalog();
 classSelect.addEventListener("change", updateSectionLabels);
 
@@ -338,6 +410,7 @@ let isSubmitting = false;
 
 document.querySelectorAll(".star").forEach(function(star) {
   star.addEventListener("click", function() {
+    if (hasLocalVote()) return;
     rating = Number(this.dataset.value);
     document.querySelectorAll(".star").forEach(function(item) {
       const value = Number(item.dataset.value);
@@ -353,7 +426,7 @@ function startRecording() {
     statusElement.textContent = "Speech recognition is not supported in this browser. Please type your feedback.";
     return;
   }
-  if (isRecording || isSubmitting) return;
+  if (isRecording || isSubmitting || hasLocalVote()) return;
 
   recognition = new SpeechRecognition();
   recognition.lang = document.getElementById("language").value;
@@ -413,6 +486,11 @@ function secureSubmissionId() {
 
 function submitFeedback() {
   if (isSubmitting) return;
+  if (hasLocalVote()) {
+    statusElement.textContent = "This browser has already voted. Only one submission is allowed.";
+    syncVoteStatus();
+    return;
+  }
   const data = {
     studentClass: classSelect.value,
     section: sectionSelect.value,
@@ -439,12 +517,13 @@ function submitFeedback() {
     // No feedback text goes into the URL. Navigate to a genuine Google-hosted
     // HTML receipt so browser CORS/JSONP blockers cannot hide the save result.
     const id = secureSubmissionId();
+    const deviceToken = getOrCreateDeviceToken();
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = SCRIPT_URL.trim();
     form.target = '_self';
     form.style.display = 'none';
-    const fields = Object.assign({ action: 'save', submissionId: id }, data);
+    const fields = Object.assign({ action: 'save', submissionId: id, deviceToken: deviceToken }, data);
     Object.keys(fields).forEach(function(name) {
       const input = document.createElement('input');
       input.type = 'hidden';
