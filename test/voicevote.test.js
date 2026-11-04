@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
-function app() {
+function app(fetchProjects) {
   class Element {
     constructor() { this.options = []; this.value = ''; this.disabled = false; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.classList = { toggle() {}, remove() {} }; }
     add(option) { this.options.push(option); }
@@ -25,6 +25,7 @@ function app() {
   };
   const context = { document, console: { error() {} }, URLSearchParams, Option: function(text, value) { this.textContent = text; this.value = value; }, Event: function(type) { this.type = type; }, setTimeout, clearTimeout };
   context.window = context;
+  if (fetchProjects) context.fetch = fetchProjects;
   context.location = { reload() { context.__reloaded = true; } };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('voicevote-catalog.js', 'utf8'), context);
@@ -174,4 +175,40 @@ test('actual backend reports catalog and save errors through JSONP', async () =>
   assert.equal(b.writes.length, 0);
   const invalid = b.context.doGet({ parameter: { action: 'catalog', callback: 'bad.name()' } });
   assert.match(invalid.text, /^voiceVoteResponse\(/);
+});
+
+// The live GitHub Pages site has fetch(); it should load the same-origin public
+// catalog without issuing a cross-origin Google JSONP request.
+test('same-origin projects.json populates class and section without contacting Google', async () => {
+  const seen = [];
+  const a = app(async (url, options) => {
+    seen.push({ url, options });
+    return { ok: true, json: async () => ({ success: true, projects: [
+      {grade:'6', section:'Heidelberg', project:'XenoChat'},
+      {grade:'9', section:'Keats', project:'VoiceVote'}
+    ] }) };
+  });
+  await tick();
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].url, './projects.json');
+  assert.equal(seen[0].options.credentials, 'same-origin');
+  assert.equal(a.scripts.length, 0);
+  assert.deepEqual(a.elements.studentClass.options.map(o => o.value), ['', '6', '9']);
+  a.elements.studentClass.value = '6'; a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  assert.deepEqual(a.elements.section.options.map(o => o.value), ['', 'Heidelberg']);
+  a.elements.section.value = 'Heidelberg'; a.elements.section.dispatchEvent(new a.context.Event('change'));
+  assert.deepEqual(a.elements.project.options.map(o => o.value), ['', 'XenoChat']);
+  assert.equal(a.elements.catalogStatus.textContent, '1 project(s) available');
+});
+
+test('snapshot unavailable falls back to real Google JSONP catalog', async () => {
+  const a = app(async () => { throw new Error('Snapshot unavailable'); });
+  await tick();
+  assert.equal(a.scripts.length, 1);
+  const { url } = respond(a, { success: true, projects: [
+    {grade:'9', section:'Keats', project:'VoiceVote'}
+  ] });
+  await tick();
+  assert.equal(url.searchParams.get('action'), 'catalog');
+  assert.deepEqual(a.elements.studentClass.options.map(o => o.value), ['', '9']);
 });
