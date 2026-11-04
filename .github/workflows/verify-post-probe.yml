@@ -1,0 +1,29 @@
+name: Verify VoiceVote POST without saving
+
+on:
+  workflow_run:
+    workflows: ["Deploy VoiceVote Apps Script"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safe-post-probe:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser driver
+        run: npm install --no-save playwright-core
+      - name: Test non-saving HTML POST and receipt in live Chromium
+        run: node scripts/verify-post-probe.mjs
