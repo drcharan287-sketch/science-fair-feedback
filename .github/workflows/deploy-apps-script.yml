@@ -52,10 +52,28 @@ jobs:
           for key in SCRIPT_ID DEPLOYMENT_ID SHEET_ID CLASPRC_JSON; do
             test -n "${!key}" || { echo "Missing $key in voicevote-production GitHub environment" >&2; exit 1; }
           done
-          for id in "$SCRIPT_ID" "$DEPLOYMENT_ID" "$SHEET_ID"; do
-            [[ "$id" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo 'Invalid identifier format' >&2; exit 1; }
+          for id in "$SCRIPT_ID" "$DEPLOYMENT_ID"; do
+            [[ "$id" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo 'Invalid Apps Script identifier format' >&2; exit 1; }
           done
           printf '%s' "$CLASPRC_JSON" | node -e 'let s="";process.stdin.on("data",x=>s+=x).on("end",()=>JSON.parse(s))'
+          # Users may store either the Sheets ID or its full docs.google.com URL.
+          # Normalize without printing the secret or any derived identifier.
+          node <<'NODE'
+          const fs = require('node:fs');
+          const raw = String(process.env.SHEET_ID || '').trim();
+          let id = raw;
+          if (/^https?:\/\//i.test(raw)) {
+            const u = new URL(raw);
+            if (u.hostname !== 'docs.google.com') throw new Error('Google Sheet must use a docs.google.com URL');
+            const found = u.pathname.match(/^\/spreadsheets\/d\/([A-Za-z0-9_-]+)(?:\/|$)/);
+            if (!found) throw new Error('Google Sheets URL did not contain a spreadsheet ID');
+            id = found[1];
+          }
+          if (!/^[A-Za-z0-9_-]{20,}$/.test(id)) {
+            throw new Error('Invalid VOICEVOTE_SPREADSHEET_ID secret: provide the Sheet ID or a docs.google.com spreadsheet URL');
+          }
+          fs.writeFileSync(process.env.RUNNER_TEMP + '/.voicevote-sheet-id', id, { mode: 0o600 });
+          NODE
       - name: Authenticate and inspect existing Apps Script (read-only)
         env:
           SCRIPT_ID: ${{ vars.APPS_SCRIPT_ID }}
@@ -89,17 +107,16 @@ jobs:
           echo 'Google authorization, script ID, existing deployment, and live source files verified.' >> "$GITHUB_STEP_SUMMARY"
       - name: Overlay version-controlled backend (after verification)
         if: github.event_name == 'push' || inputs.mode == 'deploy'
-        env:
-          SHEET_ID: ${{ secrets.VOICEVOTE_SPREADSHEET_ID }}
         run: |
           node <<'NODE'
           const fs = require('node:fs');
           const source = fs.readFileSync('apps-script/Code.gs','utf8');
           const marker = "'YOUR_SPREADSHEET_ID'";
           if (source.split(marker).length !== 2) throw Error('Expected exactly one backend spreadsheet placeholder');
-          if (!/^[a-zA-Z0-9_-]+$/.test(process.env.SHEET_ID || '')) throw Error('Invalid spreadsheet ID');
-          // Only the pulled backend Code.js is changed (clasp maps it to Code.gs in Apps Script). Preserve the manifest, Index.html and other live files.
-          fs.writeFileSync('.voicevote-live/Code.js', source.replace(marker, JSON.stringify(process.env.SHEET_ID)));
+          const sheetId = fs.readFileSync(process.env.RUNNER_TEMP + '/.voicevote-sheet-id','utf8').trim();
+          if (!/^[a-zA-Z0-9_-]{20,}$/.test(sheetId)) throw Error('Normalized spreadsheet ID invalid');
+          // Only the pulled backend Code.js is changed (clasp maps it to Code.gs in Apps Script). Preserve manifest, Index.html and all other files.
+          fs.writeFileSync('.voicevote-live/Code.js', source.replace(marker, JSON.stringify(sheetId)));
           NODE
       - name: Push source and update existing deployment
         if: github.event_name == 'push' || inputs.mode == 'deploy'
