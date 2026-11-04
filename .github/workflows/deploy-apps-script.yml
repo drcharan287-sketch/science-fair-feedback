@@ -1,0 +1,86 @@
+name: Deploy VoiceVote Apps Script
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps-script/**'
+      - '.github/workflows/deploy-apps-script.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voicevote-apps-script-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: voicevote-production
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run contract tests
+        run: node --test --test-isolation=none
+      - name: Install clasp
+        run: npm install --global @google/clasp@3.4.1
+      - name: Validate configuration
+        env:
+          SCRIPT_ID: ${{ vars.APPS_SCRIPT_ID }}
+          DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
+          SHEET_ID: ${{ secrets.VOICEVOTE_SPREADSHEET_ID }}
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          for key in SCRIPT_ID DEPLOYMENT_ID SHEET_ID CLASPRC_JSON; do
+            test -n "${!key}" || { echo "Missing $key in voicevote-production GitHub environment" >&2; exit 1; }
+          done
+          for id in "$SCRIPT_ID" "$DEPLOYMENT_ID" "$SHEET_ID"; do
+            [[ "$id" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo 'Invalid identifier format' >&2; exit 1; }
+          done
+          printf '%s' "$CLASPRC_JSON" | node -e 'let s="";process.stdin.on("data",x=>s+=x).on("end",()=>JSON.parse(s))'
+      - name: Authenticate and retrieve existing project
+        env:
+          SCRIPT_ID: ${{ vars.APPS_SCRIPT_ID }}
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          mkdir -p .voicevote-live
+          node -e 'require("fs").writeFileSync(".voicevote-live/.clasp.json", JSON.stringify({scriptId:process.env.SCRIPT_ID}))'
+          (cd .voicevote-live && clasp pull)
+          # Preserve live Index.html and manifest instead of deleting them with a partial push.
+          test -s .voicevote-live/Code.gs || { echo 'Live Code.gs missing; refusing to deploy' >&2; exit 1; }
+          test -s .voicevote-live/appsscript.json || { echo 'Live manifest missing; refusing to deploy' >&2; exit 1; }
+      - name: Overlay versioned backend
+        env:
+          SHEET_ID: ${{ secrets.VOICEVOTE_SPREADSHEET_ID }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync('apps-script/Code.gs','utf8');
+          const marker = "'YOUR_SPREADSHEET_ID'";
+          if (!source.includes(marker)) throw Error('Backend placeholder missing; review Code.gs');
+          if (!/^[a-zA-Z0-9_-]+$/.test(process.env.SHEET_ID || '')) throw Error('Invalid spreadsheet ID');
+          fs.writeFileSync('.voicevote-live/Code.gs', source.replace(marker, JSON.stringify(process.env.SHEET_ID)));
+          NODE
+      - name: Push and update existing deployment
+        env:
+          DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          cd .voicevote-live
+          clasp push --force
+          clasp update-deployment "$DEPLOYMENT_ID"
+      - name: Summary
+        run: |
+          echo 'Updated existing VoiceVote Apps Script deployment. Verify the hosted catalog and feedback flow.' >> "$GITHUB_STEP_SUMMARY"
