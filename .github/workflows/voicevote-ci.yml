@@ -25,4 +25,5 @@ jobs:
           node --test
           node --check scripts/smoke-catalog.mjs
           node --check scripts/sync-projects.mjs
+          node --check scripts/verify-post-probe.mjs
           node -e "const p=require('./projects.json'); if(!p.success || !Array.isArray(p.projects) || !p.projects.length) process.exit(1)"

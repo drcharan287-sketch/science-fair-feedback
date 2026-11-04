@@ -114,6 +114,7 @@ test('save uses existing JSONP fields, preserves feedback on failure, and clears
 // JSONP response in the frontend VM. No Google services are contacted.
 function backend(rows) {
   const writes = [];
+  const receipts = new Map();
   let released = false;
   const projectSheet = rows && { getDataRange: () => ({ getDisplayValues: () => rows }) };
   const feedbackSheet = { getLastRow: () => writes.length, appendRow: row => writes.push(Array.from(row)) };
@@ -121,7 +122,14 @@ function backend(rows) {
     ContentService: { MimeType: { JAVASCRIPT: 'javascript' }, createTextOutput: text => ({ text, setMimeType(type) { this.mime = type; return this; } }) },
     SpreadsheetApp: { openById: () => ({ getSheetByName: name => name === 'Projects' ? projectSheet : feedbackSheet }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() { released = true; } }) },
-    LanguageApp: { translate: (text, source, target) => `${source}:${target}:${text}` }
+    LanguageApp: { translate: (text, source, target) => `${source}:${target}:${text}` },
+    PropertiesService: { getScriptProperties: () => ({
+      getProperty: key => receipts.get(key),
+      setProperty: (key, value) => receipts.set(key, value)
+    }) },
+    HtmlService: { createHtmlOutput: html => ({
+      html, setTitle(title) { this.title = title; return this; }
+    }) }
   };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('apps-script/Code.gs', 'utf8'), context);
@@ -211,4 +219,31 @@ test('snapshot unavailable falls back to real Google JSONP catalog', async () =>
   await tick();
   assert.equal(url.searchParams.get('action'), 'catalog');
   assert.deepEqual(a.elements.studentClass.options.map(o => o.value), ['', '9']);
+});
+
+test('secure POST probe makes no writes and duplicate POSTs append only once', () => {
+  const b = backend([
+    ['Class/Grade', 'Section', 'Project Name', 'Active'],
+    ['6', 'Heidelberg', 'XenoChat', 'TRUE']
+  ]);
+  const probe = b.context.doPost({ parameter: { action: 'probe' } });
+  assert.match(probe.html, /VoiceVote POST connection ready/);
+  assert.equal(b.writes.length, 0);
+
+  const params = {
+    action: 'save', submissionId: '123e4567-e89b-42d3-a456-426614174000',
+    project: 'XenoChat', studentClass: '6', section: 'Heidelberg',
+    feedback: 'Works well', rating: '5', language: 'en-IN'
+  };
+  const first = b.context.doPost({ parameter: params });
+  assert.match(first.html, /Thank you! Feedback saved/);
+  assert.equal(b.writes.length, 2);
+  const second = b.context.doPost({ parameter: params });
+  assert.match(second.html, /previously saved; no duplicate was added/);
+  assert.equal(b.writes.length, 2);
+  assert.equal(b.wasReleased(), true);
+
+  const invalid = b.context.doPost({ parameter: { ...params, submissionId: 'bad-id' } });
+  assert.match(invalid.html, /Feedback not confirmed/);
+  assert.equal(b.writes.length, 2);
 });
