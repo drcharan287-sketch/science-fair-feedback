@@ -63,6 +63,7 @@ try {
       assert.equal(fields.get('rating'),'5');
       assert.equal(fields.get('feedback'),'AUTOMATED DRY RUN - never transmitted to Google.');
       assert.match(fields.get('submissionId')||'',/^[a-f0-9-]{36}$/i);
+      assert.match(fields.get('deviceToken')||'',/^[a-f0-9-]{36}$/i, 'Persistent anonymous browser token must be included in POST');
       console.log('Live POST form dry run PASSED. Request intercepted; absolutely no feedback was sent to Google.');
       error=null;
       break;
