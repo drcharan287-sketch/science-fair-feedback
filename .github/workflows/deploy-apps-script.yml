@@ -74,6 +74,13 @@ jobs:
             echo 'Configured deployment ID is not associated with the configured Apps Script project' >&2
             exit 1
           fi
+          # Remember the currently published immutable version for automatic rollback.
+          grep -F -- "$DEPLOYMENT_ID" .voicevote-deployments.txt |
+            sed -nE 's/.*@([0-9]+).*/\1/p' | head -1 > .voicevote-prior-version
+          test -s .voicevote-prior-version || {
+            echo 'Could not determine existing published version; refusing to deploy' >&2
+            exit 1
+          }
 
           (cd .voicevote-live && clasp pull)
           test -s .voicevote-live/Code.gs || { echo 'Live Code.gs missing; refusing to deploy' >&2; exit 1; }
@@ -103,11 +110,24 @@ jobs:
           cd .voicevote-live
           clasp push --force
           clasp update-deployment "$DEPLOYMENT_ID"
+          touch ../.voicevote-deployment-updated
       - name: Read-only smoke test of deployed catalog
         if: github.event_name == 'push' || inputs.mode == 'deploy'
         env:
           DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
         run: node scripts/smoke-catalog.mjs
+      - name: Restore previous live deployment if smoke test fails
+        if: failure() && (github.event_name == 'push' || inputs.mode == 'deploy')
+        env:
+          DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          if test -f .voicevote-deployment-updated && test -s .voicevote-prior-version; then
+            previous="$(cat .voicevote-prior-version)"
+            [[ "$previous" =~ ^[0-9]+$ ]] || exit 1
+            (cd .voicevote-live && clasp update-deployment "$DEPLOYMENT_ID" --versionNumber "$previous")
+            echo 'Catalog smoke test failed. Previous deployed version restored.' >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Verification-only summary
         if: github.event_name == 'workflow_dispatch' && inputs.mode == 'verify'
         run: echo 'Read-only verification passed. No Google files, versions or deployments were modified.' >> "$GITHUB_STEP_SUMMARY"
