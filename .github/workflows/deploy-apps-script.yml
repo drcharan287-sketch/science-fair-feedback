@@ -83,7 +83,7 @@ jobs:
           }
 
           (cd .voicevote-live && clasp pull)
-          test -s .voicevote-live/Code.gs || { echo 'Live Code.gs missing; refusing to deploy' >&2; exit 1; }
+          test -s .voicevote-live/Code.js || { echo 'Live Code.js missing; refusing to deploy' >&2; exit 1; }
           test -s .voicevote-live/appsscript.json || { echo 'Live manifest missing; refusing to deploy' >&2; exit 1; }
           test -s .voicevote-live/Index.html || { echo 'Live Index.html missing; refusing to deploy' >&2; exit 1; }
           echo 'Google authorization, script ID, existing deployment, and live source files verified.' >> "$GITHUB_STEP_SUMMARY"
@@ -98,8 +98,8 @@ jobs:
           const marker = "'YOUR_SPREADSHEET_ID'";
           if (source.split(marker).length !== 2) throw Error('Expected exactly one backend spreadsheet placeholder');
           if (!/^[a-zA-Z0-9_-]+$/.test(process.env.SHEET_ID || '')) throw Error('Invalid spreadsheet ID');
-          // Only Code.gs changes. Preserve the fetched manifest, Index.html and other live files.
-          fs.writeFileSync('.voicevote-live/Code.gs', source.replace(marker, JSON.stringify(process.env.SHEET_ID)));
+          // Only the pulled backend Code.js is changed (clasp maps it to Code.gs in Apps Script). Preserve the manifest, Index.html and other live files.
+          fs.writeFileSync('.voicevote-live/Code.js', source.replace(marker, JSON.stringify(process.env.SHEET_ID)));
           NODE
       - name: Push source and update existing deployment
         if: github.event_name == 'push' || inputs.mode == 'deploy'
