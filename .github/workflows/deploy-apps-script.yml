@@ -1,0 +1,133 @@
+name: Deploy VoiceVote Apps Script
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps-script/**'
+      - '.github/workflows/deploy-apps-script.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Verify Google connection without writing, or deploy explicitly'
+        type: choice
+        required: true
+        default: verify
+        options:
+          - verify
+          - deploy
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voicevote-apps-script-production
+  cancel-in-progress: false
+
+jobs:
+  verify-and-deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: voicevote-production
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test frontend and backend contract
+        run: node --test
+      - name: Install clasp
+        run: npm install --global @google/clasp@3.4.1
+      - name: Check required GitHub environment settings
+        env:
+          SCRIPT_ID: ${{ vars.APPS_SCRIPT_ID }}
+          DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
+          SHEET_ID: ${{ secrets.VOICEVOTE_SPREADSHEET_ID }}
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          for key in SCRIPT_ID DEPLOYMENT_ID SHEET_ID CLASPRC_JSON; do
+            test -n "${!key}" || { echo "Missing $key in voicevote-production GitHub environment" >&2; exit 1; }
+          done
+          for id in "$SCRIPT_ID" "$DEPLOYMENT_ID" "$SHEET_ID"; do
+            [[ "$id" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo 'Invalid identifier format' >&2; exit 1; }
+          done
+          printf '%s' "$CLASPRC_JSON" | node -e 'let s="";process.stdin.on("data",x=>s+=x).on("end",()=>JSON.parse(s))'
+      - name: Authenticate and inspect existing Apps Script (read-only)
+        env:
+          SCRIPT_ID: ${{ vars.APPS_SCRIPT_ID }}
+          DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          mkdir -p .voicevote-live
+          node -e 'require("fs").writeFileSync(".voicevote-live/.clasp.json", JSON.stringify({scriptId:process.env.SCRIPT_ID}))'
+
+          # Refuse to target the wrong deployment. No changes to Google yet.
+          clasp list-deployments "$SCRIPT_ID" > .voicevote-deployments.txt
+          if ! grep -Fq -- "$DEPLOYMENT_ID" .voicevote-deployments.txt; then
+            echo 'Configured deployment ID is not associated with the configured Apps Script project' >&2
+            exit 1
+          fi
+          # Remember the currently published immutable version for automatic rollback.
+          grep -F -- "$DEPLOYMENT_ID" .voicevote-deployments.txt |
+            sed -nE 's/.*@([0-9]+).*/\1/p' | head -1 > .voicevote-prior-version
+          test -s .voicevote-prior-version || {
+            echo 'Could not determine existing published version; refusing to deploy' >&2
+            exit 1
+          }
+
+          (cd .voicevote-live && clasp pull)
+          test -s .voicevote-live/Code.js || { echo 'Live Code.js missing; refusing to deploy' >&2; exit 1; }
+          test -s .voicevote-live/appsscript.json || { echo 'Live manifest missing; refusing to deploy' >&2; exit 1; }
+          test -s .voicevote-live/Index.html || { echo 'Live Index.html missing; refusing to deploy' >&2; exit 1; }
+          echo 'Google authorization, script ID, existing deployment, and live source files verified.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Overlay version-controlled backend (after verification)
+        if: github.event_name == 'push' || inputs.mode == 'deploy'
+        env:
+          SHEET_ID: ${{ secrets.VOICEVOTE_SPREADSHEET_ID }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync('apps-script/Code.gs','utf8');
+          const marker = "'YOUR_SPREADSHEET_ID'";
+          if (source.split(marker).length !== 2) throw Error('Expected exactly one backend spreadsheet placeholder');
+          if (!/^[a-zA-Z0-9_-]+$/.test(process.env.SHEET_ID || '')) throw Error('Invalid spreadsheet ID');
+          // Only the pulled backend Code.js is changed (clasp maps it to Code.gs in Apps Script). Preserve the manifest, Index.html and other live files.
+          fs.writeFileSync('.voicevote-live/Code.js', source.replace(marker, JSON.stringify(process.env.SHEET_ID)));
+          NODE
+      - name: Push source and update existing deployment
+        if: github.event_name == 'push' || inputs.mode == 'deploy'
+        env:
+          DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          cd .voicevote-live
+          clasp push --force
+          clasp update-deployment "$DEPLOYMENT_ID"
+          touch ../.voicevote-deployment-updated
+      - name: Read-only smoke test of deployed catalog
+        if: github.event_name == 'push' || inputs.mode == 'deploy'
+        env:
+          DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: node scripts/smoke-catalog.mjs
+      - name: Restore previous live deployment if smoke test fails
+        if: failure() && (github.event_name == 'push' || inputs.mode == 'deploy')
+        env:
+          DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          if test -f .voicevote-deployment-updated && test -s .voicevote-prior-version; then
+            previous="$(cat .voicevote-prior-version)"
+            [[ "$previous" =~ ^[0-9]+$ ]] || exit 1
+            (cd .voicevote-live && clasp update-deployment "$DEPLOYMENT_ID" --versionNumber "$previous")
+            echo 'Catalog smoke test failed. Previous deployed version restored.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Verification-only summary
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'verify'
+        run: echo 'Read-only verification passed. No Google files, versions or deployments were modified.' >> "$GITHUB_STEP_SUMMARY"

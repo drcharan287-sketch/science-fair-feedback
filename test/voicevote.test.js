@@ -1,0 +1,177 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+
+function app() {
+  class Element {
+    constructor() { this.options = []; this.value = ''; this.disabled = false; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.classList = { toggle() {}, remove() {} }; }
+    add(option) { this.options.push(option); }
+    replaceChildren() { this.options = []; this.value = ''; }
+    addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
+    setAttribute(name, value) { (this.attributes ||= {})[name] = String(value); }
+    dispatchEvent(event) { for (const fn of this.listeners[event.type] || []) fn.call(this, event); }
+    remove() { this.removed = true; }
+  }
+  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback'].map(id => [id, new Element()]));
+  elements.language.value = 'hi-IN';
+  elements.submitBtn.disabled = true;
+  const stars = Array.from({ length: 5 }, (_, i) => { const e = new Element(); e.dataset.value = String(i + 1); return e; });
+  const scripts = [];
+  const document = {
+    querySelector: s => elements[s.slice(1)], getElementById: id => elements[id],
+    querySelectorAll: s => s === '.star' ? stars : [],
+    createElement: () => new Element(), head: { appendChild: tag => scripts.push(tag) }
+  };
+  const context = { document, console: { error() {} }, URLSearchParams, Option: function(text, value) { this.textContent = text; this.value = value; }, Event: function(type) { this.type = type; }, setTimeout, clearTimeout };
+  context.window = context;
+  context.location = { reload() { context.__reloaded = true; } };
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync('voicevote-catalog.js', 'utf8'), context);
+  const html = fs.readFileSync('index.html', 'utf8');
+  vm.runInContext(html.match(/<script>\s*([\s\S]*?)<\/script>/)[1], context);
+  return { context, elements, stars, scripts };
+}
+function respond(app, payload) {
+  const tag = app.scripts.at(-1);
+  const url = new URL(tag.src);
+  app.context[url.searchParams.get('callback')](payload);
+  return { tag, url };
+}
+const tick = () => new Promise(resolve => setImmediate(resolve));
+
+test('catalog URL and dependent selections reflect sheet rows, including numeric grades', async () => {
+  const a = app();
+  assert.equal(a.elements.studentClass.disabled, true);
+  assert.match(fs.readFileSync('index.html', 'utf8'), /type="button" class="star" data-value="5" aria-label="5 stars"/);
+  const { url, tag } = respond(a, { success: true, projects: [
+    { grade: 6, section: ' A ', project: ' Volcano ' },
+    { grade: '6', section: 'B', project: 'Solar' },
+    { grade: '11', section: 'A', project: 'Robot' },
+    { grade: '6', section: 'A', project: 'Volcano' }
+  ] });
+  await tick();
+  assert.match(url.pathname, /\/exec$/);
+  assert.doesNotMatch(url.pathname, /\/exec\/exec/);
+  assert.equal(url.searchParams.get('action'), 'catalog');
+  assert.equal(tag.removed, true);
+  assert.deepEqual(a.elements.studentClass.options.map(o => o.value), ['', '6', '11']);
+  a.elements.studentClass.value = '6'; a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  assert.deepEqual(a.elements.section.options.map(o => o.value), ['', 'A', 'B']);
+  a.elements.section.value = 'A'; a.elements.section.dispatchEvent(new a.context.Event('change'));
+  assert.deepEqual(a.elements.project.options.map(o => o.value), ['', 'Volcano']);
+  a.elements.studentClass.value = '11'; a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  assert.equal(a.elements.project.value, '');
+  assert.equal(a.elements.project.disabled, true);
+  a.elements.section.value = 'A'; a.elements.section.dispatchEvent(new a.context.Event('change'));
+  assert.deepEqual(a.elements.project.options.map(o => o.value), ['', 'Robot']);
+});
+
+test('catalog errors leave submission disabled with actionable status', async () => {
+  for (const mode of ['backend', 'invalid', 'no-callback', 'network']) {
+    const a = app(); const tag = a.scripts[0];
+    if (mode === 'backend') respond(a, { success: false, message: 'Projects sheet missing' });
+    if (mode === 'invalid') respond(a, { success: true, projects: [{ title: 'x' }] });
+    if (mode === 'no-callback') tag.onload();
+    if (mode === 'network') tag.onerror();
+    await tick();
+    assert.equal(a.elements.submitBtn.disabled, true, mode);
+    assert.equal(a.elements.retryCatalogBtn.hidden, false, mode);
+    assert.equal(a.elements.studentClass.disabled, true, mode);
+    assert.match(a.elements.catalogStatus.textContent, /Unable to load projects:/, mode);
+    assert.equal(tag.removed, true);
+  }
+});
+
+test('save uses existing JSONP fields, preserves feedback on failure, and clears only on confirmation', async () => {
+  const a = app();
+  respond(a, { success: true, projects: [{ grade: '6', section: 'A', project: 'Robot' }] }); await tick();
+  a.elements.studentClass.value = '6'; a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value = 'A'; a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value = 'Robot'; a.elements.feedback.value = 'Great & clever';
+  a.stars[3].dispatchEvent(new a.context.Event('click'));
+  assert.equal(a.stars[3].attributes['aria-pressed'], 'true');
+  let pending = a.context.submitFeedback();
+  const { url } = respond(a, { success: false, message: 'Save failed' });
+  await pending;
+  assert.equal(url.searchParams.get('action'), 'save');
+  assert.equal(url.searchParams.get('studentClass'), '6');
+  assert.equal(url.searchParams.get('section'), 'A');
+  assert.equal(url.searchParams.get('project'), 'Robot');
+  assert.equal(url.searchParams.get('feedback'), 'Great & clever');
+  assert.equal(url.searchParams.get('language'), 'hi-IN');
+  assert.equal(url.searchParams.get('rating'), '4');
+  assert.equal(a.elements.feedback.value, 'Great & clever');
+  assert.match(a.elements.status.textContent, /Save failed/);
+  pending = a.context.submitFeedback(); respond(a, { success: true }); await pending;
+  assert.equal(a.elements.feedback.value, '');
+  assert.match(a.elements.status.textContent, /saved successfully/);
+  assert.equal(a.stars[3].attributes['aria-pressed'], 'false');
+});
+
+// Run the versioned Apps Script with in-memory services, then execute its real
+// JSONP response in the frontend VM. No Google services are contacted.
+function backend(rows) {
+  const writes = [];
+  let released = false;
+  const projectSheet = rows && { getDataRange: () => ({ getDisplayValues: () => rows }) };
+  const feedbackSheet = { getLastRow: () => writes.length, appendRow: row => writes.push(Array.from(row)) };
+  const context = {
+    ContentService: { MimeType: { JAVASCRIPT: 'javascript' }, createTextOutput: text => ({ text, setMimeType(type) { this.mime = type; return this; } }) },
+    SpreadsheetApp: { openById: () => ({ getSheetByName: name => name === 'Projects' ? projectSheet : feedbackSheet }) },
+    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() { released = true; } }) },
+    LanguageApp: { translate: (text, source, target) => `${source}:${target}:${text}` }
+  };
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync('apps-script/Code.gs', 'utf8'), context);
+  return { context, writes, wasReleased: () => released };
+}
+function serve(a, b) {
+  const tag = a.scripts.at(-1);
+  const params = Object.fromEntries(new URL(tag.src).searchParams);
+  const response = b.context.doGet({ parameter: params });
+  assert.equal(response.mime, 'javascript');
+  vm.runInContext(response.text, a.context);
+  return params;
+}
+
+test('actual backend catalog and save JSONP interoperate with frontend', async () => {
+  const a = app();
+  const b = backend([
+    ['Class/Grade', 'Section', 'Project Name', 'Active'],
+    [' 6 ', 'A', 'Robot', 'YES'], ['6', 'A', 'Robot', ''],
+    ['6', 'B', 'Hidden', 'NO'], ['7', 'B', 'Solar', ''],
+    ['7', '', 'Incomplete', 'TRUE']
+  ]);
+  serve(a, b); await tick();
+  assert.deepEqual(a.elements.studentClass.options.map(o => o.value), ['', '6', '7']);
+  a.elements.studentClass.value = '6'; a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  assert.deepEqual(a.elements.section.options.map(o => o.value), ['', 'A']);
+  a.elements.section.value = 'A'; a.elements.section.dispatchEvent(new a.context.Event('change'));
+  assert.deepEqual(a.elements.project.options.map(o => o.value), ['', 'Robot']);
+  a.elements.project.value = 'Robot'; a.elements.feedback.value = '=great';
+  a.stars[4].dispatchEvent(new a.context.Event('click'));
+  const pending = a.context.submitFeedback();
+  const params = serve(a, b); await pending;
+  assert.equal(params.language, 'hi-IN');
+  assert.deepEqual(b.writes[0], ['Date', 'Project', 'Class', 'Section', 'Original Feedback', 'Rating', 'Language', 'English Translation']);
+  assert.deepEqual(b.writes[1].slice(1), ['Robot', '6', 'A', "'=great", 5, 'hi-IN', 'hi:en:=great']);
+  assert.equal(b.wasReleased(), true);
+  assert.equal(a.elements.feedback.value, '');
+  assert.match(a.elements.status.textContent, /saved successfully/);
+});
+
+test('actual backend reports catalog and save errors through JSONP', async () => {
+  const a = app(); const b = backend(null);
+  serve(a, b); await tick();
+  assert.match(a.elements.catalogStatus.textContent, /Create a sheet tab named "Projects"/);
+  assert.equal(a.elements.submitBtn.disabled, true);
+  const response = b.context.doGet({ parameter: { action: 'save', callback: 'validCallback', rating: '8' } });
+  let result;
+  vm.runInNewContext(response.text, { validCallback: value => { result = value; } });
+  assert.equal(result.success, false);
+  assert.match(result.message, /invalid feedback/);
+  assert.equal(b.writes.length, 0);
+  const invalid = b.context.doGet({ parameter: { action: 'catalog', callback: 'bad.name()' } });
+  assert.match(invalid.text, /^voiceVoteResponse\(/);
+});

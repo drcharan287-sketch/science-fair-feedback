@@ -30,7 +30,7 @@
     if (!grade || !section || !project) {
       throw new Error('Class/Grade, Section, or Project dropdown was not found.');
     }
-    const preserveExistingGrades = config.preserveExistingGrades !== false;
+    const preserveExistingGrades = config.preserveExistingGrades === true;
     const existingGradeValues = Array.from(grade.options)
       .map(function (option) { return option.value.trim(); })
       .filter(Boolean);
@@ -61,12 +61,15 @@
     function setCatalog(entries) {
       if (!Array.isArray(entries)) throw new Error('Project catalog must be an array.');
       catalog = entries.filter(function (entry) {
-        return entry && typeof entry.grade === 'string' && entry.grade.trim() &&
-          typeof entry.section === 'string' && entry.section.trim() &&
-          typeof entry.project === 'string' && entry.project.trim();
+        return entry && ['grade', 'section', 'project'].every(function (key) {
+          return (typeof entry[key] === 'string' || typeof entry[key] === 'number') && String(entry[key]).trim();
+        });
       }).map(function (entry) {
-        return { grade: entry.grade.trim(), section: entry.section.trim(), project: entry.project.trim() };
+        return { grade: String(entry.grade).trim(), section: String(entry.section).trim(), project: String(entry.project).trim() };
       });
+      if (entries.length && !catalog.length) {
+        throw new Error('The Projects catalog has no valid rows. Each row needs grade, section and project fields.');
+      }
 
       const grades = (preserveExistingGrades && existingGradeValues.length)
         ? existingGradeValues : unique(catalog.map(function (entry) { return entry.grade; }));
@@ -103,7 +106,10 @@
             finish(null, payload.projects);
           }
         };
-        script.onerror = function () { finish(new Error('Unable to reach Google Apps Script.')); };
+        script.onerror = function () { finish(new Error('Unable to reach Google Apps Script. Check the web app URL, deployment access and network connection.')); };
+        script.onload = function () {
+          if (!finished) finish(new Error('Apps Script returned no catalog callback. Check that the deployed web app supports action=catalog and JSONP.'));
+        };
         const separator = apiUrl.includes('?') ? '&' : '?';
         script.src = apiUrl + separator + 'action=catalog&callback=' + encodeURIComponent(name);
         document.head.appendChild(script);
@@ -112,6 +118,7 @@
 
     grade.addEventListener('change', updateSections);
     section.addEventListener('change', updateProjects);
+    grade.disabled = true;
     resetSelect(section, 'Select class/grade first', []);
     resetSelect(project, 'Select class/grade and section first', []);
     setStatus('Loading projects…');
