@@ -151,7 +151,7 @@
       setStatus('Missing Apps Script URL.');
       return Promise.reject(new Error('Pass apiUrl or catalog to VoiceVoteCatalogSelector.init.'));
     }
-    const request = config.snapshotUrl
+    const request = (config.snapshotUrl && typeof global.fetch === 'function')
       ? loadSnapshot(config.snapshotUrl).catch(function(snapshotError) {
           setStatus('Local project list unavailable; checking Google Apps Script…');
           return loadCatalog(config.apiUrl);
