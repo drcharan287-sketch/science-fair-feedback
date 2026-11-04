@@ -5,7 +5,9 @@ const vm = require('node:vm');
 
 function app(fetchProjects) {
   class Element {
-    constructor() { this.options = []; this.value = ''; this.disabled = false; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.classList = { toggle() {}, remove() {} }; }
+    constructor() { this.options = []; this.value = ''; this.disabled = false; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.children = []; this.style = {}; this.classList = { toggle() {}, remove() {} }; }
+    appendChild(child) { this.children.push(child); }
+    submit() { this.submitted = true; }
     add(option) { this.options.push(option); }
     replaceChildren() { this.options = []; this.value = ''; }
     addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
@@ -18,12 +20,15 @@ function app(fetchProjects) {
   elements.submitBtn.disabled = true;
   const stars = Array.from({ length: 5 }, (_, i) => { const e = new Element(); e.dataset.value = String(i + 1); return e; });
   const scripts = [];
+  const forms = [];
   const document = {
     querySelector: s => elements[s.slice(1)], getElementById: id => elements[id],
     querySelectorAll: s => s === '.star' ? stars : [],
-    createElement: () => new Element(), head: { appendChild: tag => scripts.push(tag) }
+    createElement: () => new Element(), head: { appendChild: tag => scripts.push(tag) },
+    body: { appendChild: node => forms.push(node) }
   };
-  const context = { document, console: { error() {} }, URLSearchParams, Option: function(text, value) { this.textContent = text; this.value = value; }, Event: function(type) { this.type = type; }, setTimeout, clearTimeout };
+  const context = { document, console: { error() {} }, URLSearchParams, Option: function(text, value) { this.textContent = text; this.value = value; }, Event: function(type) { this.type = type; }, setTimeout, clearTimeout,
+    crypto: { randomUUID: () => '123e4567-e89b-42d3-a456-426614174000', getRandomValues: a => a.fill(7) } };
   context.window = context;
   if (fetchProjects) context.fetch = fetchProjects;
   context.location = { reload() { context.__reloaded = true; } };
@@ -31,7 +36,7 @@ function app(fetchProjects) {
   vm.runInContext(fs.readFileSync('voicevote-catalog.js', 'utf8'), context);
   const html = fs.readFileSync('index.html', 'utf8');
   vm.runInContext(html.match(/<script>\s*([\s\S]*?)<\/script>/)[1], context);
-  return { context, elements, stars, scripts };
+  return { context, elements, stars, scripts, forms };
 }
 function respond(app, payload) {
   const tag = app.scripts.at(-1);
@@ -84,7 +89,7 @@ test('catalog errors leave submission disabled with actionable status', async ()
   }
 });
 
-test('save uses existing JSONP fields, preserves feedback on failure, and clears only on confirmation', async () => {
+test('browser sends one secure POST form with all feedback fields, not a JSONP GET URL', async () => {
   const a = app();
   respond(a, { success: true, projects: [{ grade: '6', section: 'A', project: 'Robot' }] }); await tick();
   a.elements.studentClass.value = '6'; a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
@@ -92,22 +97,29 @@ test('save uses existing JSONP fields, preserves feedback on failure, and clears
   a.elements.project.value = 'Robot'; a.elements.feedback.value = 'Great & clever';
   a.stars[3].dispatchEvent(new a.context.Event('click'));
   assert.equal(a.stars[3].attributes['aria-pressed'], 'true');
-  let pending = a.context.submitFeedback();
-  const { url } = respond(a, { success: false, message: 'Save failed' });
-  await pending;
-  assert.equal(url.searchParams.get('action'), 'save');
-  assert.equal(url.searchParams.get('studentClass'), '6');
-  assert.equal(url.searchParams.get('section'), 'A');
-  assert.equal(url.searchParams.get('project'), 'Robot');
-  assert.equal(url.searchParams.get('feedback'), 'Great & clever');
-  assert.equal(url.searchParams.get('language'), 'hi-IN');
-  assert.equal(url.searchParams.get('rating'), '4');
-  assert.equal(a.elements.feedback.value, 'Great & clever');
-  assert.match(a.elements.status.textContent, /Save failed/);
-  pending = a.context.submitFeedback(); respond(a, { success: true }); await pending;
-  assert.equal(a.elements.feedback.value, '');
-  assert.match(a.elements.status.textContent, /saved successfully/);
-  assert.equal(a.stars[3].attributes['aria-pressed'], 'false');
+  a.context.submitFeedback();
+  assert.equal(a.forms.length, 1);
+  const form = a.forms[0];
+  assert.equal(form.method, 'POST');
+  assert.equal(form.target, '_self');
+  assert.match(form.action, /\/exec$/);
+  assert.equal(form.submitted, true);
+  const fields = Object.fromEntries(form.children.map(x => [x.name, x.value]));
+  assert.deepEqual(fields, {
+    action: 'save',
+    submissionId: '123e4567-e89b-42d3-a456-426614174000',
+    studentClass: '6',
+    section: 'A',
+    project: 'Robot',
+    language: 'hi-IN',
+    feedback: 'Great & clever',
+    rating: '4'
+  });
+  assert.equal(a.scripts.length, 1, 'Only the earlier read-only catalog JSONP tag should exist');
+  assert.equal(a.elements.feedback.value, 'Great & clever', 'Browser must not clear content before a server receipt');
+  assert.equal(a.elements.submitBtn.disabled, true);
+  a.context.submitFeedback();
+  assert.equal(a.forms.length, 1, 'Repeated clicks while navigating may not send duplicates');
 });
 
 // Run the versioned Apps Script with in-memory services, then execute its real
@@ -160,14 +172,15 @@ test('actual backend catalog and save JSONP interoperate with frontend', async (
   assert.deepEqual(a.elements.project.options.map(o => o.value), ['', 'Robot']);
   a.elements.project.value = 'Robot'; a.elements.feedback.value = '=great';
   a.stars[4].dispatchEvent(new a.context.Event('click'));
-  const pending = a.context.submitFeedback();
-  const params = serve(a, b); await pending;
+  a.context.submitFeedback();
+  const params = Object.fromEntries(a.forms[0].children.map(x => [x.name, x.value]));
+  const receipt = b.context.doPost({ parameter: params });
+  assert.match(receipt.html, /Thank you! Feedback saved/);
   assert.equal(params.language, 'hi-IN');
   assert.deepEqual(b.writes[0], ['Date', 'Project', 'Class', 'Section', 'Original Feedback', 'Rating', 'Language', 'English Translation']);
   assert.deepEqual(b.writes[1].slice(1), ['Robot', '6', 'A', "'=great", 5, 'hi-IN', 'hi:en:=great']);
   assert.equal(b.wasReleased(), true);
-  assert.equal(a.elements.feedback.value, '');
-  assert.match(a.elements.status.textContent, /saved successfully/);
+  assert.equal(a.elements.feedback.value, '=great', 'Data remains until the browser navigates to the receipt');
 });
 
 test('actual backend reports catalog and save errors through JSONP', async () => {
