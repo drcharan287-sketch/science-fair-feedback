@@ -250,7 +250,8 @@ button:hover {
     Submit Feedback →
   </button>
 
-  <div id="status"></div>
+  <div id="status" role="status" aria-live="polite"></div>
+  <p id="receiptHint" style="margin-top:10px;font-size:12px;color:#cbd5e1;text-align:center;">After submitting, Google displays a confirmation receipt. Return here to give more feedback.</p>
 
   <div class="footer">
     VoiceVote • Smart Science Fair Feedback System
@@ -394,101 +395,80 @@ function stopRecording() {
   if (recognition && isRecording) recognition.stop();
 }
 
-// The supplied Apps Script source exposes doGet(action=save) with a JSONP callback,
-// NOT a JSON POST endpoint. Wait for an explicit success response before clearing.
-function saveFeedback(data) {
-  return new Promise(function(resolve, reject) {
-    const callback = "voiceVoteSave_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
-    const tag = document.createElement("script");
-    let settled = false;
-    const timer = setTimeout(function() {
-      finish(new Error("No save confirmation received. Check the Feedback sheet before retrying; the first request may have been saved."));
-    }, 30000);
-
-    function finish(error, response) {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      delete window[callback];
-      tag.remove();
-      if (error) reject(error);
-      else resolve(response);
-    }
-
-    window[callback] = function(response) {
-      if (response && response.success === true) finish(null, response);
-      else finish(new Error((response && response.message) || "The backend did not confirm the save."));
-    };
-    tag.onerror = function() { finish(new Error("Cannot reach Apps Script. Check the Feedback sheet before retrying; the request may have been saved.")); };
-    tag.onload = function() {
-      if (!settled) finish(new Error("Apps Script returned no valid save confirmation. Check the Feedback sheet before retrying; the request may have been saved."));
-    };
-
-    const params = new URLSearchParams({
-      action: "save",
-      studentClass: data.studentClass,
-      section: data.section,
-      project: data.project,
-      feedback: data.feedback,
-      language: data.language,
-      rating: String(data.rating),
-      callback: callback
-    });
-    const connector = SCRIPT_URL.includes("?") ? "&" : "?";
-    tag.src = SCRIPT_URL.trim() + connector + params.toString();
-    document.head.appendChild(tag);
-  });
+// Browser cross-origin JSONP save requests can fail AFTER the backend has
+// already written a Feedback row. A normal top-level HTTPS form POST avoids
+// cross-origin JavaScript entirely and displays an authoritative server receipt.
+function secureSubmissionId() {
+  if (!window.crypto || typeof window.crypto.getRandomValues !== 'function') {
+    throw new Error('This browser cannot generate a secure submission ID. Try an updated browser.');
+  }
+  if (typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+  const bytes = window.crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, function(byte) { return byte.toString(16).padStart(2, '0'); }).join('');
+  return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) +
+    '-' + hex.slice(16, 20) + '-' + hex.slice(20);
 }
 
-async function submitFeedback() {
+function submitFeedback() {
   if (isSubmitting) return;
   const data = {
     studentClass: classSelect.value,
     section: sectionSelect.value,
     project: projectSelect.value,
-    language: document.getElementById("language").value,
-    feedback: document.getElementById("feedback").value.trim(),
+    language: document.getElementById('language').value,
+    feedback: document.getElementById('feedback').value.trim(),
     rating: rating
   };
 
   if (!catalogReady) {
-    statusElement.textContent = "The project list is not ready. Check the project status above.";
+    statusElement.textContent = 'The project list is not ready. Check the project status above.';
     return;
   }
   if (!data.studentClass || !data.section || !data.project || !data.feedback || !data.rating) {
-    statusElement.textContent = "Please choose a class, section and project, enter feedback, and select a star rating.";
+    statusElement.textContent = 'Please choose a class, section and project, enter feedback, and select a star rating.';
     return;
   }
   if (!hasValidWebAppUrl()) {
-    statusElement.textContent = "Please configure the Apps Script /exec URL first.";
+    statusElement.textContent = 'The Google Apps Script web app URL is not configured correctly.';
     return;
   }
 
-  isSubmitting = true;
-  stopRecording();
-  submitButton.disabled = true;
-  submitButton.textContent = "Submitting...";
-  statusElement.textContent = "Saving feedback…";
-
   try {
-    await saveFeedback(data);
-    statusElement.textContent = "Thank you! Your feedback was saved successfully.";
-    document.getElementById("feedback").value = "";
-    classSelect.value = "";
-    classSelect.dispatchEvent(new Event("change", { bubbles: true }));
-    rating = 0;
-    document.querySelectorAll(".star").forEach(function(star) {
-      star.classList.remove("active");
-      star.setAttribute("aria-pressed", "false");
+    // No feedback text goes into the URL. Navigate to a genuine Google-hosted
+    // HTML receipt so browser CORS/JSONP blockers cannot hide the save result.
+    const id = secureSubmissionId();
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = SCRIPT_URL.trim();
+    form.target = '_self';
+    form.style.display = 'none';
+    const fields = Object.assign({ action: 'save', submissionId: id }, data);
+    Object.keys(fields).forEach(function(name) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = String(fields[name]);
+      form.appendChild(input);
     });
+    document.body.appendChild(form);
+
+    isSubmitting = true;
+    stopRecording();
+    submitButton.disabled = true;
+    submitButton.textContent = 'Opening confirmation…';
+    statusElement.textContent =
+      'Opening Google confirmation page. Do not submit again unless it confirms an error.';
+    form.submit();
   } catch (error) {
-    statusElement.textContent = "Submission not confirmed: " + error.message;
-  } finally {
     isSubmitting = false;
-    submitButton.disabled = !catalogReady;
-    submitButton.textContent = "Submit Feedback →";
+    submitButton.disabled = false;
+    submitButton.textContent = 'Submit Feedback →';
+    statusElement.textContent = 'Could not open the confirmation page: ' + error.message;
   }
 }
+
 </script>
 
 </body>
