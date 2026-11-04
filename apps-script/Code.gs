@@ -22,6 +22,54 @@ function doGet(e) {
   if (params.action !== 'save') {
     return ContentService.createTextOutput('VoiceVote is running.');
   }
+  return jsonpResponse_(saveFeedback_(params), params.callback);
+}
+
+function doPost(e) {
+  const params = (e && e.parameter) || {};
+  if (params.action === 'probe') {
+    return HtmlService.createHtmlOutput(
+      '<!doctype html><html><head><meta charset="utf-8"><title>VoiceVote probe</title></head>' +
+      '<body><h1 id="voiceVoteProbe">VoiceVote POST connection ready</h1></body></html>'
+    );
+  }
+  if (params.action !== 'save') {
+    return HtmlService.createHtmlOutput('<h1>Unsupported request</h1>');
+  }
+  // For POST, require a unique request ID to protect against double submission.
+  if (!/^[a-f0-9-]{36}$/i.test(String(params.submissionId || ''))) {
+    return voiceVoteReceipt_({ success: false, message: 'Invalid submission ID.' });
+  }
+  return voiceVoteReceipt_(saveFeedback_(params));
+}
+
+/** A top-level HTML receipt avoids browser-blocked cross-origin JSONP callbacks.
+ *  Submitted text travels in an HTTPS POST body, not a GET URL. */
+function voiceVoteReceipt_(result) {
+  const success = result && result.success === true;
+  const title = success ? 'Thank you! Feedback saved.' : 'Feedback not confirmed';
+  const explanation = success
+    ? (result.duplicate ? 'Your feedback was previously saved; no duplicate was added.' :
+        'Your feedback was saved successfully in VoiceVote.')
+    : 'The save could not be confirmed. Do not resubmit immediately; ask the science fair organizer to check the Feedback sheet.';
+  const pageUrl = 'https://drcharan287-sketch.github.io/science-fair-feedback/';
+  const html = '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<title>VoiceVote feedback receipt</title><style>' +
+    'body{box-sizing:border-box;min-height:100vh;margin:0;padding:32px 15px;' +
+    'background:linear-gradient(135deg,#08152e,#102b50,#075985);font:16px Arial,sans-serif;color:white;}' +
+    'main{max-width:560px;margin:10vh auto;padding:36px;border-radius:22px;' +
+    'background:#203857;border:1px solid #ffffff30;text-align:center;}' +
+    'h1{font-size:26px;color:#67e8f9;}p{line-height:1.6}a{display:inline-block;' +
+    'margin-top:20px;padding:14px 22px;border-radius:10px;color:white;' +
+    'background:#0891b2;text-decoration:none;font-weight:bold}</style></head>' +
+    '<body><main><h1 id="voiceVoteReceipt">' + title + '</h1><p>' + explanation + '</p>' +
+    '<a href="' + pageUrl + '" target="_top" rel="noopener">Return to VoiceVote</a>' +
+    '</main></body></html>';
+  return HtmlService.createHtmlOutput(html).setTitle('VoiceVote feedback receipt');
+}
+
+function saveFeedback_(params) {
   let result;
   try {
     const project = String(params.project || '').trim();
@@ -41,6 +89,17 @@ function doGet(e) {
     const lock = LockService.getScriptLock();
     lock.waitLock(15000);
     try {
+      // POST requests use a browser-generated ID so accidental retries do not
+      // append the same feedback twice. Legacy GET requests remain compatible.
+      const submissionId = String(params.submissionId || '').trim();
+      if (submissionId && !/^[a-f0-9-]{36}$/i.test(submissionId)) {
+        throw new Error('Invalid submission ID.');
+      }
+      const props = submissionId ? PropertiesService.getScriptProperties() : null;
+      const key = submissionId ? 'vv:' + submissionId : '';
+      if (props && props.getProperty(key)) {
+        return { success: true, duplicate: true, message: 'This feedback was already saved.' };
+      }
       const headers = [
         'Date', 'Project', 'Class', 'Section', 'Original Feedback',
         'Rating', 'Language', 'English Translation'
@@ -67,6 +126,7 @@ function doGet(e) {
         safeSheetText_(section), safeSheetText_(feedback), rating,
         safeSheetText_(language), safeSheetText_(translation)
       ]);
+      if (props) props.setProperty(key, String(Date.now()));
     } finally {
       lock.releaseLock();
     }
@@ -74,7 +134,7 @@ function doGet(e) {
   } catch (error) {
     result = { success: false, message: error.message };
   }
-  return jsonpResponse_(result, params.callback);
+  return result;
 }
 /** Read public catalog rows; blank Active values count as active. */
 function readProjectCatalog_() {
