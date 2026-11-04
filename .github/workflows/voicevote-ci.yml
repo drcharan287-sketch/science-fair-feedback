@@ -21,4 +21,6 @@ jobs:
         with:
           node-version: '22'
       - name: Run frontend / backend contract tests
-        run: node --test
+        run: |
+          node --test
+          node --check scripts/smoke-catalog.mjs
