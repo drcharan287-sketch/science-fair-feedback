@@ -49,3 +49,25 @@ jobs:
           test -s "$RUNNER_TEMP/voicevote-live/Code.gs" || { echo 'Backend Code.gs was not returned' >&2; exit 1; }
           test -s "$RUNNER_TEMP/voicevote-live/appsscript.json" || { echo 'Manifest was not returned' >&2; exit 1; }
           echo 'Authorized Google Apps Script access verified; project files retrieved read-only.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify published catalog without submitting feedback (read-only)
+        run: |
+          node <<'NODE'
+          const id = process.env.DEPLOYMENT_ID;
+          const url = new URL('https://script.google.com/macros/s/' + id + '/exec');
+          url.searchParams.set('action', 'catalog');
+          url.searchParams.set('callback', 'voiceVoteCheck');
+          (async () => {
+            const result = await fetch(url, {redirect:'follow',signal:AbortSignal.timeout(25000)});
+            if (!result.ok) throw Error('Published catalog returned HTTP ' + result.status);
+            const body = (await result.text()).trim();
+            const match = /^voiceVoteCheck\(([\s\S]*?)\);?$/.exec(body);
+            if (!match) throw Error('Published catalog did not return the expected JSONP callback');
+            const payload = JSON.parse(match[1]);
+            if (!payload || payload.success !== true || !Array.isArray(payload.projects)) {
+              throw Error('Published catalog returned an error: ' + (payload && payload.message || 'unexpected response'));
+            }
+            if (!payload.projects.length) throw Error('Published catalog contains no active projects');
+            console.log('Live catalog read-only check passed: ' + payload.projects.length + ' projects.');
+          })().catch(e => { console.error(e.message); process.exitCode = 1; });
+          NODE
+
