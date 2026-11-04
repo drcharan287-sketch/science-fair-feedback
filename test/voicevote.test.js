@@ -252,7 +252,7 @@ test('secure POST probe makes no writes and duplicate POSTs append only once', (
   assert.match(first.html, /Thank you! Feedback saved/);
   assert.equal(b.writes.length, 2);
   const second = b.context.doPost({ parameter: params });
-  assert.match(second.html, /already saved; no duplicate/);
+  assert.match(second.html, /previously saved; no duplicate was added/);
   assert.equal(b.writes.length, 2);
   assert.equal(b.wasReleased(), true);
 
