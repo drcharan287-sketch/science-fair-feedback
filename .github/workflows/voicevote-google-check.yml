@@ -1,0 +1,51 @@
+name: VoiceVote Google connection check (read-only)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/voicevote-google-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  google-connection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: voicevote-production
+    env:
+      SCRIPT_ID: ${{ vars.APPS_SCRIPT_ID }}
+      DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
+      CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+    steps:
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Google clasp
+        run: npm install --global @google/clasp@3.4.1
+      - name: Check credentials and pull remote source (read-only)
+        run: |
+          set -euo pipefail
+          for key in SCRIPT_ID DEPLOYMENT_ID CLASPRC_JSON; do
+            test -n "${!key}" || { echo "Missing $key in voicevote-production" >&2; exit 1; }
+          done
+          for id in "$SCRIPT_ID" "$DEPLOYMENT_ID"; do
+            [[ "$id" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo 'Invalid identifier' >&2; exit 1; }
+          done
+          umask 077
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          node -e 'JSON.parse(require("fs").readFileSync(process.env.HOME+"/.clasprc.json","utf8"))'
+          clasp list-deployments "$SCRIPT_ID" > "$RUNNER_TEMP/voicevote-deployments.txt"
+          if ! grep -Fq "$DEPLOYMENT_ID" "$RUNNER_TEMP/voicevote-deployments.txt"; then
+            echo 'Deployment ID not found in configured Apps Script project' >&2
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/voicevote-live"
+          node -e 'require("fs").writeFileSync(process.env.RUNNER_TEMP+"/voicevote-live/.clasp.json", JSON.stringify({scriptId:process.env.SCRIPT_ID}))'
+          (cd "$RUNNER_TEMP/voicevote-live" && clasp pull)
+          test -s "$RUNNER_TEMP/voicevote-live/Code.gs" || { echo 'Backend Code.gs was not returned' >&2; exit 1; }
+          test -s "$RUNNER_TEMP/voicevote-live/appsscript.json" || { echo 'Manifest was not returned' >&2; exit 1; }
+          echo 'Authorized Google Apps Script access verified; project files retrieved read-only.' >> "$GITHUB_STEP_SUMMARY"
