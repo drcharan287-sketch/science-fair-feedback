@@ -7,6 +7,15 @@ on:
       - 'apps-script/**'
       - '.github/workflows/deploy-apps-script.yml'
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Verify Google connection without writing, or deploy explicitly'
+        type: choice
+        required: true
+        default: verify
+        options:
+          - verify
+          - deploy
 
 permissions:
   contents: read
@@ -16,23 +25,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  verify-and-deploy:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: voicevote-production
     steps:
-      - name: Check out repository
+      - name: Check out source
         uses: actions/checkout@v4
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Run contract tests
+      - name: Test frontend and backend contract
         run: node --test
       - name: Install clasp
         run: npm install --global @google/clasp@3.4.1
-      - name: Validate configuration
+      - name: Check required GitHub environment settings
         env:
           SCRIPT_ID: ${{ vars.APPS_SCRIPT_ID }}
           DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
@@ -47,9 +56,10 @@ jobs:
             [[ "$id" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo 'Invalid identifier format' >&2; exit 1; }
           done
           printf '%s' "$CLASPRC_JSON" | node -e 'let s="";process.stdin.on("data",x=>s+=x).on("end",()=>JSON.parse(s))'
-      - name: Authenticate and retrieve existing project
+      - name: Authenticate and inspect existing Apps Script (read-only)
         env:
           SCRIPT_ID: ${{ vars.APPS_SCRIPT_ID }}
+          DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
         run: |
           set -euo pipefail
@@ -57,11 +67,21 @@ jobs:
           printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
           mkdir -p .voicevote-live
           node -e 'require("fs").writeFileSync(".voicevote-live/.clasp.json", JSON.stringify({scriptId:process.env.SCRIPT_ID}))'
+
+          # Refuse to target the wrong deployment. No changes to Google yet.
+          clasp list-deployments "$SCRIPT_ID" > .voicevote-deployments.txt
+          if ! grep -Fq -- "$DEPLOYMENT_ID" .voicevote-deployments.txt; then
+            echo 'Configured deployment ID is not associated with the configured Apps Script project' >&2
+            exit 1
+          fi
+
           (cd .voicevote-live && clasp pull)
-          # Preserve live Index.html and manifest instead of deleting them with a partial push.
           test -s .voicevote-live/Code.gs || { echo 'Live Code.gs missing; refusing to deploy' >&2; exit 1; }
           test -s .voicevote-live/appsscript.json || { echo 'Live manifest missing; refusing to deploy' >&2; exit 1; }
-      - name: Overlay versioned backend
+          test -s .voicevote-live/Index.html || { echo 'Live Index.html missing; refusing to deploy' >&2; exit 1; }
+          echo 'Google authorization, script ID, existing deployment, and live source files verified.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Overlay version-controlled backend (after verification)
+        if: github.event_name == 'push' || inputs.mode == 'deploy'
         env:
           SHEET_ID: ${{ secrets.VOICEVOTE_SPREADSHEET_ID }}
         run: |
@@ -69,11 +89,13 @@ jobs:
           const fs = require('node:fs');
           const source = fs.readFileSync('apps-script/Code.gs','utf8');
           const marker = "'YOUR_SPREADSHEET_ID'";
-          if (!source.includes(marker)) throw Error('Backend placeholder missing; review Code.gs');
+          if (source.split(marker).length !== 2) throw Error('Expected exactly one backend spreadsheet placeholder');
           if (!/^[a-zA-Z0-9_-]+$/.test(process.env.SHEET_ID || '')) throw Error('Invalid spreadsheet ID');
+          // Only Code.gs changes. Preserve the fetched manifest, Index.html and other live files.
           fs.writeFileSync('.voicevote-live/Code.gs', source.replace(marker, JSON.stringify(process.env.SHEET_ID)));
           NODE
-      - name: Push and update existing deployment
+      - name: Push source and update existing deployment
+        if: github.event_name == 'push' || inputs.mode == 'deploy'
         env:
           DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
         run: |
@@ -81,6 +103,11 @@ jobs:
           cd .voicevote-live
           clasp push --force
           clasp update-deployment "$DEPLOYMENT_ID"
-      - name: Summary
-        run: |
-          echo 'Updated existing VoiceVote Apps Script deployment. Verify the hosted catalog and feedback flow.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Read-only smoke test of deployed catalog
+        if: github.event_name == 'push' || inputs.mode == 'deploy'
+        env:
+          DEPLOYMENT_ID: ${{ vars.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: node scripts/smoke-catalog.mjs
+      - name: Verification-only summary
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'verify'
+        run: echo 'Read-only verification passed. No Google files, versions or deployments were modified.' >> "$GITHUB_STEP_SUMMARY"
