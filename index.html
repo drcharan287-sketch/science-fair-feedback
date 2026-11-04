@@ -364,7 +364,7 @@ function stopRecording() {
   if (recognition && isRecording) recognition.stop();
 }
 
-// The deployed Apps Script exposes doGet(action=save) with a JSONP callback,
+// The supplied Apps Script source exposes doGet(action=save) with a JSONP callback,
 // NOT a JSON POST endpoint. Wait for an explicit success response before clearing.
 function saveFeedback(data) {
   return new Promise(function(resolve, reject) {

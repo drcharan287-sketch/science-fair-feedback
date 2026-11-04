@@ -102,3 +102,70 @@ test('save uses existing JSONP fields, preserves feedback on failure, and clears
   assert.equal(a.elements.feedback.value, '');
   assert.match(a.elements.status.textContent, /saved successfully/);
 });
+
+// Run the versioned Apps Script with in-memory services, then execute its real
+// JSONP response in the frontend VM. No Google services are contacted.
+function backend(rows) {
+  const writes = [];
+  let released = false;
+  const projectSheet = rows && { getDataRange: () => ({ getDisplayValues: () => rows }) };
+  const feedbackSheet = { getLastRow: () => writes.length, appendRow: row => writes.push(Array.from(row)) };
+  const context = {
+    ContentService: { MimeType: { JAVASCRIPT: 'javascript' }, createTextOutput: text => ({ text, setMimeType(type) { this.mime = type; return this; } }) },
+    SpreadsheetApp: { openById: () => ({ getSheetByName: name => name === 'Projects' ? projectSheet : feedbackSheet }) },
+    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() { released = true; } }) },
+    LanguageApp: { translate: (text, source, target) => `${source}:${target}:${text}` }
+  };
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync('apps-script/Code.gs', 'utf8'), context);
+  return { context, writes, wasReleased: () => released };
+}
+function serve(a, b) {
+  const tag = a.scripts.at(-1);
+  const params = Object.fromEntries(new URL(tag.src).searchParams);
+  const response = b.context.doGet({ parameter: params });
+  assert.equal(response.mime, 'javascript');
+  vm.runInContext(response.text, a.context);
+  return params;
+}
+
+test('actual backend catalog and save JSONP interoperate with frontend', async () => {
+  const a = app();
+  const b = backend([
+    ['Class/Grade', 'Section', 'Project Name', 'Active'],
+    [' 6 ', 'A', 'Robot', 'YES'], ['6', 'A', 'Robot', ''],
+    ['6', 'B', 'Hidden', 'NO'], ['7', 'B', 'Solar', ''],
+    ['7', '', 'Incomplete', 'TRUE']
+  ]);
+  serve(a, b); await tick();
+  assert.deepEqual(a.elements.studentClass.options.map(o => o.value), ['', '6', '7']);
+  a.elements.studentClass.value = '6'; a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  assert.deepEqual(a.elements.section.options.map(o => o.value), ['', 'A']);
+  a.elements.section.value = 'A'; a.elements.section.dispatchEvent(new a.context.Event('change'));
+  assert.deepEqual(a.elements.project.options.map(o => o.value), ['', 'Robot']);
+  a.elements.project.value = 'Robot'; a.elements.feedback.value = '=great';
+  a.stars[4].dispatchEvent(new a.context.Event('click'));
+  const pending = a.context.submitFeedback();
+  const params = serve(a, b); await pending;
+  assert.equal(params.language, 'hi-IN');
+  assert.deepEqual(b.writes[0], ['Date', 'Project', 'Class', 'Section', 'Original Feedback', 'Rating', 'Language', 'English Translation']);
+  assert.deepEqual(b.writes[1].slice(1), ['Robot', '6', 'A', "'=great", 5, 'hi-IN', 'hi:en:=great']);
+  assert.equal(b.wasReleased(), true);
+  assert.equal(a.elements.feedback.value, '');
+  assert.match(a.elements.status.textContent, /saved successfully/);
+});
+
+test('actual backend reports catalog and save errors through JSONP', async () => {
+  const a = app(); const b = backend(null);
+  serve(a, b); await tick();
+  assert.match(a.elements.catalogStatus.textContent, /Create a sheet tab named "Projects"/);
+  assert.equal(a.elements.submitBtn.disabled, true);
+  const response = b.context.doGet({ parameter: { action: 'save', callback: 'validCallback', rating: '8' } });
+  let result;
+  vm.runInNewContext(response.text, { validCallback: value => { result = value; } });
+  assert.equal(result.success, false);
+  assert.match(result.message, /invalid feedback/);
+  assert.equal(b.writes.length, 0);
+  const invalid = b.context.doGet({ parameter: { action: 'catalog', callback: 'bad.name()' } });
+  assert.match(invalid.text, /^voiceVoteResponse\(/);
+});
