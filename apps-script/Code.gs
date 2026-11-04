@@ -28,10 +28,18 @@ function doGet(e) {
 function doPost(e) {
   const params = (e && e.parameter) || {};
   if (params.action === 'probe') {
-    return HtmlService.createHtmlOutput(
-      '<!doctype html><html><head><meta charset="utf-8"><title>VoiceVote probe</title></head>' +
-      '<body><h1 id="voiceVoteProbe">VoiceVote POST connection ready</h1></body></html>'
-    );
+    // Read-only permission and layout check: no Feedback row is appended.
+    try {
+      PropertiesService.getScriptProperties().getProperty('voicevote_probe');
+      const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('Feedback');
+      if (!sheet) throw new Error('Feedback sheet unavailable');
+      return HtmlService.createHtmlOutput(
+        '<!doctype html><html><head><meta charset="utf-8"><title>VoiceVote probe</title></head>' +
+        '<body><h1 id="voiceVoteProbe">VoiceVote POST connection ready</h1></body></html>'
+      );
+    } catch (error) {
+      return HtmlService.createHtmlOutput('<h1>VoiceVote POST probe failed</h1>');
+    }
   }
   if (params.action !== 'save') {
     return HtmlService.createHtmlOutput('<h1>Unsupported request</h1>');
