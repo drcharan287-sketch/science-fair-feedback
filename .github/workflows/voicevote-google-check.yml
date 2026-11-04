@@ -46,7 +46,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/voicevote-live"
           node -e 'require("fs").writeFileSync(process.env.RUNNER_TEMP+"/voicevote-live/.clasp.json", JSON.stringify({scriptId:process.env.SCRIPT_ID}))'
           (cd "$RUNNER_TEMP/voicevote-live" && clasp pull)
-          test -s "$RUNNER_TEMP/voicevote-live/Code.gs" || { echo 'Backend Code.gs was not returned' >&2; exit 1; }
+          test -s "$RUNNER_TEMP/voicevote-live/Code.js" || { echo 'Backend Code.js was not returned' >&2; exit 1; }
           test -s "$RUNNER_TEMP/voicevote-live/appsscript.json" || { echo 'Manifest was not returned' >&2; exit 1; }
           echo 'Authorized Google Apps Script access verified; project files retrieved read-only.' >> "$GITHUB_STEP_SUMMARY"
       - name: Verify published catalog without submitting feedback (read-only)
