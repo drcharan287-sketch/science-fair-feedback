@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -72,6 +71,18 @@ select:focus, textarea:focus {
 select option {
   background: #102b50;
   color: white;
+}
+
+select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+#catalogStatus {
+  color: #cbd5e1;
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 textarea {
@@ -177,19 +188,15 @@ button:hover {
   </select>
 
   <label for="section">Select Section</label>
-  <select id="section">
-    <option value="">Choose Section</option>
+  <select id="section" disabled>
+    <option value="">Select class first</option>
   </select>
 
   <label for="project">Select Project</label>
-  <select id="project">
-    <option value="">Choose Project</option>
-    <option>Solar Energy Model</option>
-    <option>Rainwater Harvesting</option>
-    <option>Smart Irrigation System</option>
-    <option>Water Purification</option>
-    <option>Electricity Generation</option>
+  <select id="project" disabled>
+    <option value="">Select class and section first</option>
   </select>
+  <p id="catalogStatus" role="status" aria-live="polite">Loading available projects…</p>
 
   <label for="language">Feedback Language</label>
   <select id="language">
@@ -219,7 +226,7 @@ button:hover {
     <span class="star" data-value="5">★</span>
   </div>
 
-  <button class="submit" id="submitBtn" onclick="submitFeedback()">
+  <button class="submit" id="submitBtn" onclick="submitFeedback()" disabled>
     Submit Feedback →
   </button>
 
@@ -231,166 +238,222 @@ button:hover {
 
 </div>
 
+<script src="voicevote-catalog.js"></script>
 <script>
-const SCRIPT_URL = "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
-
-const sections = {
-  "6": ["A","B","C"],
-  "7": ["A","B","C"],
-  "8": ["A","B","C"],
-  "9": ["A","B","C"],
-  "10": ["A","B","C"]
-};
+// 1. Replace this placeholder with the Google Apps Script WEB APP /exec URL.
+//    Do NOT use the Deployment ID, Library URL, Apps Script editor URL or Google Sheet URL.
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxk-Ex6bd0l3V9fiUrPoCGVHNmkUAm_4yY7xlGLHWFRZBSn6lCo0Pw0vZ0C-vgyIC26/exec";
 
 const classSelect = document.getElementById("studentClass");
 const sectionSelect = document.getElementById("section");
+const projectSelect = document.getElementById("project");
+const submitButton = document.getElementById("submitBtn");
+const statusElement = document.getElementById("status");
+const catalogStatus = document.getElementById("catalogStatus");
 
-classSelect.addEventListener("change", function() {
-  sectionSelect.innerHTML = '<option value="">Choose Section</option>';
+function hasValidWebAppUrl() {
+  return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(SCRIPT_URL.trim());
+}
 
-  (sections[this.value] || []).forEach(function(section) {
-    const option = document.createElement("option");
-    option.value = section;
-    option.textContent = "Section " + section;
-    sectionSelect.appendChild(option);
+// Preserve the application's familiar "Class 6", "Class 7", etc. labels.
+function updateGradeLabels() {
+  Array.from(classSelect.options).forEach(function(option) {
+    if (/^\d+$/.test(option.value)) option.textContent = "Class " + option.value;
   });
-});
+}
+
+// Friendly "Section A" labels when the roster uses simple A/B/C values.
+// Keep raw option values exactly as they appear in the Projects sheet.
+function updateSectionLabels() {
+  Array.from(sectionSelect.options).forEach(function(option) {
+    if (/^[A-Za-z]$/.test(option.value)) option.textContent = "Section " + option.value.toUpperCase();
+  });
+}
+
+let catalogReady = false;
+function startCatalog() {
+  if (!hasValidWebAppUrl()) {
+    catalogStatus.textContent = "Setup needed: paste the Google Apps Script Web app /exec URL into index.html.";
+    return;
+  }
+  if (!window.VoiceVoteCatalogSelector) {
+    catalogStatus.textContent = "Could not load voicevote-catalog.js. Check that it is beside index.html.";
+    return;
+  }
+  VoiceVoteCatalogSelector.init({
+    apiUrl: SCRIPT_URL.trim(),
+    gradeSelector: "#studentClass",
+    sectionSelector: "#section",
+    projectSelector: "#project",
+    statusSelector: "#catalogStatus",
+    preserveExistingGrades: true
+  }).then(function() {
+    catalogReady = true;
+    submitButton.disabled = false;
+    updateGradeLabels();
+  }).catch(function(error) {
+    catalogStatus.textContent = "Unable to load projects: " + error.message + " Refresh after checking your Projects sheet and deployment.";
+    console.error("VoiceVote project catalog error:", error);
+  });
+}
+
+// Initialize the catalog first so its filtering runs before label formatting.
+startCatalog();
+classSelect.addEventListener("change", updateSectionLabels);
 
 let rating = 0;
 let recognition = null;
 let isRecording = false;
+let isSubmitting = false;
 
 document.querySelectorAll(".star").forEach(function(star) {
   star.addEventListener("click", function() {
     rating = Number(this.dataset.value);
-
     document.querySelectorAll(".star").forEach(function(item) {
-      item.classList.toggle(
-        "active",
-        Number(item.dataset.value) <= rating
-      );
+      item.classList.toggle("active", Number(item.dataset.value) <= rating);
     });
   });
 });
 
 function startRecording() {
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    document.getElementById("status").textContent =
-      "Speech recognition is not supported in this browser. Please type your feedback.";
+    statusElement.textContent = "Speech recognition is not supported in this browser. Please type your feedback.";
     return;
   }
-
-  if (isRecording) return;
+  if (isRecording || isSubmitting) return;
 
   recognition = new SpeechRecognition();
   recognition.lang = document.getElementById("language").value;
   recognition.continuous = true;
   recognition.interimResults = true;
-
   let finalTranscript = document.getElementById("feedback").value.trim();
 
   recognition.onresult = function(event) {
     let interim = "";
-
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const transcript = event.results[i][0].transcript;
-
       if (event.results[i].isFinal) {
         finalTranscript += (finalTranscript ? " " : "") + transcript;
       } else {
         interim += transcript;
       }
     }
-
-    document.getElementById("feedback").value =
-      finalTranscript + (interim ? " " + interim : "");
+    document.getElementById("feedback").value = finalTranscript + (interim ? " " + interim : "");
   };
 
   recognition.onerror = function(event) {
-    document.getElementById("status").textContent =
-      "Voice error: " + event.error +
-      ". Check browser microphone permission.";
+    if (!isSubmitting) statusElement.textContent = "Voice error: " + event.error + ". Check browser microphone permission.";
     isRecording = false;
   };
-
   recognition.onend = function() {
     isRecording = false;
-    document.getElementById("status").textContent = "Recording stopped.";
+    if (!isSubmitting) statusElement.textContent = "Recording stopped.";
   };
-
   try {
     recognition.start();
     isRecording = true;
-    document.getElementById("status").textContent = "Listening...";
-  } catch(error) {
-    document.getElementById("status").textContent =
-      "Could not start recording: " + error.message;
+    statusElement.textContent = "Listening...";
+  } catch (error) {
+    statusElement.textContent = "Could not start recording: " + error.message;
   }
 }
 
 function stopRecording() {
-  if (recognition && isRecording) {
-    recognition.stop();
-  }
+  if (recognition && isRecording) recognition.stop();
+}
+
+// The deployed Apps Script exposes doGet(action=save) with a JSONP callback,
+// NOT a JSON POST endpoint. Wait for an explicit success response before clearing.
+function saveFeedback(data) {
+  return new Promise(function(resolve, reject) {
+    const callback = "voiceVoteSave_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+    const tag = document.createElement("script");
+    let settled = false;
+    const timer = setTimeout(function() {
+      finish(new Error("No save confirmation received. Check the Feedback sheet before retrying; the first request may have been saved."));
+    }, 30000);
+
+    function finish(error, response) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      delete window[callback];
+      tag.remove();
+      if (error) reject(error);
+      else resolve(response);
+    }
+
+    window[callback] = function(response) {
+      if (response && response.success === true) finish(null, response);
+      else finish(new Error((response && response.message) || "The backend did not confirm the save."));
+    };
+    tag.onerror = function() { finish(new Error("Cannot reach Apps Script. Check the /exec URL and deployment access.")); };
+    tag.onload = function() {
+      if (!settled) finish(new Error("Apps Script returned no valid save confirmation."));
+    };
+
+    const params = new URLSearchParams({
+      action: "save",
+      studentClass: data.studentClass,
+      section: data.section,
+      project: data.project,
+      feedback: data.feedback,
+      language: data.language,
+      rating: String(data.rating),
+      callback: callback
+    });
+    const connector = SCRIPT_URL.includes("?") ? "&" : "?";
+    tag.src = SCRIPT_URL.trim() + connector + params.toString();
+    document.head.appendChild(tag);
+  });
 }
 
 async function submitFeedback() {
+  if (isSubmitting) return;
   const data = {
     studentClass: classSelect.value,
     section: sectionSelect.value,
-    project: document.getElementById("project").value,
+    project: projectSelect.value,
     language: document.getElementById("language").value,
     feedback: document.getElementById("feedback").value.trim(),
     rating: rating
   };
 
-  if (!data.studentClass || !data.section ||
-      !data.project || !data.feedback || !data.rating) {
-    alert("Please complete all fields and select a star rating.");
+  if (!catalogReady) {
+    statusElement.textContent = "The project list is not ready. Check the project status above.";
+    return;
+  }
+  if (!data.studentClass || !data.section || !data.project || !data.feedback || !data.rating) {
+    statusElement.textContent = "Please choose a class, section and project, enter feedback, and select a star rating.";
+    return;
+  }
+  if (!hasValidWebAppUrl()) {
+    statusElement.textContent = "Please configure the Apps Script /exec URL first.";
     return;
   }
 
-  if (!SCRIPT_URL.startsWith("https://script.google.com/")) {
-    alert("Please add your Google Apps Script Web App URL first.");
-    return;
-  }
-
+  isSubmitting = true;
   stopRecording();
-
-  const button = document.getElementById("submitBtn");
-  button.disabled = true;
-  button.textContent = "Submitting...";
+  submitButton.disabled = true;
+  submitButton.textContent = "Submitting...";
+  statusElement.textContent = "Saving feedback…";
 
   try {
-    await fetch(SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify(data)
-    });
-
-    document.getElementById("status").textContent =
-      "Thank you! Your feedback has been submitted.";
-
+    await saveFeedback(data);
+    statusElement.textContent = "Thank you! Your feedback was saved successfully.";
     document.getElementById("feedback").value = "";
-    document.getElementById("studentClass").value = "";
-    document.getElementById("section").innerHTML =
-      '<option value="">Choose Section</option>';
-    document.getElementById("project").value = "";
+    classSelect.value = "";
+    classSelect.dispatchEvent(new Event("change", { bubbles: true }));
     rating = 0;
-
-    document.querySelectorAll(".star").forEach(function(star) {
-      star.classList.remove("active");
-    });
-
-  } catch(error) {
-    document.getElementById("status").textContent =
-      "Submission failed. Please try again.";
+    document.querySelectorAll(".star").forEach(function(star) { star.classList.remove("active"); });
+  } catch (error) {
+    statusElement.textContent = "Submission not confirmed: " + error.message;
+  } finally {
+    isSubmitting = false;
+    submitButton.disabled = !catalogReady;
+    submitButton.textContent = "Submit Feedback →";
   }
-
-  button.disabled = false;
-  button.textContent = "Submit Feedback →";
 }
 </script>
 
