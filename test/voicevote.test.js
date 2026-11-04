@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
+const { createHash } = require('node:crypto');
 
 function app(fetchProjects, search = '', stored = new Map()) {
   class Element {
@@ -187,12 +188,22 @@ function backend(rows) {
   const receipts = new Map();
   let released = false;
   const projectSheet = rows && { getDataRange: () => ({ getDisplayValues: () => rows }) };
-  const feedbackSheet = { getLastRow: () => writes.length, appendRow: row => writes.push(Array.from(row)) };
+  const feedbackSheet = {
+    getLastRow: () => writes.length,
+    appendRow: row => writes.push(Array.from(row)),
+    getRange: (row, col, count, width) => ({
+      getValues: () => writes.slice(row - 1, row - 1 + count).map(r => r.slice(col - 1, col - 1 + width))
+    })
+  };
   const context = {
     ContentService: { MimeType: { JAVASCRIPT: 'javascript' }, createTextOutput: text => ({ text, setMimeType(type) { this.mime = type; return this; } }) },
     SpreadsheetApp: { openById: () => ({ getSheetByName: name => name === 'Projects' ? projectSheet : feedbackSheet }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() { released = true; } }) },
     LanguageApp: { translate: (text, source, target) => `${source}:${target}:${text}` },
+    Utilities: {
+      DigestAlgorithm: { SHA_256: 'SHA_256' },
+      computeDigest: (_, token) => Array.from(createHash('sha256').update(token).digest())
+    },
     PropertiesService: { getScriptProperties: () => ({
       getProperty: key => receipts.get(key),
       setProperty: (key, value) => receipts.set(key, value)
@@ -235,8 +246,9 @@ test('actual backend catalog and save JSONP interoperate with frontend', async (
   const receipt = b.context.doPost({ parameter: params });
   assert.match(receipt.html, /Thank you! Feedback saved/);
   assert.equal(params.language, 'hi-IN');
-  assert.deepEqual(b.writes[0], ['Date', 'Project', 'Class', 'Section', 'Original Feedback', 'Rating', 'Language', 'English Translation']);
-  assert.deepEqual(b.writes[1].slice(1), ['Robot', '6', 'A', "'=great", 5, 'hi-IN', 'hi:en:=great']);
+  assert.deepEqual(b.writes[0], ['Date', 'Project', 'Class', 'Section', 'Original Feedback', 'Rating', 'Language', 'English Translation', 'Submission ID', 'Device hash']);
+  assert.deepEqual(b.writes[1].slice(1, 8), ['Robot', '6', 'A', "'=great", 5, 'hi-IN', 'hi:en:=great']);
+  assert.match(b.writes[1][9], /^[0-9a-f]{64}$/);
   assert.equal(b.wasReleased(), true);
   assert.equal(a.elements.feedback.value, '=great', 'Data remains until the browser navigates to the receipt');
 });
@@ -250,7 +262,7 @@ test('actual backend reports catalog and save errors through JSONP', async () =>
   let result;
   vm.runInNewContext(response.text, { validCallback: value => { result = value; } });
   assert.equal(result.success, false);
-  assert.match(result.message, /invalid feedback/);
+  assert.match(result.message, /POST required/);
   assert.equal(b.writes.length, 0);
   const invalid = b.context.doGet({ parameter: { action: 'catalog', callback: 'bad.name()' } });
   assert.match(invalid.text, /^voiceVoteResponse\(/);
@@ -303,6 +315,7 @@ test('secure POST probe makes no writes and duplicate POSTs append only once', (
 
   const params = {
     action: 'save', submissionId: '123e4567-e89b-42d3-a456-426614174000',
+    deviceToken: '123e4567-e89b-42d3-a456-426614174000',
     project: 'XenoChat', studentClass: '6', section: 'Heidelberg',
     feedback: 'Works well', rating: '5', language: 'en-IN'
   };
@@ -313,6 +326,21 @@ test('secure POST probe makes no writes and duplicate POSTs append only once', (
   assert.match(second.html, /previously saved; no duplicate was added/);
   assert.equal(b.writes.length, 2);
   assert.equal(b.wasReleased(), true);
+
+  // A new submission ID cannot bypass the one-vote-per-browser restriction.
+  const secondProject = b.context.doPost({ parameter: {
+    ...params,
+    submissionId: 'aaaabbbb-cccc-4ddd-8eee-123456789abc',
+    project: 'XenoChat', feedback: 'Trying again'
+  } });
+  assert.match(secondProject.html, /This browser has already voted/);
+  assert.equal(b.writes.length, 2);
+  assert.equal(b.writes[1][8], params.submissionId);
+  assert.notEqual(b.writes[1][9], params.deviceToken, 'Do not store raw device tokens');
+
+  const missingToken = b.context.doPost({ parameter: { ...params, deviceToken: '' } });
+  assert.match(missingToken.html, /Feedback not confirmed/);
+  assert.equal(b.writes.length, 2);
 
   const invalid = b.context.doPost({ parameter: { ...params, submissionId: 'bad-id' } });
   assert.match(invalid.html, /Feedback not confirmed/);
