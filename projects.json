@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "projects": [
+    {
+      "grade": "6",
+      "section": "Heidelberg",
+      "project": "XenoChat"
+    },
+    {
+      "grade": "9",
+      "section": "Keats",
+      "project": "VoiceVote"
+    }
+  ]
+}

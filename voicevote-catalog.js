@@ -116,6 +116,26 @@
       });
     }
 
+    // Prefer a same-origin snapshot on GitHub Pages. This avoids depending on
+    // cross-site Google ContentService redirects in each visitor's browser.
+    // Fall back to the live JSONP API if the snapshot cannot be read.
+    function loadSnapshot(url) {
+      if (typeof global.fetch !== 'function') {
+        return Promise.reject(new Error('Browser does not support fetch.'));
+      }
+      return global.fetch(url, { cache: 'no-store', credentials: 'same-origin' })
+        .then(function(response) {
+          if (!response.ok) throw new Error('Project snapshot returned HTTP ' + response.status);
+          return response.json();
+        })
+        .then(function(payload) {
+          if (!payload || payload.success !== true || !Array.isArray(payload.projects) || !payload.projects.length) {
+            throw new Error('Project snapshot is missing or empty.');
+          }
+          return payload.projects;
+        });
+    }
+
     grade.addEventListener('change', updateSections);
     section.addEventListener('change', updateProjects);
     grade.disabled = true;
@@ -131,7 +151,14 @@
       setStatus('Missing Apps Script URL.');
       return Promise.reject(new Error('Pass apiUrl or catalog to VoiceVoteCatalogSelector.init.'));
     }
-    return loadCatalog(config.apiUrl).then(function (entries) {
+    const request = (config.snapshotUrl && typeof global.fetch === 'function')
+      ? loadSnapshot(config.snapshotUrl).catch(function(snapshotError) {
+          setStatus('Local project list unavailable; checking Google Apps Script…');
+          return loadCatalog(config.apiUrl);
+        })
+      : loadCatalog(config.apiUrl);
+
+    return request.then(function (entries) {
       setCatalog(entries);
       return { setCatalog: setCatalog, loadCatalog: loadCatalog };
     }).catch(function (error) {
