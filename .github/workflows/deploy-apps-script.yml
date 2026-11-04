@@ -29,7 +29,7 @@ jobs:
         with:
           node-version: '22'
       - name: Run contract tests
-        run: node --test --test-isolation=none
+        run: node --test
       - name: Install clasp
         run: npm install --global @google/clasp@3.4.1
       - name: Validate configuration
