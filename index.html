@@ -140,6 +140,25 @@ button:hover {
 .star {
   cursor: pointer;
   color: #64748b;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+  line-height: 1;
+}
+.star:focus-visible {
+  outline: 2px solid #67e8f9;
+  outline-offset: 3px;
+}
+#retryCatalogBtn {
+  margin-top: 8px;
+  padding: 9px 13px;
+  font-size: 14px;
+  background: #0891b2;
+  color: white;
+}
+[hidden] {
+  display: none !important;
 }
 
 .star.active {
@@ -197,6 +216,7 @@ button:hover {
     <option value="">Select class and section first</option>
   </select>
   <p id="catalogStatus" role="status" aria-live="polite">Loading available projects…</p>
+  <button type="button" id="retryCatalogBtn" hidden>Retry loading projects</button>
 
   <label for="language">Feedback Language</label>
   <select id="language">
@@ -218,12 +238,12 @@ button:hover {
   <textarea id="feedback" placeholder="Speak or type your feedback here..."></textarea>
 
   <label>Rate the Project</label>
-  <div class="stars" id="stars">
-    <span class="star" data-value="1">★</span>
-    <span class="star" data-value="2">★</span>
-    <span class="star" data-value="3">★</span>
-    <span class="star" data-value="4">★</span>
-    <span class="star" data-value="5">★</span>
+  <div class="stars" id="stars" role="group" aria-label="Rate this project from one to five stars">
+    <button type="button" class="star" data-value="1" aria-label="1 star" aria-pressed="false">★</button>
+    <button type="button" class="star" data-value="2" aria-label="2 stars" aria-pressed="false">★</button>
+    <button type="button" class="star" data-value="3" aria-label="3 stars" aria-pressed="false">★</button>
+    <button type="button" class="star" data-value="4" aria-label="4 stars" aria-pressed="false">★</button>
+    <button type="button" class="star" data-value="5" aria-label="5 stars" aria-pressed="false">★</button>
   </div>
 
   <button class="submit" id="submitBtn" onclick="submitFeedback()" disabled>
@@ -250,6 +270,8 @@ const projectSelect = document.getElementById("project");
 const submitButton = document.getElementById("submitBtn");
 const statusElement = document.getElementById("status");
 const catalogStatus = document.getElementById("catalogStatus");
+const retryCatalogBtn = document.getElementById("retryCatalogBtn");
+retryCatalogBtn.addEventListener("click", function() { window.location.reload(); });
 
 function hasValidWebAppUrl() {
   return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(SCRIPT_URL.trim());
@@ -273,12 +295,15 @@ function updateSectionLabels() {
 let catalogReady = false;
 function startCatalog() {
   classSelect.disabled = true;
+  retryCatalogBtn.hidden = true;
   if (!hasValidWebAppUrl()) {
     catalogStatus.textContent = "Setup needed: paste the Google Apps Script Web app /exec URL into index.html.";
+    retryCatalogBtn.hidden = false;
     return;
   }
   if (!window.VoiceVoteCatalogSelector) {
     catalogStatus.textContent = "Could not load voicevote-catalog.js. Check that it is beside index.html.";
+    retryCatalogBtn.hidden = false;
     return;
   }
   VoiceVoteCatalogSelector.init({
@@ -290,10 +315,12 @@ function startCatalog() {
     preserveExistingGrades: false
   }).then(function() {
     catalogReady = true;
+    retryCatalogBtn.hidden = true;
     submitButton.disabled = false;
     updateGradeLabels();
   }).catch(function(error) {
-    catalogStatus.textContent = "Unable to load projects: " + error.message + " Refresh after checking your Projects sheet and deployment.";
+    catalogStatus.textContent = "Unable to load projects: " + error.message + " Check your Projects sheet or deployment, then retry.";
+    retryCatalogBtn.hidden = false;
     console.error("VoiceVote project catalog error:", error);
   });
 }
@@ -311,7 +338,9 @@ document.querySelectorAll(".star").forEach(function(star) {
   star.addEventListener("click", function() {
     rating = Number(this.dataset.value);
     document.querySelectorAll(".star").forEach(function(item) {
-      item.classList.toggle("active", Number(item.dataset.value) <= rating);
+      const value = Number(item.dataset.value);
+      item.classList.toggle("active", value <= rating);
+      item.setAttribute("aria-pressed", String(value === rating));
     });
   });
 });
@@ -447,7 +476,10 @@ async function submitFeedback() {
     classSelect.value = "";
     classSelect.dispatchEvent(new Event("change", { bubbles: true }));
     rating = 0;
-    document.querySelectorAll(".star").forEach(function(star) { star.classList.remove("active"); });
+    document.querySelectorAll(".star").forEach(function(star) {
+      star.classList.remove("active");
+      star.setAttribute("aria-pressed", "false");
+    });
   } catch (error) {
     statusElement.textContent = "Submission not confirmed: " + error.message;
   } finally {
