@@ -1,0 +1,31 @@
+name: Verify VoiceVote in real browser
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-live-ui.yml'
+      - 'scripts/verify-hosted-ui.mjs'
+      - 'index.html'
+      - 'voicevote-catalog.js'
+      - 'projects.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install headless browser driver
+        run: npm install --no-save playwright-core
+      - name: Check live site and dependent selections in Chromium
+        run: node scripts/verify-hosted-ui.mjs
