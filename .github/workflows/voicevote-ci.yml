@@ -21,4 +21,4 @@ jobs:
         with:
           node-version: '22'
       - name: Run frontend / backend contract tests
-        run: node --test --test-isolation=none
+        run: node --test
