@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
-function app(fetchProjects) {
+function app(fetchProjects, search = '', stored = new Map()) {
   class Element {
     constructor() { this.options = []; this.value = ''; this.disabled = false; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.children = []; this.style = {}; this.classList = { toggle() {}, remove() {} }; }
     appendChild(child) { this.children.push(child); }
@@ -15,7 +15,7 @@ function app(fetchProjects) {
     dispatchEvent(event) { for (const fn of this.listeners[event.type] || []) fn.call(this, event); }
     remove() { this.removed = true; }
   }
-  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback'].map(id => [id, new Element()]));
+  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn'].map(id => [id, new Element()]));
   elements.language.value = 'hi-IN';
   elements.submitBtn.disabled = true;
   const stars = Array.from({ length: 5 }, (_, i) => { const e = new Element(); e.dataset.value = String(i + 1); return e; });
@@ -28,15 +28,16 @@ function app(fetchProjects) {
     body: { appendChild: node => forms.push(node) }
   };
   const context = { document, console: { error() {} }, URLSearchParams, Option: function(text, value) { this.textContent = text; this.value = value; }, Event: function(type) { this.type = type; }, setTimeout, clearTimeout,
-    crypto: { randomUUID: () => '123e4567-e89b-42d3-a456-426614174000', getRandomValues: a => a.fill(7) } };
+    crypto: { randomUUID: () => '123e4567-e89b-42d3-a456-426614174000', getRandomValues: a => a.fill(7) },
+    localStorage: { getItem: key => stored.get(key) || null, setItem: (key,val) => {stored.set(key, String(val));} } };
   context.window = context;
   if (fetchProjects) context.fetch = fetchProjects;
-  context.location = { reload() { context.__reloaded = true; } };
+  context.location = { search, reload() { context.__reloaded = true; } };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('voicevote-catalog.js', 'utf8'), context);
   const html = fs.readFileSync('index.html', 'utf8');
   vm.runInContext(html.match(/<script>\s*([\s\S]*?)<\/script>/)[1], context);
-  return { context, elements, stars, scripts, forms };
+  return { context, elements, stars, scripts, forms, stored };
 }
 function respond(app, payload) {
   const tag = app.scripts.at(-1);
@@ -108,6 +109,7 @@ test('browser sends one secure POST form with all feedback fields, not a JSONP G
   assert.deepEqual(fields, {
     action: 'save',
     submissionId: '123e4567-e89b-42d3-a456-426614174000',
+    deviceToken: '123e4567-e89b-42d3-a456-426614174000',
     studentClass: '6',
     section: 'A',
     project: 'Robot',
@@ -139,6 +141,43 @@ test('submit prevents POST when a star rating or required selection is absent', 
   a.elements.project.value = '';
   a.context.submitFeedback();
   assert.equal(a.forms.length, 0, 'Missing project should prevent submission');
+});
+
+test('browser reuses an anonymous device token for repeat visits', async () => {
+  const saved = new Map();
+  const a = app(null, '', saved);
+  respond(a, {success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  a.elements.studentClass.value = '9'; a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value = 'Keats'; a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value = 'VoiceVote';
+  a.elements.feedback.value = 'Useful'; a.stars[4].dispatchEvent(new a.context.Event('click'));
+  a.context.submitFeedback();
+  assert.equal(saved.get('voicevote_device_token_v1'),'123e4567-e89b-42d3-a456-426614174000');
+  assert.equal(a.forms.length,1);
+  const returning = app(null,'?vote=success',saved);
+  respond(returning, {success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  assert.equal(saved.get('voicevote_voted_v1'),'1');
+  assert.equal(returning.elements.submitBtn.disabled,true);
+  assert.equal(returning.elements.voteGuardStatus.hidden,false);
+  assert.match(returning.elements.voteGuardStatus.textContent,/already submitted feedback/);
+  returning.context.submitFeedback();
+  assert.equal(returning.forms.length,0);
+});
+
+test('browser vote token requires writable local storage', async () => {
+  const a = app();
+  respond(a, {success:true,projects:[{grade:'6',section:'Heidelberg',project:'XenoChat'}]});
+  await tick();
+  a.elements.studentClass.value = '6'; a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value = 'Heidelberg'; a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value = 'XenoChat'; a.elements.feedback.value = 'Good';
+  a.stars[4].dispatchEvent(new a.context.Event('click'));
+  a.context.localStorage.setItem = () => {throw Error('storage disabled');};
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,0);
+  assert.match(a.elements.status.textContent,/Unable to save the browser voting token/);
 });
 
 // Run the versioned Apps Script with in-memory services, then execute its real
