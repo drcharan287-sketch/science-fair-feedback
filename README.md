@@ -17,7 +17,7 @@ Saving uses a GET request and JSONP because that is the existing frontend contra
 
 ## Tests
 
-Run `node --test --test-isolation=none` with a recent Node.js version. Tests simulate the browser and Google services; they do not contact Google or modify Sheets. Contract tests execute the versioned Apps Script handlers and their JSONP responses in the frontend, covering filtering, errors, save fields, Feedback columns, translation invocation, formula escaping, and preserving feedback until the backend confirms a save. They do not verify the live deployment, microphone permissions, or speech recognition in a real browser.
+Run `node --test` with a recent Node.js version. Tests simulate the browser and Google services; they do not contact Google or modify Sheets. Contract tests execute the versioned Apps Script handlers and their JSONP responses in the frontend, covering filtering, errors, save fields, Feedback columns, translation invocation, formula escaping, and preserving feedback until the backend confirms a save. They do not verify the live deployment, microphone permissions, or speech recognition in a real browser.
 
 ## Manual authorization and live verification
 
