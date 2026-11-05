@@ -347,6 +347,13 @@ button:disabled, textarea:disabled, input:disabled {
     <button type="button" id="newVisitorBtn" hidden disabled>Start a different visitor with their unused pass</button>
   </section>
   <p id="voteGuardStatus" class="vote-lock" role="status" aria-live="polite" hidden></p>
+  <aside id="practiceCallout" class="practice-callout" hidden>
+    <div>
+      <strong>Already tested VoiceVote?</strong>
+      <p>Use our safe rehearsal page for unlimited demonstrations. It never submits a real vote or changes results.</p>
+    </div>
+    <a href="./practice.html">Try Practice Voting ↗</a>
+  </aside>
   <button type="button" id="retryCatalogBtn" hidden>Retry loading projects</button>
   </section>
 
@@ -472,6 +479,8 @@ function syncVoteStatus() {
   const pending = hasPendingVote();
   const locked = voted || pending;
   notice.hidden = !locked;
+  const practiceCallout = document.getElementById('practiceCallout');
+  if (practiceCallout) practiceCallout.hidden = !locked;
   notice.textContent = voted
     ? "A vote has already been recorded in this browser. Additional feedback is blocked here. Ask an organizer if you need help."
     : pending
