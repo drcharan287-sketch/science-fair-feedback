@@ -1,0 +1,29 @@
+name: Verify published VoiceVote search and voting lock
+
+on:
+  workflow_run:
+    workflows: ["pages build and deployment"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  published-ui:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out live code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium driver
+        run: npm install --no-save playwright-core
+      - name: Verify hosted project search and receipt lock without saving feedback
+        run: node scripts/verify-hosted-search.mjs
