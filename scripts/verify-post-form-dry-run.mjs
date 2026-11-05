@@ -50,6 +50,7 @@ try {
       await page.selectOption('#studentClass','9');
       await page.selectOption('#section','Keats');
       await page.selectOption('#project','VoiceVote');
+      await page.fill('#visitorPass','VV-123E4567-E89B42D3-A4564266-14174000');
       await page.fill('#feedback','AUTOMATED DRY RUN - never transmitted to Google.');
       await page.locator('.star[data-value="5"]').click();
       // Project selections are populated before the app's final ready callback.
@@ -85,6 +86,7 @@ try {
       assert.equal(fields.get('section'),'Keats');
       assert.equal(fields.get('project'),'VoiceVote');
       assert.equal(fields.get('rating'),'5');
+      assert.equal(fields.get('visitorPass'),'VV-123E4567-E89B42D3-A4564266-14174000');
       assert.equal(fields.get('feedback'),'AUTOMATED DRY RUN - never transmitted to Google.');
       assert.match(fields.get('submissionId')||'',/^[a-f0-9-]{36}$/i);
       assert.match(fields.get('deviceToken')||'',/^[a-f0-9-]{36}$/i, 'Persistent anonymous browser token must be included in POST');
