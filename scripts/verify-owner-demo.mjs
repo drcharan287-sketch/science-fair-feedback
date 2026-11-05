@@ -4,7 +4,8 @@
 import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
 
-const site='https://drcharan287-sketch.github.io/science-fair-feedback/';
+const site=process.env.VOICEVOTE_SITE_BASE ||
+  'https://drcharan287-sketch.github.io/science-fair-feedback/';
 const origin=new URL(site).origin;
 const ticket='a'.repeat(64);
 const screens=[
