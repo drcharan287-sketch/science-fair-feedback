@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
 const site='https://drcharan287-sketch.github.io/science-fair-feedback/';
-const files=["index.html","results.html","results.css","results.js","voicevote-theme.css"];
+const files=["index.html","results.html","results.css","results.js","voicevote-theme.css","practice.html","practice-vote.css","practice-vote.js"];
 const digest = s => createHash('sha256')
   .update(String(s).replace(/\r\n/g,'\n').trim()).digest('hex');
 const expected={};
