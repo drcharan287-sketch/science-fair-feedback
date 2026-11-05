@@ -6,17 +6,22 @@ const { createHash } = require('node:crypto');
 
 function app(fetchProjects, search = '', stored = new Map()) {
   class Element {
-    constructor() { this.options = []; this.value = ''; this.disabled = false; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.children = []; this.style = {}; this.classList = { toggle() {}, remove() {} }; }
+    constructor() { this.options = []; this.value = ''; this.disabled = false; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.children = []; this.style = {}; this.hidden = false; this.classList = { toggle() {}, remove() {} }; }
+    focus() { this.focused = true; }
+    blur() { this.focused = false; }
+    click() { this.dispatchEvent({type:'click'}); }
+    querySelector(name) { return name === 'button' ? (this.children.find(x => x.type === 'button') || null) : null; }
+    querySelectorAll(name) { return name === 'button' ? this.children.filter(x => x.type === 'button') : []; }
     appendChild(child) { this.children.push(child); }
     submit() { this.submitted = true; }
     add(option) { this.options.push(option); }
-    replaceChildren() { this.options = []; this.value = ''; }
+    replaceChildren() { this.options = []; this.children = []; this.value = ''; }
     addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
     setAttribute(name, value) { (this.attributes ||= {})[name] = String(value); }
     dispatchEvent(event) { for (const fn of this.listeners[event.type] || []) fn.call(this, event); }
     remove() { this.removed = true; }
   }
-  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn'].map(id => [id, new Element()]));
+  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn', 'stopBtn', 'projectSearch', 'projectSearchResults', 'projectSearchStatus', 'projectSearchSelected'].map(id => [id, new Element()]));
   elements.language.value = 'hi-IN';
   elements.submitBtn.disabled = true;
   const stars = Array.from({ length: 5 }, (_, i) => { const e = new Element(); e.dataset.value = String(i + 1); return e; });
@@ -30,7 +35,7 @@ function app(fetchProjects, search = '', stored = new Map()) {
   };
   const context = { document, console: { error() {} }, URLSearchParams, Option: function(text, value) { this.textContent = text; this.value = value; }, Event: function(type) { this.type = type; }, setTimeout, clearTimeout,
     crypto: { randomUUID: () => '123e4567-e89b-42d3-a456-426614174000', getRandomValues: a => a.fill(7) },
-    localStorage: { getItem: key => stored.get(key) || null, setItem: (key,val) => {stored.set(key, String(val));} } };
+    localStorage: { getItem: key => stored.get(key) || null, setItem: (key,val) => {stored.set(key, String(val));}, removeItem: key => stored.delete(key) } };
   context.window = context;
   if (fetchProjects) context.fetch = fetchProjects;
   context.location = { search, reload() { context.__reloaded = true; } };
@@ -179,6 +184,89 @@ test('browser vote token requires writable local storage', async () => {
   a.context.submitFeedback();
   assert.equal(a.forms.length,0);
   assert.match(a.elements.status.textContent,/Unable to save the browser voting token/);
+});
+
+test('global quick-find searches 300 projects and selects correct class/section for duplicate names', async () => {
+  const entries = Array.from({ length: 300 }, (_, i) => ({
+    grade: String(6 + (i % 5)), section: i % 2 ? 'Keats' : 'Heidelberg',
+    project: 'Project ' + String(i + 1).padStart(3, '0')
+  }));
+  entries[13].project = 'Solar Explorer';
+  entries[24].project = 'Solar Explorer';
+  const a = app();
+  respond(a, { success: true, projects: entries });
+  await tick();
+  assert.equal(a.elements.projectSearch.disabled, false);
+  a.elements.projectSearch.value = 'solar';
+  a.elements.projectSearch.dispatchEvent(new a.context.Event('input'));
+  assert.equal(a.elements.projectSearchResults.children.length, 2);
+  assert.match(a.elements.projectSearchResults.children[0].textContent, /Solar Explorer/);
+  a.elements.projectSearchResults.children[1].click();
+  const chosen = entries[24];
+  assert.equal(a.elements.studentClass.value, chosen.grade);
+  assert.equal(a.elements.section.value, chosen.section);
+  assert.equal(a.elements.project.value, 'Solar Explorer');
+  assert.equal(a.elements.projectSearchResults.hidden, true);
+  assert.match(a.elements.projectSearchSelected.textContent, /Selected: Solar Explorer/);
+  assert.equal(a.elements.submitBtn.disabled, false);
+});
+
+test('quick-find gives useful feedback for zero matches and limits suggestions to twelve', async () => {
+  const a = app();
+  const entries = Array.from({ length: 300 }, (_, i) => ({
+    grade: '9', section: 'Keats', project: 'Volcano Project ' + i
+  }));
+  respond(a, { success: true, projects: entries });
+  await tick();
+  a.elements.projectSearch.value = 'volcano';
+  a.elements.projectSearch.dispatchEvent(new a.context.Event('input'));
+  assert.equal(a.elements.projectSearchResults.children.length, 12);
+  assert.match(a.elements.projectSearchStatus.textContent, /300 matching project/);
+  a.elements.projectSearch.value = 'does-not-exist';
+  a.elements.projectSearch.dispatchEvent(new a.context.Event('input'));
+  assert.equal(a.elements.projectSearchResults.hidden, true);
+  assert.match(a.elements.projectSearchStatus.textContent, /No active projects match/);
+});
+
+test('after a submission attempt the whole form stays locked when the QR is reopened', async () => {
+  const saved = new Map();
+  const a = app(null, '', saved);
+  respond(a, {success:true,projects:[{grade:'6',section:'Heidelberg',project:'XenoChat'}]});
+  await tick();
+  a.elements.studentClass.value = '6'; a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value = 'Heidelberg'; a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value = 'XenoChat';
+  a.elements.feedback.value = 'Test submission';
+  a.stars[4].dispatchEvent(new a.context.Event('click'));
+  a.context.submitFeedback();
+  assert.equal(saved.get('voicevote_pending_v1'),'1');
+  const returning = app(null,'',saved);
+  respond(returning, {success:true,projects:[{grade:'6',section:'Heidelberg',project:'XenoChat'}]});
+  await tick();
+  assert.equal(returning.elements.voteGuardStatus.hidden,false);
+  assert.match(returning.elements.voteGuardStatus.textContent,/awaiting confirmation|voting is paused/);
+  for (const id of ['submitBtn','studentClass','section','project','language','feedback','startBtn','stopBtn','projectSearch']) {
+    assert.equal(returning.elements[id].disabled, true, id + ' must be locked');
+  }
+  assert.ok(returning.stars.every(star => star.disabled));
+  returning.context.submitFeedback();
+  assert.equal(returning.forms.length,0);
+  const confirmed = app(null,'?vote=success',saved);
+  respond(confirmed, {success:true,projects:[{grade:'6',section:'Heidelberg',project:'XenoChat'}]});
+  await tick();
+  assert.equal(saved.get('voicevote_pending_v1'), undefined);
+  assert.equal(saved.get('voicevote_voted_v1'), '1');
+  assert.equal(confirmed.elements.feedback.disabled,true);
+});
+
+test('failed Google receipt clears only pending attempt to allow an explicit retry', async () => {
+  const stored = new Map([['voicevote_pending_v1','1']]);
+  const a = app(null,'?vote=retry',stored);
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  assert.equal(stored.has('voicevote_pending_v1'),false);
+  assert.equal(a.elements.submitBtn.disabled,false);
+  assert.equal(a.elements.feedback.disabled,false);
 });
 
 // Run the versioned Apps Script with in-memory services, then execute its real
