@@ -34,7 +34,7 @@ try {
   });
 
   let error;
-  for (let attempt = 0; attempt < 8; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     try {
       captured = null;
       const response = await page.goto(site + '?postDryRun=' + Date.now(), {
