@@ -2,14 +2,2039 @@
   "success": true,
   "projects": [
     {
+      "grade": "3",
+      "section": "Barbets",
+      "project": "Clean and Polluted city"
+    },
+    {
+      "grade": "3",
+      "section": "Barbets",
+      "project": "Life cycle of tree"
+    },
+    {
+      "grade": "3",
+      "section": "Barbets",
+      "project": "Rain water Harvesting (Group 4)"
+    },
+    {
+      "grade": "3",
+      "section": "Barbets",
+      "project": "Rain Water Harvesting (Group 6)"
+    },
+    {
+      "grade": "3",
+      "section": "Barbets",
+      "project": "Shelter"
+    },
+    {
+      "grade": "3",
+      "section": "Barbets",
+      "project": "Smart Dust bin"
+    },
+    {
+      "grade": "3",
+      "section": "Barbets",
+      "project": "Tornado"
+    },
+    {
+      "grade": "3",
+      "section": "Barbets",
+      "project": "Volcano"
+    },
+    {
+      "grade": "3",
+      "section": "Barbets",
+      "project": "Water cycle (Group 1)"
+    },
+    {
+      "grade": "3",
+      "section": "Barbets",
+      "project": "Water cycle (Group 3)"
+    },
+    {
+      "grade": "3",
+      "section": "Barbets",
+      "project": "Water Purifier"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "Aquatic Habitat"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "Digestive system"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "Electric Quiz Board"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "Magnetic Train"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "Rain water harvesting"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "Respiratory system (Group 6)"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "Respiratory system (Group 11)"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "Self water plant system"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "Solar system (Group 4)"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "Solar system (Group 5)"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "solar system (Group 12)"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "Solar system (Group 14)"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "volcano (Group 10)"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "Volcano (Group 15)"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "water Evaporation"
+    },
+    {
+      "grade": "3",
+      "section": "Buntings",
+      "project": "Water purification"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Aquatic Habitat (Coralreefs)"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Colour blindness detection"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Digestive system"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Drip Irrigation Model"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Electric"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Rain water harvesting (Group 3)"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Rain water harvesting (Group 11)"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Saving Trees for future"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Solar system"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Traffic lights"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Traffic Rules"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Urban Field control system"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Water purification (Group 9)"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Water purification (Group 13)"
+    },
+    {
+      "grade": "3",
+      "section": "Cuckoos",
+      "project": "Wet waste and Dry waste"
+    },
+    {
+      "grade": "3",
+      "section": "Flamingos",
+      "project": "Global warning"
+    },
+    {
+      "grade": "3",
+      "section": "Flamingos",
+      "project": "Nervous system"
+    },
+    {
+      "grade": "3",
+      "section": "Flamingos",
+      "project": "Rockets and sattelites"
+    },
+    {
+      "grade": "3",
+      "section": "Flamingos",
+      "project": "Skeletal system"
+    },
+    {
+      "grade": "3",
+      "section": "Flamingos",
+      "project": "Solar system"
+    },
+    {
+      "grade": "3",
+      "section": "Flamingos",
+      "project": "Volcano"
+    },
+    {
+      "grade": "3",
+      "section": "Flamingos",
+      "project": "Water Purifier"
+    },
+    {
+      "grade": "3",
+      "section": "Parrots",
+      "project": "Automatic street light"
+    },
+    {
+      "grade": "3",
+      "section": "Parrots",
+      "project": "Buzzer Game"
+    },
+    {
+      "grade": "3",
+      "section": "Parrots",
+      "project": "Day and Night"
+    },
+    {
+      "grade": "3",
+      "section": "Parrots",
+      "project": "Digestive System"
+    },
+    {
+      "grade": "3",
+      "section": "Parrots",
+      "project": "Rain water Harvesting"
+    },
+    {
+      "grade": "3",
+      "section": "Parrots",
+      "project": "Solar power"
+    },
+    {
+      "grade": "3",
+      "section": "Parrots",
+      "project": "Solar System"
+    },
+    {
+      "grade": "3",
+      "section": "Parrots",
+      "project": "Solar water Heater"
+    },
+    {
+      "grade": "3",
+      "section": "Parrots",
+      "project": "Tornado"
+    },
+    {
+      "grade": "3",
+      "section": "Parrots",
+      "project": "Types of Transport"
+    },
+    {
+      "grade": "3",
+      "section": "Parrots",
+      "project": "Volcano"
+    },
+    {
+      "grade": "3",
+      "section": "Parrots",
+      "project": "Water Purifier"
+    },
+    {
+      "grade": "3",
+      "section": "Parrots",
+      "project": "Wind Mill"
+    },
+    {
+      "grade": "4",
+      "section": "Jupiter",
+      "project": "Digestive system"
+    },
+    {
+      "grade": "4",
+      "section": "Jupiter",
+      "project": "Home made projector"
+    },
+    {
+      "grade": "4",
+      "section": "Jupiter",
+      "project": "Landforms"
+    },
+    {
+      "grade": "4",
+      "section": "Jupiter",
+      "project": "Natural Disasters"
+    },
+    {
+      "grade": "4",
+      "section": "Jupiter",
+      "project": "Parts of a Tooth"
+    },
+    {
+      "grade": "4",
+      "section": "Jupiter",
+      "project": "Smart Road Accident warning system"
+    },
+    {
+      "grade": "4",
+      "section": "Jupiter",
+      "project": "Solar Cooker"
+    },
+    {
+      "grade": "4",
+      "section": "Jupiter",
+      "project": "Solar Energy"
+    },
+    {
+      "grade": "4",
+      "section": "Jupiter",
+      "project": "Tooth Decay/Problems"
+    },
+    {
+      "grade": "4",
+      "section": "Jupiter",
+      "project": "Urinary System"
+    },
+    {
+      "grade": "4",
+      "section": "Jupiter",
+      "project": "Water Management"
+    },
+    {
+      "grade": "4",
+      "section": "Jupiter",
+      "project": "Waterpurifier"
+    },
+    {
+      "grade": "4",
+      "section": "Mars",
+      "project": "Carbon Purifier"
+    },
+    {
+      "grade": "4",
+      "section": "Mars",
+      "project": "Flood Prevention and Rain water management"
+    },
+    {
+      "grade": "4",
+      "section": "Mars",
+      "project": "HYDRO ELECTRICITY"
+    },
+    {
+      "grade": "4",
+      "section": "Mars",
+      "project": "Landforms on Earth"
+    },
+    {
+      "grade": "4",
+      "section": "Mars",
+      "project": "Rain water harvesting"
+    },
+    {
+      "grade": "4",
+      "section": "Mars",
+      "project": "SOIL EROSION"
+    },
+    {
+      "grade": "4",
+      "section": "Mars",
+      "project": "SOLAR ENERGY CAR AND WIND ENERGY"
+    },
+    {
+      "grade": "4",
+      "section": "Mars",
+      "project": "Solar Energy in Bus Transportation"
+    },
+    {
+      "grade": "4",
+      "section": "Mars",
+      "project": "SOLAR SYSTEM"
+    },
+    {
+      "grade": "4",
+      "section": "Mars",
+      "project": "Telangana state symbols and its heritage"
+    },
+    {
+      "grade": "4",
+      "section": "Mercury",
+      "project": "Circulatory system"
+    },
+    {
+      "grade": "4",
+      "section": "Mercury",
+      "project": "Digestive System"
+    },
+    {
+      "grade": "4",
+      "section": "Mercury",
+      "project": "Respiratory System"
+    },
+    {
+      "grade": "4",
+      "section": "Mercury",
+      "project": "Solar Energy"
+    },
+    {
+      "grade": "4",
+      "section": "Mercury",
+      "project": "Solar System"
+    },
+    {
+      "grade": "4",
+      "section": "Mercury",
+      "project": "Tooth problems/Dental Care"
+    },
+    {
+      "grade": "4",
+      "section": "Mercury",
+      "project": "Water cycle"
+    },
+    {
+      "grade": "4",
+      "section": "Mercury",
+      "project": "Water Purifier"
+    },
+    {
+      "grade": "4",
+      "section": "Neptune",
+      "project": "Chandrayan"
+    },
+    {
+      "grade": "4",
+      "section": "Neptune",
+      "project": "Drip Irrigation System"
+    },
+    {
+      "grade": "4",
+      "section": "Neptune",
+      "project": "Flood Alert system"
+    },
+    {
+      "grade": "4",
+      "section": "Neptune",
+      "project": "How Earth causes Day and Night"
+    },
+    {
+      "grade": "4",
+      "section": "Neptune",
+      "project": "Indian Missile System"
+    },
+    {
+      "grade": "4",
+      "section": "Neptune",
+      "project": "Knowledge of Space"
+    },
+    {
+      "grade": "4",
+      "section": "Neptune",
+      "project": "Land pollution"
+    },
+    {
+      "grade": "4",
+      "section": "Neptune",
+      "project": "Rotation and Revolution"
+    },
+    {
+      "grade": "4",
+      "section": "Neptune",
+      "project": "Saving our Environment"
+    },
+    {
+      "grade": "4",
+      "section": "Neptune",
+      "project": "Smart watering system"
+    },
+    {
+      "grade": "4",
+      "section": "Neptune",
+      "project": "Sponge city"
+    },
+    {
+      "grade": "4",
+      "section": "Neptune",
+      "project": "Street light"
+    },
+    {
+      "grade": "4",
+      "section": "Neptune",
+      "project": "Volcano eruption"
+    },
+    {
+      "grade": "4",
+      "section": "Venus",
+      "project": "Air Force"
+    },
+    {
+      "grade": "4",
+      "section": "Venus",
+      "project": "Brain"
+    },
+    {
+      "grade": "4",
+      "section": "Venus",
+      "project": "Digestive System"
+    },
+    {
+      "grade": "4",
+      "section": "Venus",
+      "project": "Earth's Movement"
+    },
+    {
+      "grade": "4",
+      "section": "Venus",
+      "project": "Eco friendly City"
+    },
+    {
+      "grade": "4",
+      "section": "Venus",
+      "project": "Seeds and Sprouts"
+    },
+    {
+      "grade": "4",
+      "section": "Venus",
+      "project": "The up's and Down's of Earth"
+    },
+    {
+      "grade": "4",
+      "section": "Venus",
+      "project": "Urinary system (Group 1)"
+    },
+    {
+      "grade": "4",
+      "section": "Venus",
+      "project": "Urinary System (Group 6)"
+    },
+    {
+      "grade": "4",
+      "section": "Venus",
+      "project": "Volcanic Eruption"
+    },
+    {
+      "grade": "4",
+      "section": "Venus",
+      "project": "Water power electricity generating model."
+    },
+    {
+      "grade": "4",
+      "section": "Venus",
+      "project": "Water purification"
+    },
+    {
+      "grade": "5",
+      "section": "Alps",
+      "project": "Automatic Street Lights"
+    },
+    {
+      "grade": "5",
+      "section": "Alps",
+      "project": "Digestive System"
+    },
+    {
+      "grade": "5",
+      "section": "Alps",
+      "project": "Drip irrigation"
+    },
+    {
+      "grade": "5",
+      "section": "Alps",
+      "project": "Germination of a seed/ vegetative reproduction"
+    },
+    {
+      "grade": "5",
+      "section": "Alps",
+      "project": "Hydro Power Plant"
+    },
+    {
+      "grade": "5",
+      "section": "Alps",
+      "project": "Opstical Car"
+    },
+    {
+      "grade": "5",
+      "section": "Alps",
+      "project": "Renewable energy"
+    },
+    {
+      "grade": "5",
+      "section": "Alps",
+      "project": "Robot"
+    },
+    {
+      "grade": "5",
+      "section": "Alps",
+      "project": "Sensors"
+    },
+    {
+      "grade": "5",
+      "section": "Alps",
+      "project": "Water Purifier"
+    },
+    {
+      "grade": "5",
+      "section": "Aravalli",
+      "project": "3'D Hologram"
+    },
+    {
+      "grade": "5",
+      "section": "Aravalli",
+      "project": "Automatic Water Dispenser"
+    },
+    {
+      "grade": "5",
+      "section": "Aravalli",
+      "project": "Different types of wells"
+    },
+    {
+      "grade": "5",
+      "section": "Aravalli",
+      "project": "DNA"
+    },
+    {
+      "grade": "5",
+      "section": "Aravalli",
+      "project": "Drip Irrigation"
+    },
+    {
+      "grade": "5",
+      "section": "Aravalli",
+      "project": "Respiratory system"
+    },
+    {
+      "grade": "5",
+      "section": "Aravalli",
+      "project": "Rocket"
+    },
+    {
+      "grade": "5",
+      "section": "Aravalli",
+      "project": "Soda machine"
+    },
+    {
+      "grade": "5",
+      "section": "Aravalli",
+      "project": "Solar Tracker"
+    },
+    {
+      "grade": "5",
+      "section": "Aravalli",
+      "project": "Waste management"
+    },
+    {
+      "grade": "5",
+      "section": "Aravalli",
+      "project": "Water cycle"
+    },
+    {
+      "grade": "5",
+      "section": "Aravalli",
+      "project": "Wind mill"
+    },
+    {
+      "grade": "5",
+      "section": "Himalayas",
+      "project": "Cognitive Psychology"
+    },
+    {
+      "grade": "5",
+      "section": "Himalayas",
+      "project": "Germination of a seed"
+    },
+    {
+      "grade": "5",
+      "section": "Himalayas",
+      "project": "Human Digestive system"
+    },
+    {
+      "grade": "5",
+      "section": "Himalayas",
+      "project": "Milky way Galaxy"
+    },
+    {
+      "grade": "5",
+      "section": "Himalayas",
+      "project": "Rain Detector"
+    },
+    {
+      "grade": "5",
+      "section": "Himalayas",
+      "project": "Water Pollution"
+    },
+    {
+      "grade": "5",
+      "section": "Himalayas",
+      "project": "Water purification"
+    },
+    {
+      "grade": "5",
+      "section": "Himalayas",
+      "project": "Windmill"
+    },
+    {
+      "grade": "5",
+      "section": "Himalayas",
+      "project": "Wire Wizard"
+    },
+    {
+      "grade": "5",
+      "section": "Satpura",
+      "project": "Digestive system"
+    },
+    {
+      "grade": "5",
+      "section": "Satpura",
+      "project": "Home Security Alarm"
+    },
+    {
+      "grade": "5",
+      "section": "Satpura",
+      "project": "Hydrolic Lift"
+    },
+    {
+      "grade": "5",
+      "section": "Satpura",
+      "project": "Light house"
+    },
+    {
+      "grade": "5",
+      "section": "Satpura",
+      "project": "Street light"
+    },
+    {
+      "grade": "5",
+      "section": "Satpura",
+      "project": "Volcanic Eruption"
+    },
+    {
+      "grade": "5",
+      "section": "Satpura",
+      "project": "Water cycle (Group 5)"
+    },
+    {
+      "grade": "5",
+      "section": "Satpura",
+      "project": "Water cycle (Group 9)"
+    },
+    {
+      "grade": "5",
+      "section": "Satpura",
+      "project": "Water purifier (Group 1)"
+    },
+    {
+      "grade": "5",
+      "section": "Satpura",
+      "project": "Water purifier (Group 7)"
+    },
+    {
+      "grade": "5",
+      "section": "Vindhyas",
+      "project": "Electric Bell"
+    },
+    {
+      "grade": "5",
+      "section": "Vindhyas",
+      "project": "Electricity Generator"
+    },
+    {
+      "grade": "5",
+      "section": "Vindhyas",
+      "project": "Gateway of India"
+    },
+    {
+      "grade": "5",
+      "section": "Vindhyas",
+      "project": "Global warming"
+    },
+    {
+      "grade": "5",
+      "section": "Vindhyas",
+      "project": "Human Digestive system"
+    },
+    {
+      "grade": "5",
+      "section": "Vindhyas",
+      "project": "Persian wheel"
+    },
+    {
+      "grade": "5",
+      "section": "Vindhyas",
+      "project": "RC Car"
+    },
+    {
+      "grade": "5",
+      "section": "Vindhyas",
+      "project": "Seismograph"
+    },
+    {
+      "grade": "5",
+      "section": "Vindhyas",
+      "project": "Solar system (Group 5)"
+    },
+    {
+      "grade": "5",
+      "section": "Vindhyas",
+      "project": "Solar System (Group 10)"
+    },
+    {
+      "grade": "6",
+      "section": "Boston",
+      "project": "Air cooler"
+    },
+    {
+      "grade": "6",
+      "section": "Boston",
+      "project": "Automatic fire extinguisher"
+    },
+    {
+      "grade": "6",
+      "section": "Boston",
+      "project": "Automatic rain protection sliding roof"
+    },
+    {
+      "grade": "6",
+      "section": "Boston",
+      "project": "Automatic water dispencer"
+    },
+    {
+      "grade": "6",
+      "section": "Boston",
+      "project": "Autoturn street lights"
+    },
+    {
+      "grade": "6",
+      "section": "Boston",
+      "project": "Buzzer"
+    },
+    {
+      "grade": "6",
+      "section": "Boston",
+      "project": "CPR technique"
+    },
+    {
+      "grade": "6",
+      "section": "Boston",
+      "project": "Flood alarm system"
+    },
+    {
+      "grade": "6",
+      "section": "Boston",
+      "project": "Rainbow & puzzles"
+    },
+    {
+      "grade": "6",
+      "section": "Boston",
+      "project": "Solar panels model"
+    },
+    {
+      "grade": "6",
+      "section": "Boston",
+      "project": "solar system"
+    },
+    {
+      "grade": "6",
+      "section": "Boston",
+      "project": "Spider drone"
+    },
+    {
+      "grade": "6",
+      "section": "Boston",
+      "project": "Water purification"
+    },
+    {
+      "grade": "6",
+      "section": "Harvard",
+      "project": "Automated football stadium"
+    },
+    {
+      "grade": "6",
+      "section": "Harvard",
+      "project": "Causes & Effects of elnino"
+    },
+    {
+      "grade": "6",
+      "section": "Harvard",
+      "project": "Earthquake detector"
+    },
+    {
+      "grade": "6",
+      "section": "Harvard",
+      "project": "Obstacles avoiding car"
+    },
+    {
+      "grade": "6",
+      "section": "Harvard",
+      "project": "Rainwater harvesting"
+    },
+    {
+      "grade": "6",
+      "section": "Harvard",
+      "project": "Robotic traffic Lights"
+    },
+    {
+      "grade": "6",
+      "section": "Harvard",
+      "project": "Types of energy"
+    },
+    {
+      "grade": "6",
+      "section": "Heidelberg",
+      "project": "Air cooler"
+    },
+    {
+      "grade": "6",
+      "section": "Heidelberg",
+      "project": "Automatic fire extinguisher"
+    },
+    {
+      "grade": "6",
+      "section": "Heidelberg",
+      "project": "Automatic street light"
+    },
+    {
+      "grade": "6",
+      "section": "Heidelberg",
+      "project": "Floor Cleaning system"
+    },
+    {
+      "grade": "6",
+      "section": "Heidelberg",
+      "project": "Fun games"
+    },
+    {
+      "grade": "6",
+      "section": "Heidelberg",
+      "project": "Light sensors"
+    },
+    {
+      "grade": "6",
+      "section": "Heidelberg",
+      "project": "Solar energy house"
+    },
+    {
+      "grade": "6",
+      "section": "Heidelberg",
+      "project": "Solar system"
+    },
+    {
+      "grade": "6",
+      "section": "Heidelberg",
+      "project": "Wave to Switch – a touch-free lamp controlled by ultrasonic echoes"
+    },
+    {
+      "grade": "6",
+      "section": "Heidelberg",
+      "project": "Xeno chat App"
+    },
+    {
       "grade": "6",
       "section": "Heidelberg",
       "project": "XenoChat"
     },
     {
+      "grade": "6",
+      "section": "Princeton",
+      "project": "Agribot-Robo"
+    },
+    {
+      "grade": "6",
+      "section": "Princeton",
+      "project": "Aqua cycle-smart water recycling system"
+    },
+    {
+      "grade": "6",
+      "section": "Princeton",
+      "project": "Automatic watering system for plants"
+    },
+    {
+      "grade": "6",
+      "section": "Princeton",
+      "project": "Gravity battery"
+    },
+    {
+      "grade": "6",
+      "section": "Princeton",
+      "project": "High Performance ,low-cost,two-wheeled self balancing robot"
+    },
+    {
+      "grade": "6",
+      "section": "Princeton",
+      "project": "Piezoelectric"
+    },
+    {
+      "grade": "6",
+      "section": "Princeton",
+      "project": "Plant microbial fuel cells-Generating clean electricity from soil bacteria"
+    },
+    {
+      "grade": "6",
+      "section": "Princeton",
+      "project": "Project Pause"
+    },
+    {
+      "grade": "6",
+      "section": "Princeton",
+      "project": "Renewable energy"
+    },
+    {
+      "grade": "6",
+      "section": "Princeton",
+      "project": "Right bot"
+    },
+    {
+      "grade": "6",
+      "section": "Princeton",
+      "project": "Smart plant monitoring & watering robot"
+    },
+    {
+      "grade": "6",
+      "section": "Princeton",
+      "project": "Sundrive solar powered car"
+    },
+    {
+      "grade": "6",
+      "section": "Stanford",
+      "project": "1,2,3,4 D explanation"
+    },
+    {
+      "grade": "6",
+      "section": "Stanford",
+      "project": "Aqua alert smart flood drain alert system"
+    },
+    {
+      "grade": "6",
+      "section": "Stanford",
+      "project": "Disaster alert"
+    },
+    {
+      "grade": "6",
+      "section": "Stanford",
+      "project": "Oil and water purifier"
+    },
+    {
+      "grade": "6",
+      "section": "Stanford",
+      "project": "Prevention of global warming"
+    },
+    {
+      "grade": "6",
+      "section": "Stanford",
+      "project": "Smart moutain accident prevention sysytem"
+    },
+    {
+      "grade": "6",
+      "section": "Stanford",
+      "project": "Types of energy"
+    },
+    {
+      "grade": "6",
+      "section": "Stanford",
+      "project": "volcano"
+    },
+    {
+      "grade": "6",
+      "section": "Stanford",
+      "project": "Wind electricity"
+    },
+    {
+      "grade": "6",
+      "section": "Yale",
+      "project": "Agriculture drone"
+    },
+    {
+      "grade": "6",
+      "section": "Yale",
+      "project": "Electronic water cycle"
+    },
+    {
+      "grade": "6",
+      "section": "Yale",
+      "project": "Renewable energy"
+    },
+    {
+      "grade": "6",
+      "section": "Yale",
+      "project": "Water filtration"
+    },
+    {
+      "grade": "7",
+      "section": "Bhaskara",
+      "project": "Automated street lights"
+    },
+    {
+      "grade": "7",
+      "section": "Bhaskara",
+      "project": "carbon absorber"
+    },
+    {
+      "grade": "7",
+      "section": "Bhaskara",
+      "project": "Cloud chamber"
+    },
+    {
+      "grade": "7",
+      "section": "Bhaskara",
+      "project": "Irrigation by solar energy"
+    },
+    {
+      "grade": "7",
+      "section": "Bhaskara",
+      "project": "Mechanism of breathing"
+    },
+    {
+      "grade": "7",
+      "section": "Bhaskara",
+      "project": "Smart lock system"
+    },
+    {
+      "grade": "7",
+      "section": "Bhaskara",
+      "project": "Solar electricity"
+    },
+    {
+      "grade": "7",
+      "section": "Bhaskara",
+      "project": "Solar tractor"
+    },
+    {
+      "grade": "7",
+      "section": "Bhaskara",
+      "project": "Water cycle"
+    },
+    {
+      "grade": "7",
+      "section": "Brahmagupta",
+      "project": "Automatic railway gate"
+    },
+    {
+      "grade": "7",
+      "section": "Brahmagupta",
+      "project": "Automatic street light system"
+    },
+    {
+      "grade": "7",
+      "section": "Brahmagupta",
+      "project": "Drip irrigation system"
+    },
+    {
+      "grade": "7",
+      "section": "Brahmagupta",
+      "project": "Earthquake alarm"
+    },
+    {
+      "grade": "7",
+      "section": "Brahmagupta",
+      "project": "Experiments on chemical reactions."
+    },
+    {
+      "grade": "7",
+      "section": "Brahmagupta",
+      "project": "Fire alarm"
+    },
+    {
+      "grade": "7",
+      "section": "Brahmagupta",
+      "project": "Fourth dimension"
+    },
+    {
+      "grade": "7",
+      "section": "Brahmagupta",
+      "project": "Hydraulic lift with sensor"
+    },
+    {
+      "grade": "7",
+      "section": "Brahmagupta",
+      "project": "Low cost algae bio reactor for carbon capture"
+    },
+    {
+      "grade": "7",
+      "section": "Brahmagupta",
+      "project": "Rectilinear propagation of light"
+    },
+    {
+      "grade": "7",
+      "section": "Brahmagupta",
+      "project": "Viscosity Wonders"
+    },
+    {
+      "grade": "7",
+      "section": "Brahmagupta",
+      "project": "Working model of digestive system"
+    },
+    {
+      "grade": "7",
+      "section": "Brahmagupta",
+      "project": "Working model of respiratory system"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-A Aryabhatta",
+      "project": "Cardboard virtual Reality"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-A Aryabhatta",
+      "project": "Dispersion of light and Newton disc"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-A Aryabhatta",
+      "project": "Green house and smart hospitals"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-A Aryabhatta",
+      "project": "Hand Writing Machine"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-A Aryabhatta",
+      "project": "Hydraulic pressured powered arm"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-A Aryabhatta",
+      "project": "Mini Industrial waste sorting plant"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-A Aryabhatta",
+      "project": "Projector"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-A Aryabhatta",
+      "project": "Security alarm"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-A Aryabhatta",
+      "project": "Smart city A sustainable and connected future"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-A Aryabhatta",
+      "project": "Smart Drain Blockage Severity Detector"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-A Aryabhatta",
+      "project": "Smart Rail and safety automation system"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Cauliflower brain model"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Density Dynamics, Lava Lamp"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Fire detection and prevention system"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Human Brain"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Laser Light Security alarm"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Phantom power detector"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Prevention of acid rain"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Safety magnetic elevator"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Skull"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Solar energy using sunlight"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Solar system"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Solar tree"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Vaccum cleaner"
+    },
+    {
+      "grade": "7",
+      "section": "IIT-B Baudhayana",
+      "project": "Working model of Hydraulic lift"
+    },
+    {
+      "grade": "7",
+      "section": "Ramanujan",
+      "project": "Bluetooth Speaker"
+    },
+    {
+      "grade": "7",
+      "section": "Ramanujan",
+      "project": "Hydraulic Bridge"
+    },
+    {
+      "grade": "7",
+      "section": "Ramanujan",
+      "project": "Model of Respiratory system"
+    },
+    {
+      "grade": "7",
+      "section": "Ramanujan",
+      "project": "Model showing action of diaphragm and mechanism of breathing"
+    },
+    {
+      "grade": "7",
+      "section": "Ramanujan",
+      "project": "Obstacle avoiding car"
+    },
+    {
+      "grade": "7",
+      "section": "Ramanujan",
+      "project": "Oobleck Speed breaker"
+    },
+    {
+      "grade": "7",
+      "section": "Sridhara",
+      "project": "A Voice controlled car"
+    },
+    {
+      "grade": "7",
+      "section": "Sridhara",
+      "project": "Smart city"
+    },
+    {
+      "grade": "7",
+      "section": "Sridhara",
+      "project": "Sustainable Development"
+    },
+    {
+      "grade": "7",
+      "section": "Sridhara",
+      "project": "Wind Energy in everyday Vehicles"
+    },
+    {
+      "grade": "7",
+      "section": "Vashishtha",
+      "project": "Experiments on Acids and bases , Neutralisation reaction"
+    },
+    {
+      "grade": "7",
+      "section": "Vashishtha",
+      "project": "Experiments on Methods of heat transfer: Conduction and Convection"
+    },
+    {
+      "grade": "7",
+      "section": "Vashishtha",
+      "project": "Microscope"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "Designing an effective water filtration using natural materials"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "Electrolysis of water, Volacano Eruption simulation"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "Human Sensor"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "Hydraulic arm"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "Lungs Model- demonstration of the breathing machanism"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "Oblelex Fluid"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "Smart Staircase water Purifier"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "Solar Lift"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "testing antacids, Testing acid and base"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "The Newton's Disc"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "Water Level Indicator"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "Wi-Fi Controlled car"
+    },
+    {
+      "grade": "8",
+      "section": "Darwin",
+      "project": "Automatic Fire Detector"
+    },
+    {
+      "grade": "8",
+      "section": "Darwin",
+      "project": "Blind Eye Sensors"
+    },
+    {
+      "grade": "8",
+      "section": "Darwin",
+      "project": "Drone"
+    },
+    {
+      "grade": "8",
+      "section": "Darwin",
+      "project": "Ecosort"
+    },
+    {
+      "grade": "8",
+      "section": "Darwin",
+      "project": "Green House Effect"
+    },
+    {
+      "grade": "8",
+      "section": "Darwin",
+      "project": "Rain Detector"
+    },
+    {
+      "grade": "8",
+      "section": "Darwin",
+      "project": "Remote Control Car"
+    },
+    {
+      "grade": "8",
+      "section": "Darwin",
+      "project": "Robotic Arm"
+    },
+    {
+      "grade": "8",
+      "section": "Edison",
+      "project": "Activity to show plant cell in an onion peel"
+    },
+    {
+      "grade": "8",
+      "section": "Edison",
+      "project": "Electrolysis"
+    },
+    {
+      "grade": "8",
+      "section": "Edison",
+      "project": "Laser security alarm"
+    },
+    {
+      "grade": "8",
+      "section": "Edison",
+      "project": "Refraction of light"
+    },
+    {
+      "grade": "8",
+      "section": "Edison",
+      "project": "Robotic arm"
+    },
+    {
+      "grade": "8",
+      "section": "Edison",
+      "project": "Smart street light system"
+    },
+    {
+      "grade": "8",
+      "section": "Edison",
+      "project": "solar car"
+    },
+    {
+      "grade": "8",
+      "section": "Edison",
+      "project": "Tranfering polluted air to clean air"
+    },
+    {
+      "grade": "8",
+      "section": "Einstein",
+      "project": "Activity to find the plant cell in onion peel"
+    },
+    {
+      "grade": "8",
+      "section": "Einstein",
+      "project": "Buzzer game"
+    },
+    {
+      "grade": "8",
+      "section": "Einstein",
+      "project": "Periscope"
+    },
+    {
+      "grade": "8",
+      "section": "Einstein",
+      "project": "Smart Agriculture"
+    },
+    {
+      "grade": "8",
+      "section": "Einstein",
+      "project": "Volcano"
+    },
+    {
+      "grade": "8",
+      "section": "Einstein",
+      "project": "Water filtration"
+    },
+    {
+      "grade": "8",
+      "section": "IIT-A Hawking",
+      "project": "Automatic Speed breaker"
+    },
+    {
+      "grade": "8",
+      "section": "IIT-A Hawking",
+      "project": "Human following"
+    },
+    {
+      "grade": "8",
+      "section": "IIT-A Hawking",
+      "project": "Mysteries of Pyranids"
+    },
+    {
+      "grade": "8",
+      "section": "IIT-A Hawking",
+      "project": "Sattellite Comunication"
+    },
+    {
+      "grade": "8",
+      "section": "IIT-A Hawking",
+      "project": "Smart agriculture using Smart Irrigation"
+    },
+    {
+      "grade": "8",
+      "section": "IIT-A Hawking",
+      "project": "Super El-nino"
+    },
+    {
+      "grade": "8",
+      "section": "IIT-A Hawking",
+      "project": "Telsa Coil"
+    },
+    {
+      "grade": "8",
+      "section": "Newton",
+      "project": "Carbon purification model for Factories"
+    },
+    {
+      "grade": "8",
+      "section": "Newton",
+      "project": "Controlling lights and fans with a remote"
+    },
+    {
+      "grade": "8",
+      "section": "Newton",
+      "project": "Fire Detector"
+    },
+    {
+      "grade": "8",
+      "section": "Newton",
+      "project": "Green fuel for the future"
+    },
+    {
+      "grade": "8",
+      "section": "Newton",
+      "project": "How Wind energy produces Electricity"
+    },
+    {
+      "grade": "8",
+      "section": "Newton",
+      "project": "Invisible Ink Lab"
+    },
+    {
+      "grade": "8",
+      "section": "Newton",
+      "project": "Rain Water Harvesting"
+    },
+    {
+      "grade": "8",
+      "section": "Newton",
+      "project": "Smart irrigation"
+    },
+    {
+      "grade": "8",
+      "section": "Newton",
+      "project": "Water Purification"
+    },
+    {
+      "grade": "8",
+      "section": "Newton",
+      "project": "Weather monitoring station"
+    },
+    {
+      "grade": "8",
+      "section": "Watson",
+      "project": "Blind stick"
+    },
+    {
+      "grade": "8",
+      "section": "Watson",
+      "project": "Carbon purifier (Group 5)"
+    },
+    {
+      "grade": "8",
+      "section": "Watson",
+      "project": "Carbon purifier (Group 9)"
+    },
+    {
+      "grade": "8",
+      "section": "Watson",
+      "project": "Electric wire loop game"
+    },
+    {
+      "grade": "8",
+      "section": "Watson",
+      "project": "Global warming vs Green house effect"
+    },
+    {
+      "grade": "8",
+      "section": "Watson",
+      "project": "Hydroponics"
+    },
+    {
+      "grade": "8",
+      "section": "Watson",
+      "project": "Rain water harvesting"
+    },
+    {
+      "grade": "8",
+      "section": "Watson",
+      "project": "Smart farmer price advisor"
+    },
+    {
+      "grade": "8",
+      "section": "Watson",
+      "project": "Smart fire detector"
+    },
+    {
+      "grade": "8",
+      "section": "Watson",
+      "project": "Smart fish feeder"
+    },
+    {
+      "grade": "8",
+      "section": "Watson",
+      "project": "Walkwatt- Electricity from walking"
+    },
+    {
+      "grade": "9",
+      "section": "Austein",
+      "project": "BUZZWIRE GAME"
+    },
+    {
+      "grade": "9",
+      "section": "Austein",
+      "project": "CARBID GUN (MONKEY GUN)"
+    },
+    {
+      "grade": "9",
+      "section": "Austein",
+      "project": "ELECTRONIC QUIZ"
+    },
+    {
+      "grade": "9",
+      "section": "Austein",
+      "project": "MICRO SCOPE"
+    },
+    {
+      "grade": "9",
+      "section": "Austein",
+      "project": "PROPAINE FIRE BUBBLE"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-A",
+      "project": "AI Voice assistant"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-A",
+      "project": "Air cooler"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-A",
+      "project": "Aqua Sense : Smart Irrigation System"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-A",
+      "project": "Aqua Tech : Smart water control dT centre"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-A",
+      "project": "Beyond brown"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-A",
+      "project": "Renewable sorces of energy"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-A",
+      "project": "Seebeck effect"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-A",
+      "project": "Smart Rain -Alaram System"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-A",
+      "project": "Technological Interventions for Ocean -Plastic removal"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-B",
+      "project": "Biodegredable plastic"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-B",
+      "project": "Conventional sustainable transformation in Agriculture"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-B",
+      "project": "Dual sustainable energy"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-B",
+      "project": "Exploring Magnetic forces"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-B",
+      "project": "Human blue print"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-B",
+      "project": "Osmasis"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-B",
+      "project": "Rain water Harvesting"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-B",
+      "project": "Remote control robot"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-B",
+      "project": "Studyverse learning app"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-B",
+      "project": "Sustainable development"
+    },
+    {
+      "grade": "9",
+      "section": "IIT-B",
+      "project": "Working model of heart"
+    },
+    {
       "grade": "9",
       "section": "Keats",
       "project": "VoiceVote"
+    },
+    {
+      "grade": "9",
+      "section": "Kipling",
+      "project": "A Safe look into atomic energy"
+    },
+    {
+      "grade": "9",
+      "section": "Kipling",
+      "project": "DNA Model 3D"
+    },
+    {
+      "grade": "9",
+      "section": "Kipling",
+      "project": "Energy-Efficient smart city"
+    },
+    {
+      "grade": "9",
+      "section": "Kipling",
+      "project": "Iodine clock reaction"
+    },
+    {
+      "grade": "9",
+      "section": "Kipling",
+      "project": "Rainbow fire"
+    },
+    {
+      "grade": "9",
+      "section": "Milton",
+      "project": "CARTESIAN DIVER"
+    },
+    {
+      "grade": "9",
+      "section": "Milton",
+      "project": "ELECTRIC CLAUSE FOR WOMEN SAFETY"
+    },
+    {
+      "grade": "9",
+      "section": "Milton",
+      "project": "ELNINO"
+    },
+    {
+      "grade": "9",
+      "section": "Milton",
+      "project": "MONKEY GUN"
+    },
+    {
+      "grade": "9",
+      "section": "Milton",
+      "project": "PIEZO ELECTRIC FOOTFALL ENERGY HARVESTER AND FLOOR TILE"
+    },
+    {
+      "grade": "9",
+      "section": "Milton",
+      "project": "RC ELECTRIC CAR"
+    },
+    {
+      "grade": "9",
+      "section": "Milton",
+      "project": "RECYCLED POWER BANK"
+    },
+    {
+      "grade": "9",
+      "section": "Milton",
+      "project": "SMART FOOD DETECTING SYSTEM"
+    },
+    {
+      "grade": "9",
+      "section": "Milton",
+      "project": "SMART HEAT WAVE ALERT AND DROUGHT DETECTION. USING SOIL MOISTURE"
+    },
+    {
+      "grade": "9",
+      "section": "Milton",
+      "project": "SMART SENSOR IRRIGATION SYSTEM WITH SOIL MOISTURE CONTROLE"
+    },
+    {
+      "grade": "9",
+      "section": "Milton",
+      "project": "THE MAGICAL ECO PLASTIC"
+    },
+    {
+      "grade": "9",
+      "section": "Tennyson",
+      "project": "3D HOLOGRAM"
+    },
+    {
+      "grade": "9",
+      "section": "Tennyson",
+      "project": "AWARENESS ABOUT VAGINAL CANCER"
+    },
+    {
+      "grade": "9",
+      "section": "Tennyson",
+      "project": "FIRE FIGHTING ROBOT"
+    },
+    {
+      "grade": "9",
+      "section": "Tennyson",
+      "project": "FLOOD DETECTION AND EARLY WARNING SYSTEM"
+    },
+    {
+      "grade": "9",
+      "section": "Tennyson",
+      "project": "HYDROPHONIC SYSTEM"
+    },
+    {
+      "grade": "9",
+      "section": "Tennyson",
+      "project": "KIDNEY WORKING MODEL"
+    },
+    {
+      "grade": "9",
+      "section": "Tennyson",
+      "project": "NEURON"
+    },
+    {
+      "grade": "9",
+      "section": "Tennyson",
+      "project": "RC-BI PLANE"
+    },
+    {
+      "grade": "9",
+      "section": "Tennyson",
+      "project": "SMART BLIND STICK"
+    },
+    {
+      "grade": "9",
+      "section": "Tennyson",
+      "project": "SMART MEDICINE REMINDER"
+    },
+    {
+      "grade": "9",
+      "section": "Tennyson",
+      "project": "WATER LEVEL FIBER SENSOR"
+    },
+    {
+      "grade": "9",
+      "section": "Wordsworth",
+      "project": "B.P ,SUGAR AND WEIGHT TEST"
+    },
+    {
+      "grade": "9",
+      "section": "Wordsworth",
+      "project": "BLOOD GROUP TEST"
+    },
+    {
+      "grade": "9",
+      "section": "Wordsworth",
+      "project": "DNA Extraction"
+    },
+    {
+      "grade": "9",
+      "section": "Wordsworth",
+      "project": "FLAMING BUBBLES AND AI IN STOCKS"
+    },
+    {
+      "grade": "9",
+      "section": "Wordsworth",
+      "project": "HYDRAULIC BRIDGE"
+    },
+    {
+      "grade": "9",
+      "section": "Wordsworth",
+      "project": "OOBLECK"
+    },
+    {
+      "grade": "9",
+      "section": "Wordsworth",
+      "project": "SMART BRIDGE"
+    },
+    {
+      "grade": "9",
+      "section": "Wordsworth",
+      "project": "SYNAPS AI: DIVALAVA, RAINGAURD, AWARENESS ON RELIGIOUS CRIMES"
     }
   ]
 }
