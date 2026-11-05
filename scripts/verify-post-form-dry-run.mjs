@@ -64,6 +64,8 @@ try {
           status: document.getElementById('status')?.textContent,
           catalogStatus: document.getElementById('catalogStatus')?.textContent,
           voted: localStorage.getItem('voicevote_voted_v1'),
+          catalogReady: typeof catalogReady === 'boolean' ? catalogReady : 'unavailable',
+          hasLocalVote: typeof hasLocalVote === 'function' ? hasLocalVote() : 'unavailable',
           submitDisabled: document.getElementById('submitBtn')?.disabled
         }));
         throw new Error('VoiceVote submit was disabled: ' + JSON.stringify(state));
