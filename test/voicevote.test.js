@@ -302,6 +302,7 @@ function backend(rows) {
   };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('apps-script/Code.gs', 'utf8'), context);
+  vm.runInContext(fs.readFileSync('apps-script/VisitorPasses.gs', 'utf8'), context);
   return { context, writes, wasReleased: () => released };
 }
 function serve(a, b) {
@@ -334,7 +335,7 @@ test('actual backend catalog and save JSONP interoperate with frontend', async (
   const receipt = b.context.doPost({ parameter: params });
   assert.match(receipt.html, /Thank you! Feedback saved/);
   assert.equal(params.language, 'hi-IN');
-  assert.deepEqual(b.writes[0], ['Date', 'Project', 'Class', 'Section', 'Original Feedback', 'Rating', 'Language', 'English Translation', 'Submission ID', 'Device hash']);
+  assert.deepEqual(b.writes[0], ['Date', 'Project', 'Class', 'Section', 'Original Feedback', 'Rating', 'Language', 'English Translation', 'Submission ID', 'Device hash', 'Vote status', 'Visitor pass serial']);
   assert.deepEqual(b.writes[1].slice(1, 8), ['Robot', '6', 'A', "'=great", 5, 'hi-IN', 'hi:en:=great']);
   assert.match(b.writes[1][9], /^[0-9a-f]{64}$/);
   assert.equal(b.wasReleased(), true);
