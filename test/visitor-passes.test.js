@@ -30,7 +30,7 @@ function setup(){
   const ss={getSheetByName:n=>sheets[n]||null,insertSheet:n=>(sheets[n]=makeSheet())};
   const ctx={
     Date,JSON,Math,
-    SpreadsheetApp:{openById:()=>{opens++;return ss}},
+    SpreadsheetApp:{openById:()=>{opens++;return ss},flush(){}},
     PropertiesService:{getScriptProperties:()=>({getProperty:k=>props.get(k)||null,setProperty:(k,v)=>props.set(k,String(v))})},
     CacheService:{getScriptCache:()=>({get:k=>cache.get(k)||null,put:(k,v)=>cache.set(k,String(v))})},
     LockService:{getScriptLock:()=>({waitLock:()=>{locked++},releaseLock:()=>{released++}})},
