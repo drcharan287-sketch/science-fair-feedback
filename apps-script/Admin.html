@@ -215,6 +215,33 @@
         <p class="help" id="passesInfo">Recent passes shown without full access codes or hashes.</p>
       </section>
 
+      <details class="panel" id="publicDisplaySettings" style="margin-top:18px">
+        <summary style="cursor:pointer;font-weight:800;font-size:17px">Audience Display · publication controls</summary>
+        <p class="help">The separate Results page is a public read-only display. It starts in DEMO mode.
+          Never publish live rankings until an organizer explicitly approves it.</p>
+        <div class="notice" id="publicDisplayStatus">Current audience display: DEMO (no real results public).</div>
+        <div class="controls">
+          <div>
+            <label for="publicDisplayMode">Audience display mode</label>
+            <select id="publicDisplayMode">
+              <option value="DEMO">DEMO · Fictional samples only</option>
+              <option value="LIVE">LIVE · Participation totals only</option>
+              <option value="PUBLISHED">PUBLISHED · Grade-wise audience rankings</option>
+            </select>
+          </div>
+          <div>
+            <label for="publicDisplayReason">Organizer reason (8+ characters)</label>
+            <input id="publicDisplayReason" type="text" maxlength="200" placeholder="Why is this audience visibility appropriate?">
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" id="savePublicDisplayMode" class="muted-btn">Save public display mode</button>
+          <a href="https://drcharan287-sketch.github.io/science-fair-feedback/results.html"
+             target="_blank" rel="noopener" style="padding:11px 15px;color:#b6ecfb">Open audience display ↗</a>
+        </div>
+        <p id="publicDisplayMessage" class="help" role="status"></p>
+      </details>
+
       <footer style="padding:25px 0;color:#aabfd1;font-size:12px">
         VoiceVote · Browser speech recognition and multilingual machine translation.
         Ratings are audience feedback, not final jury awards.
@@ -276,7 +303,11 @@
         'legacyCount','excludedCount','rankingCount','reviewsTitle',
         'reviewsStatus','adminStatus','votingState','passesAvailable',
         'passesUsed','passesRevoked','passesInfo','passModeLabel',
-        'passModeHelp','passCopyStatus','auditAlert'].forEach(id => text($(id),''));
+        'passModeHelp','passCopyStatus','auditAlert','publicDisplayStatus',
+        'publicDisplayMessage'].forEach(id => text($(id),'')); 
+      $('publicDisplayMode').value='DEMO';
+      $('publicDisplayReason').value='';
+      $('publicDisplaySettings').open=false;
       $('auditAlert').hidden = true;
       $('issuedPassOutput').value = '';
       $('issuedPassPanel').hidden = true;
@@ -321,6 +352,13 @@
       text($('protectedCount'),data.protectedVotes);
       text($('legacyCount'),data.legacyVotes);
       text($('excludedCount'),data.excludedVotes);
+      const displayMode = ['DEMO','LIVE','PUBLISHED'].includes(data.publicResultsMode)
+        ? data.publicResultsMode : 'DEMO';
+      $('publicDisplayMode').value=displayMode;
+      text($('publicDisplayStatus'),'Current audience display: '+displayMode+
+        (displayMode==='DEMO'?' · Synthetic examples only; real rankings private.'
+          : displayMode==='LIVE'?' · Public anonymous totals; no rankings.'
+          :' · Grade-wise rankings are public.'));
       const pendingAuditCount = Number(data.auditPendingActions) || 0;
       $('auditAlert').hidden = pendingAuditCount === 0;
       text($('auditAlert'),pendingAuditCount
@@ -529,6 +567,32 @@
     $('activatePasses').addEventListener('click',()=>changePassMode(true));
     $('preparePasses').addEventListener('click',()=>changePassMode(false));
     $('refreshPasses').addEventListener('click',refreshPasses);
+    $('savePublicDisplayMode').addEventListener('click',()=>{
+      const requested=$('publicDisplayMode').value;
+      const why=$('publicDisplayReason').value.trim();
+      if(!['DEMO','LIVE','PUBLISHED'].includes(requested)||why.length<8){
+        text($('publicDisplayMessage'),'Choose a mode and provide a reason of at least 8 characters.');
+        return;
+      }
+      const explicit=requested==='PUBLISHED'
+        ? 'PUBLISH ACTUAL grade-wise audience rankings publicly? This does NOT publish private comments.'
+        : requested==='LIVE'
+          ? 'Show REAL anonymous participation totals to the public? Rankings will remain private.'
+          : 'Return the public display to fictional DEMO mode?';
+      if(!confirm(explicit))return;
+      $('savePublicDisplayMode').disabled=true;
+      text($('publicDisplayMessage'),'Saving audited publication decision…');
+      call('adminSetPublicResultsMode',[key,requested,why],()=>{
+        $('savePublicDisplayMode').disabled=false;
+        $('publicDisplayReason').value='';
+        text($('publicDisplayMessage'),'Publication mode updated. Public viewers refresh automatically.');
+        refresh();
+      },err=>{
+        $('savePublicDisplayMode').disabled=false;
+        showError(err);
+        text($('publicDisplayMessage'),'Could not change publication: '+(err.message||String(err)));
+      });
+    });
 
     $('loginForm').addEventListener('submit',event=>{
       event.preventDefault();
