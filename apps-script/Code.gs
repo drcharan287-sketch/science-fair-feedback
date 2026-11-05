@@ -16,6 +16,12 @@ function doGet(e) {
     return HtmlService.createHtmlOutputFromFile('Admin')
       .setTitle('VoiceVote | AI Admin Console');
   }
+  if (params.action === 'publicResults') {
+    let payload;
+    try { payload = publicSummary_(); }
+    catch (_) { payload = {success:false,mode:'DEMO',message:'Results temporarily unavailable.'}; }
+    return jsonpResponse_(payload,params.callback);
+  }
   if (params.action === 'catalog') {
     let result;
     try {
