@@ -625,6 +625,7 @@ function submitFeedback() {
     // Record the attempt before leaving GitHub Pages. A visitor who scans the
     // common QR again should not see an active form while the receipt is unknown.
     setPendingVote(true);
+    syncVoteStatus();
     isSubmitting = true;
     stopRecording();
     submitButton.disabled = true;
@@ -634,6 +635,7 @@ function submitFeedback() {
     form.submit();
   } catch (error) {
     try { setPendingVote(false); } catch (_) {}
+    syncVoteStatus();
     isSubmitting = false;
     submitButton.disabled = false;
     submitButton.textContent = 'Submit Feedback →';
