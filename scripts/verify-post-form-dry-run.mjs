@@ -93,7 +93,8 @@ try {
       break;
     }catch(e){
       error=e;
-      if(attempt<7)await new Promise(resolve=>setTimeout(resolve,5000));
+      console.warn('Dry-run attempt '+(attempt+1)+' failed: '+e.message);
+      if(attempt<1)await new Promise(resolve=>setTimeout(resolve,1500));
     }
   }
   if(error)throw error;
