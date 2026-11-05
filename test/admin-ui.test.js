@@ -24,7 +24,7 @@ function harness() {
     select(){}
   }
   const elements = Object.fromEntries(
-    [...html.matchAll(/\\bid="([^"]+)"/g)].map(([,id])=>[id,new Element(id)])
+    [...html.matchAll(/\bid="([^"]+)"/g)].map(([,id])=>[id,new Element(id)])
   );
   const document={
     getElementById: id => elements[id] || null,
@@ -45,7 +45,7 @@ function harness() {
     google:{script:{run:runner(null,null)}}
   };
   context.window=context;
-  const script=html.match(/<script>\\s*([\\s\\S]*?)<\\/script>/);
+  const script=html.match(/<script>\s*([\s\S]*?)<\/script>/);
   assert.ok(script,'Admin inline controller must exist');
   vm.runInNewContext(script[1],context);
   const dispatch=(id,name='click')=>elements[id].dispatchEvent({
