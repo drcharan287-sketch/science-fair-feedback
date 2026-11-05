@@ -21,7 +21,7 @@ function app(fetchProjects, search = '', stored = new Map()) {
     dispatchEvent(event) { for (const fn of this.listeners[event.type] || []) fn.call(this, event); }
     remove() { this.removed = true; }
   }
-  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn', 'stopBtn', 'projectSearch', 'projectSearchResults', 'projectSearchStatus', 'projectSearchSelected'].map(id => [id, new Element()]));
+  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn', 'stopBtn', 'projectSearch', 'projectSearchResults', 'projectSearchStatus', 'projectSearchSelected', 'visitorPass', 'newVisitorBtn'].map(id => [id, new Element()]));
   elements.language.value = 'hi-IN';
   elements.submitBtn.disabled = true;
   const stars = Array.from({ length: 5 }, (_, i) => { const e = new Element(); e.dataset.value = String(i + 1); return e; });
@@ -114,6 +114,7 @@ test('browser sends one secure POST form with all feedback fields, not a JSONP G
   const fields = Object.fromEntries(form.children.map(x => [x.name, x.value]));
   assert.deepEqual(fields, {
     action: 'save',
+    visitorPass: '',
     submissionId: '123e4567-e89b-42d3-a456-426614174000',
     deviceToken: '123e4567-e89b-42d3-a456-426614174000',
     studentClass: '6',
@@ -267,6 +268,57 @@ test('failed Google receipt clears only pending attempt to allow an explicit ret
   assert.equal(stored.has('voicevote_pending_v1'),false);
   assert.equal(a.elements.submitBtn.disabled,false);
   assert.equal(a.elements.feedback.disabled,false);
+});
+
+
+test('a different visitor can explicitly use the same browser with an unused pass', async () => {
+  const saved = new Map([
+    ['voicevote_voted_v1','1'],
+    ['voicevote_device_token_v1','123e4567-e89b-42d3-a456-426614174000']
+  ]);
+  const a = app(null, '', saved);
+  respond(a, {success:true,projects:[{grade:'6',section:'Heidelberg',project:'XenoChat'}]});
+  await tick();
+  assert.equal(a.elements.submitBtn.disabled,true);
+  assert.equal(a.elements.newVisitorBtn.hidden,false);
+  assert.equal(a.elements.newVisitorBtn.disabled,true);
+  a.elements.visitorPass.value='VV-123E4567-E89B42D3-A4564266-14174000';
+  a.elements.visitorPass.dispatchEvent(new a.context.Event('input'));
+  assert.equal(a.elements.newVisitorBtn.disabled,false);
+  a.elements.newVisitorBtn.click();
+  assert.equal(saved.has('voicevote_voted_v1'),false);
+  assert.equal(a.elements.submitBtn.disabled,false);
+  a.elements.studentClass.value='6';
+  a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value='Heidelberg';
+  a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value='XenoChat';
+  a.elements.feedback.value='Second attendee: great project';
+  a.stars[4].dispatchEvent(new a.context.Event('click'));
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,1);
+  const fields=Object.fromEntries(a.forms[0].children.map(x=>[x.name,x.value]));
+  assert.equal(fields.visitorPass,'VV-123E4567-E89B42D3-A4564266-14174000');
+  assert.equal(fields.deviceToken,'123e4567-e89b-42d3-a456-426614174000');
+  assert.equal(saved.get('voicevote_pending_v1'),'1');
+  assert.equal(a.elements.visitorPass.disabled,true,'Pending receipt cannot be edited');
+});
+
+test('invalid-format pass blocks a POST before leaving the visitor page',async()=>{
+  const a=app();
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  a.elements.studentClass.value='9';
+  a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value='Keats';
+  a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value='VoiceVote';
+  a.elements.feedback.value='Good talk';
+  a.stars[4].dispatchEvent(new a.context.Event('click'));
+  a.elements.visitorPass.value='GUESS-123';
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,0);
+  assert.match(a.elements.status.textContent,/pass format/);
 });
 
 // Run the versioned Apps Script with in-memory services, then execute its real
