@@ -1,0 +1,66 @@
+/* VoiceVote Practice Voting: clear NO-SAVE treatment, shared design language.
+ * This page does NOT import the production voting JavaScript. */
+*{box-sizing:border-box}
+body{min-width:320px}
+.practice-container{max-width:840px;padding-bottom:25px}
+.practice-nav{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;min-height:80px;gap:20px;border-bottom:1px solid #c4e7ff27}
+.practice-brand{display:flex;align-items:center;white-space:nowrap;font-size:1.5rem;letter-spacing:-.065em;font-weight:900;color:#f7fcff;text-decoration:none}
+.practice-brand>span:last-child{color:#77eaf9}
+.brand-symbol{width:36px;height:36px;margin-right:9px;display:grid;place-items:center;border:1px solid #71e9f872;background:#1b557b88;border-radius:12px;color:#91f2fb;font-size:1.4rem}
+.practice-navlinks{display:flex;gap:13px;align-items:center;flex-wrap:wrap}
+.practice-navlinks a{color:#cde7f6;text-decoration:none;border:1px solid #73b9e648;border-radius:11px;padding:10px 12px;min-height:43px;font-size:.8rem;font-weight:800}
+.practice-navlinks a:hover{background:#387d9c66}
+.practice-hero{position:relative;padding:33px 4px 15px}
+.practice-kicker{display:flex;align-items:center;gap:10px;font-size:.75rem;color:#7beaff;letter-spacing:.11em;font-weight:900}
+.practice-indicator{display:inline-block;background:#91f8c5;width:9px;height:9px;border-radius:50%;box-shadow:0 0 0 5px #8ce9c522}
+.practice-hero h1{font-size:clamp(2.25rem,5.6vw,3.7rem);font-weight:900;letter-spacing:-.07em;line-height:1.09;margin:17px 0 15px;max-width:700px}
+.practice-hero h1 span{display:block;background:linear-gradient(100deg,#78eafa,#c1aefa);background-clip:text;-webkit-background-clip:text;color:transparent}
+.practice-hero>p{color:#d0e1f0;font-size:1.04rem;line-height:1.6;max-width:680px}
+.practice-safety{display:flex;gap:15px;align-items:flex-start;background:linear-gradient(105deg,#124e58de,#173b55da);border:1.5px solid #95f2ce8a;border-radius:19px;margin:16px 0 24px;padding:20px 22px}
+.practice-safety-icon{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:12px;background:#8df8c121;color:#b4ffde;font-size:1.7rem;font-weight:900}
+.practice-safety strong{color:#a9ffdb;font-size:.9rem;letter-spacing:.04em}
+.practice-safety p{font-size:.9rem;line-height:1.65;margin:6px 0 0;color:#e0fff1}
+.practice-step{margin-top:18px}.practice-step h2{font-size:clamp(1.17rem,3vw,1.65rem);letter-spacing:-.035em}
+.practice-step select,.practice-step input,.practice-step textarea{color-scheme:dark}
+.practice-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.practice-retry{background:#87eafa;color:#042539;border:0;border-radius:12px;padding:12px 15px;margin-top:12px;font-size:.9rem;font-weight:900}
+.practice-step button:focus-visible,.practice-receipt button:focus-visible,.practice-receipt a:focus-visible{outline:3px solid #96f3ff;outline-offset:4px}
+.practice-voice-buttons{display:flex;gap:12px;margin:17px 0 7px}
+.practice-voice-buttons>button{flex:1;border:1px solid #7cccf65b;padding:14px 18px;border-radius:14px;min-height:58px;font-size:1rem;font-weight:850}
+.practice-voice-buttons .record{background:linear-gradient(105deg,#05a3c4,#207fae);color:#fff}
+.practice-voice-buttons .stop{background:#294663;color:#e2f4ff}
+.practice-ai-note{margin:14px 0 0;padding:14px 16px;background:#203e5ba6;border:1px solid #7ea9ca4a;border-radius:13px;color:#d5e9f9;font-size:.85rem;line-height:1.6}
+.practice-ai-note strong{color:#a4ecf9}
+.practice-step .stars{margin:17px 0 13px}
+.practice-step .star{touch-action:manipulation}
+.practice-step button.submit{margin-top:18px}
+.practice-status{font-size:.9rem;font-weight:700;color:#b7effe;min-height:20px;text-align:center;margin-top:15px;line-height:1.5}
+.practice-footnote{color:#bdd2e7;font-size:.8rem;margin:16px 0 0;text-align:center;line-height:1.65}
+.practice-receipt{margin:22px 0 10px;padding:clamp(22px,3.5vw,36px);border-radius:26px;border:1px solid #91ecca88;background:linear-gradient(140deg,#16465a,#143659);text-align:center;box-shadow:0 24px 60px #030c214d}
+.receipt-symbol{display:grid;place-items:center;width:68px;height:68px;margin:0 auto 17px;border-radius:22px;background:#9cf7d71d;color:#bcffe3;font-size:2.7rem}
+.receipt-kicker{font-weight:900;letter-spacing:.16em;color:#9df6d3;font-size:.75rem}
+.practice-receipt h2{font-size:clamp(1.9rem,5vw,2.9rem);margin:10px 0 20px;letter-spacing:-.055em;line-height:1.17}
+.receipt-warning{color:#fff0d3;background:#524522;display:inline-block;font-size:.82rem;font-weight:800;padding:10px 15px;border:1px solid #ebc3679b;border-radius:12px}
+.receipt-summary{margin:25px 0 19px;display:grid;grid-template-columns:1fr 1fr;text-align:left;gap:10px}
+.receipt-summary>div{border-radius:13px;border:1px solid #bdd7ec32;background:#0e2946bd;padding:14px 16px;min-width:0}
+.receipt-summary>div:last-child{grid-column:1/-1}
+.receipt-summary span{display:block;font-size:.72rem;color:#a2c3da;text-transform:uppercase;font-weight:850;letter-spacing:.1em}
+.receipt-summary strong{display:block;color:#fff;font-size:1.08rem;font-weight:800;margin-top:8px;overflow-wrap:anywhere}
+.receipt-summary p{color:#ecf7ff;margin:9px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65}
+.receipt-explainer{text-align:left;color:#d4e8f3;font-size:.86rem;line-height:1.7}
+.receipt-actions{display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:23px}
+.receipt-actions button,.receipt-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:50px;border:1px solid #7cdeef91;padding:13px 17px;border-radius:13px;font-size:.86rem;font-weight:850;text-decoration:none}
+.receipt-actions button{background:#93edfa;color:#072d42}
+.receipt-actions a{background:#244b67;color:#e8faff}
+.practice-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:24px 0 0;color:#b8cce0;font-size:.75rem}
+[hidden]{display:none!important}
+@media(max-width:560px){
+ .practice-nav{min-height:75px;flex-wrap:wrap;padding:14px 0}.practice-brand{font-size:1.35rem}.practice-navlinks{width:100%;justify-content:space-between}.practice-navlinks a{flex:1;text-align:center}
+ .practice-hero{padding:31px 3px 10px}.practice-hero h1{font-size:2.25rem}.practice-hero>p{font-size:.96rem}
+ .practice-safety{padding:16px;gap:11px}.practice-safety-icon{width:34px;height:34px;font-size:1.35rem}.practice-safety p{font-size:.82rem}
+ .practice-fields{grid-template-columns:1fr;gap:0}
+ .practice-voice-buttons{gap:8px}.practice-voice-buttons>button{padding:12px 10px;font-size:.89rem}
+ .receipt-summary{grid-template-columns:1fr}.receipt-summary>div:last-child{grid-column:auto}
+ .practice-footer{flex-direction:column;text-align:center}
+}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}

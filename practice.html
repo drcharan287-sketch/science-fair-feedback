@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#091b37">
+<meta name="description" content="VoiceVote safe practice: demonstrate voting, voice transcription and ratings without saving or affecting real science fair votes.">
+<title>VoiceVote • Practice Voting (No Real Vote)</title>
+<link rel="stylesheet" href="voicevote-theme.css">
+<link rel="stylesheet" href="practice-vote.css">
+<script src="voicevote-catalog.js" defer></script>
+<script src="practice-vote.js" defer></script>
+</head>
+<body>
+<main class="container practice-container">
+  <nav class="practice-nav" aria-label="VoiceVote pages">
+    <a class="practice-brand" href="./"><span class="brand-symbol" aria-hidden="true">◈</span> Voice<span>Vote</span></a>
+    <div class="practice-navlinks">
+      <a href="./">Real Voting</a>
+      <a href="./results.html">Results Display</a>
+    </div>
+  </nav>
+
+  <header class="practice-hero">
+    <span class="practice-kicker"><span class="practice-indicator" aria-hidden="true"></span> STUDENT REHEARSAL · UNLIMITED REPEATS</span>
+    <h1>Try VoiceVote <span>without casting a vote.</span></h1>
+    <p>Explore how parents choose a project, speak in their language and rate a science-fair exhibit—all without changing actual results.</p>
+  </header>
+
+  <section class="practice-safety" role="status" aria-label="Practice mode assurance">
+    <span class="practice-safety-icon" aria-hidden="true">✓</span>
+    <div>
+      <strong>PRACTICE MODE · NO REAL VOTE</strong>
+      <p>Nothing you submit here is sent to Google Sheets or added to rankings. Existing browser vote locks remain untouched. You can repeat this demonstration as often as you like.</p>
+    </div>
+  </section>
+
+  <section class="step-section practice-step" data-practice-step aria-labelledby="chooseTitle">
+    <div class="step-topline"><span class="step-num">01</span><div><span class="step-caption">CHOOSE AN EXHIBIT</span><h2 id="chooseTitle">Find a science fair project</h2></div></div>
+    <label for="projectSearch">Quick Find a Project</label>
+    <div class="search-box">
+      <input id="projectSearch" type="search" autocomplete="off" placeholder="Search by project name or class…" disabled
+             aria-controls="projectSearchResults" aria-expanded="false" aria-describedby="projectSearchStatus">
+      <div id="projectSearchResults" class="search-results" role="group" aria-label="Matching science fair projects" hidden></div>
+    </div>
+    <p id="projectSearchStatus" class="search-help" role="status" aria-live="polite">Loading available projects…</p>
+    <p id="projectSearchSelected" class="search-selected" aria-live="polite"></p>
+
+    <div class="practice-fields">
+      <div><label for="studentClass">Class / Grade</label>
+        <select id="studentClass" disabled><option value="">Loading grades…</option></select></div>
+      <div><label for="section">Section</label>
+        <select id="section" disabled><option value="">Select grade first</option></select></div>
+    </div>
+    <label for="project">Project</label>
+    <select id="project" disabled><option value="">Select class and section first</option></select>
+    <p id="catalogStatus" class="search-help" role="status" aria-live="polite">Loading the project list…</p>
+    <button id="retryCatalogBtn" class="practice-retry" type="button" hidden>Retry loading projects</button>
+  </section>
+
+  <section class="step-section practice-step" data-practice-step aria-labelledby="feedbackTitle">
+    <div class="step-topline"><span class="step-num step-lavender">02</span><div><span class="step-caption">SPEAK OR TYPE</span><h2 id="feedbackTitle">Share what you appreciated</h2></div></div>
+    <label for="language">Feedback Language</label>
+    <select id="language">
+      <option value="en-IN">English</option>
+      <option value="te-IN">Telugu</option>
+      <option value="hi-IN">Hindi</option>
+      <option value="ta-IN">Tamil</option>
+      <option value="kn-IN">Kannada</option>
+    </select>
+    <div class="practice-voice-buttons">
+      <button id="startBtn" type="button" class="record">🎙 Start Speaking</button>
+      <button id="stopBtn" type="button" class="stop" disabled>■ Stop</button>
+    </div>
+    <p class="search-help" id="recordingHelp">Your browser can turn speech into editable text. Allow microphone access if prompted. Typing is always available.</p>
+    <label for="feedback">Your Feedback / Editable Transcript</label>
+    <textarea id="feedback" maxlength="2000" rows="5" placeholder="What did you like about this project? Speak or type here…"></textarea>
+    <p class="practice-ai-note">✦ <strong>About AI:</strong> This demo can use your browser's speech recognition. Translation happens on real submission in VoiceVote, but is not called in Practice Mode.</p>
+  </section>
+
+  <section class="step-section practice-step" data-practice-step aria-labelledby="ratingTitle">
+    <div class="step-topline"><span class="step-num step-gold">03</span><div><span class="step-caption">RATE &amp; REHEARSE</span><h2 id="ratingTitle">How many stars?</h2></div></div>
+    <div id="stars" class="stars" role="group" aria-label="Rate from one to five stars">
+      <button type="button" class="star" data-value="1" aria-label="1 star" aria-pressed="false">★</button>
+      <button type="button" class="star" data-value="2" aria-label="2 stars" aria-pressed="false">★</button>
+      <button type="button" class="star" data-value="3" aria-label="3 stars" aria-pressed="false">★</button>
+      <button type="button" class="star" data-value="4" aria-label="4 stars" aria-pressed="false">★</button>
+      <button type="button" class="star" data-value="5" aria-label="5 stars" aria-pressed="false">★</button>
+    </div>
+    <button id="submitBtn" type="button" class="submit" disabled>Show Sample Confirmation →</button>
+    <p id="status" class="practice-status" role="status" aria-live="polite"></p>
+    <p class="practice-footnote">No real vote is submitted. Nothing here changes the Results page or your ability to use the real Voting page.</p>
+  </section>
+
+  <section id="practiceReceipt" class="practice-receipt" role="status" aria-live="polite" hidden>
+    <span class="receipt-symbol" aria-hidden="true">✦</span>
+    <span class="receipt-kicker">DEMONSTRATION COMPLETE</span>
+    <h2>That's how VoiceVote works!</h2>
+    <p class="receipt-warning">SAMPLE RECEIPT ONLY · YOUR FEEDBACK WAS <strong>NOT SAVED</strong></p>
+    <div class="receipt-summary">
+      <div><span>Project</span><strong id="receiptProject">—</strong></div>
+      <div><span>Class / Section</span><strong id="receiptClass">—</strong></div>
+      <div><span>Star Rating</span><strong id="receiptStars">—</strong></div>
+      <div><span>Feedback (not transmitted)</span><p id="receiptFeedback"></p></div>
+    </div>
+    <p class="receipt-explainer">In a real vote, VoiceVote securely sends your rating and feedback, translates supported non-English feedback into English, and displays a Google confirmation. Practice Mode does none of those operations.</p>
+    <div class="receipt-actions">
+      <button id="restartPracticeBtn" type="button">↻ Try Another Practice Vote</button>
+      <a href="./results.html">Explore Demo Results ↗</a>
+    </div>
+  </section>
+
+  <footer class="practice-footer">
+    <span>VoiceVote ✦ AI-Powered Science Fair Feedback</span>
+    <span>Practice only · Never counted in results</span>
+  </footer>
+</main>
+</body>
+</html>
