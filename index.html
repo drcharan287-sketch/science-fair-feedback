@@ -84,7 +84,7 @@ select, textarea, input[type="search"], input[type="text"] {
   border: 1px solid #ffffff30;
   background: #102b50;
   color: white;
-  font-size: 15px;
+  font-size: 16px; /* Avoid unexpected iOS text-field zoom on focus. */
   outline: none;
 }
 
@@ -125,8 +125,9 @@ button {
   padding: 14px;
   border-radius: 12px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
+  min-height: 48px; /* Comfortable touch targets on phones. */
   transition: .2s;
 }
 
@@ -271,8 +272,11 @@ button:disabled, textarea:disabled, input:disabled {
 }
 
 @media(max-width:500px) {
-  .container { padding: 22px 17px; }
-  .stars { font-size: 34px; }
+  body { padding: 10px 8px; }
+  .container { margin: 8px auto; padding: 22px 17px; border-radius: 18px; }
+  .buttons { flex-direction: column; }
+  .stars { font-size: 34px; justify-content: space-between; }
+  .star { min-width: 44px; min-height: 44px; }
 }
 </style>
 </head>
@@ -343,12 +347,13 @@ button:disabled, textarea:disabled, input:disabled {
   <label>Voice Feedback</label>
 
   <div class="buttons">
-    <button class="record" id="startBtn" onclick="startRecording()">🎙 Start</button>
-    <button class="stop" id="stopBtn" onclick="stopRecording()">■ Stop</button>
+    <button class="record" id="startBtn" onclick="startRecording()" type="button">🎙 Start</button>
+    <button class="stop" id="stopBtn" onclick="stopRecording()" type="button" disabled>■ Stop</button>
   </div>
+  <p class="search-help" id="recordingHelp">Speak in your selected language, then tap Stop and review or edit the transcript before submitting. You can always type instead.</p>
 
   <label for="feedback">Your Feedback</label>
-  <textarea id="feedback" placeholder="Speak or type your feedback here..."></textarea>
+  <textarea id="feedback" maxlength="2000" placeholder="Speak or type your feedback here..."></textarea>
 
   <label>Rate the Project</label>
   <div class="stars" id="stars" role="group" aria-label="Rate this project from one to five stars">
@@ -383,6 +388,13 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxk-Ex6bd0l3V9fiUrPo
 const DEVICE_STORAGE_KEY = "voicevote_device_token_v1";
 const VOTED_STORAGE_KEY = "voicevote_voted_v1";
 const PENDING_STORAGE_KEY = "voicevote_pending_v1";
+
+// Keep voice state available when the initial receipt lockout is rendered.
+let rating = 0;
+let recognition = null;
+let isRecording = false;
+let isSubmitting = false;
+let voiceErrorShown = false;
 
 function hasLocalVote() {
   try { return window.localStorage?.getItem(VOTED_STORAGE_KEY) === "1"; }
@@ -449,11 +461,16 @@ function syncVoteStatus() {
 
   // Visually and functionally lock the entire form, not only Submit.
   // The original pre-token feedback rows cannot be linked to any browser.
-  submitButton.disabled = locked || !catalogReady;
+  // Never submit interim speech as if it were the visitor's final feedback.
+  submitButton.disabled = locked || !catalogReady || isRecording || isSubmitting;
   const controls = ["language", "feedback", "startBtn", "stopBtn", "projectSearch"];
   controls.forEach(function(id) {
     const el = document.getElementById(id);
-    if (el) el.disabled = locked || (id === "projectSearch" && !catalogReady);
+    if (!el) return;
+    if (id === "startBtn") el.disabled = locked || isRecording || isSubmitting;
+    else if (id === "stopBtn") el.disabled = locked || !isRecording;
+    else if (id === "language" || id === "feedback") el.disabled = locked || isRecording;
+    else el.disabled = locked || !catalogReady;
   });
   if (locked) {
     [classSelect, sectionSelect, projectSelect].forEach(function(el) { el.disabled = true; });
@@ -583,11 +600,6 @@ readReceiptReturn();
 startCatalog();
 classSelect.addEventListener("change", updateSectionLabels);
 
-let rating = 0;
-let recognition = null;
-let isRecording = false;
-let isSubmitting = false;
-
 document.querySelectorAll(".star").forEach(function(star) {
   star.addEventListener("click", function() {
     if (isVoteLocked()) return;
@@ -602,25 +614,26 @@ document.querySelectorAll(".star").forEach(function(star) {
 });
 
 function startRecording() {
+  if (isRecording || isSubmitting || isVoteLocked()) return;
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    statusElement.textContent = "Speech recognition is not supported in this browser. Please type your feedback.";
+    statusElement.textContent = "This browser does not support speech recognition. You can type your feedback instead.";
     return;
   }
-  if (isRecording || isSubmitting || isVoteLocked()) return;
 
   recognition = new SpeechRecognition();
   recognition.lang = document.getElementById("language").value;
   recognition.continuous = true;
   recognition.interimResults = true;
   let finalTranscript = document.getElementById("feedback").value.trim();
+  voiceErrorShown = false;
 
   recognition.onresult = function(event) {
     let interim = "";
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const transcript = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
-        finalTranscript += (finalTranscript ? " " : "") + transcript;
+        finalTranscript += (finalTranscript ? " " : "") + transcript.trim();
       } else {
         interim += transcript;
       }
@@ -629,24 +642,53 @@ function startRecording() {
   };
 
   recognition.onerror = function(event) {
-    if (!isSubmitting) statusElement.textContent = "Voice error: " + event.error + ". Check browser microphone permission.";
+    voiceErrorShown = true;
+    const code = String(event && event.error || "unknown");
+    const help = code === "not-allowed" || code === "service-not-allowed"
+      ? "Microphone permission was denied. Allow microphone access or type your feedback."
+      : code === "no-speech"
+      ? "No speech detected. Try recording again or type your feedback."
+      : code === "network"
+      ? "Voice recognition could not connect. Check your connection or type your feedback."
+      : "Voice recognition stopped (" + code + "). You can type or try again.";
+    statusElement.textContent = help;
     isRecording = false;
+    syncVoteStatus();
   };
   recognition.onend = function() {
     isRecording = false;
-    if (!isSubmitting) statusElement.textContent = "Recording stopped.";
+    recognition = null;
+    syncVoteStatus();
+    if (!isSubmitting && !voiceErrorShown) {
+      statusElement.textContent = "Recording stopped. Review or edit your transcript before submitting.";
+    }
   };
+
   try {
     recognition.start();
     isRecording = true;
-    statusElement.textContent = "Listening...";
+    syncVoteStatus();
+    statusElement.textContent = "Listening… Tap Stop and review the transcript before submitting.";
   } catch (error) {
-    statusElement.textContent = "Could not start recording: " + error.message;
+    recognition = null;
+    isRecording = false;
+    voiceErrorShown = true;
+    syncVoteStatus();
+    statusElement.textContent = "Could not start recording: " + error.message + ". You can type your feedback.";
   }
 }
 
 function stopRecording() {
-  if (recognition && isRecording) recognition.stop();
+  if (!recognition || !isRecording) return;
+  statusElement.textContent = "Finishing speech transcription… Review your feedback when recording stops.";
+  try {
+    recognition.stop();
+  } catch (error) {
+    isRecording = false;
+    voiceErrorShown = true;
+    syncVoteStatus();
+    statusElement.textContent = "Could not stop recording cleanly. Review your feedback before submitting.";
+  }
 }
 
 // Browser cross-origin JSONP save requests can fail AFTER the backend has
@@ -667,6 +709,10 @@ function secureSubmissionId() {
 
 function submitFeedback() {
   if (isSubmitting) return;
+  if (isRecording) {
+    statusElement.textContent = "Tap Stop and wait for speech recognition to finish before submitting.";
+    return;
+  }
   if (isVoteLocked()) {
     statusElement.textContent = "A vote was already submitted or is awaiting confirmation in this browser.";
     syncVoteStatus();
