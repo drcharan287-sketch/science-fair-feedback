@@ -1,9 +1,9 @@
 /**
  * Shared fail-closed integrity validation for the PUBLIC VoiceVote catalog.
  *
- * A visitor's project is identified by grade + section + project, NOT by an
- * immutable project ID. Therefore repeated titles within the same class and
- * section are AMBIGUOUS and must be resolved by an organizer before publish.
+ * Each published project may also carry a stable ID that survives a rename.
+ * Duplicate visible names within a class and section are still AMBIGUOUS,
+ * so do not publish them even if their IDs differ.
  *
  * This checks prospective data only. It never reads or writes feedback.
  */
@@ -16,6 +16,7 @@ export function validateProjectEntries(entries) {
   }
   const limits = {grade:30, section:120, project:200};
   const seen = new Map();
+  const seenIds = new Map();
   const projects = entries.map((item, row) => {
     if (!item || typeof item !== 'object') {
       throw new Error('Project catalog row ' + (row + 1) + ' is missing.');
@@ -31,6 +32,18 @@ export function validateProjectEntries(entries) {
         throw new Error('Project catalog row ' + (row + 1) + ' has an empty, oversized or control-character ' + key + '.');
       }
       p[key] = trimmed;
+    }
+    if (item.id !== undefined && item.id !== null && String(item.id).trim()) {
+      const id = String(item.id).trim();
+      if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(id)) {
+        throw new Error('Invalid stable project ID at row ' + (row + 1) + '.');
+      }
+      if (seenIds.has(id)) {
+        throw new Error('Duplicate stable project ID at rows ' + seenIds.get(id) +
+          ' and ' + (row + 1) + '.');
+      }
+      seenIds.set(id, row + 1);
+      p.id = id;
     }
     // Normalization is ONLY used to spot aliases. Keep exact names because
     // the deployed backend validates submitted values against Sheet strings.

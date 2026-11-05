@@ -71,3 +71,25 @@ test('published snapshot remains valid under the same identity rules', async () 
   assert.ok(entries.some(x=>x.grade==='6'&&x.section==='Heidelberg'&&x.project==='XenoChat'));
   assert.ok(entries.some(x=>x.grade==='9'&&x.section==='Keats'&&x.project==='VoiceVote'));
 });
+
+
+test('stable project IDs survive snapshot validation without altering display strings',()=>{
+  const rows=[
+    {grade:'6',section:'Heidelberg',project:'XenoChat',id:'LEG-6-HEIDELBERG-XENOCHAT'},
+    {grade:'9',section:'Keats',project:'VoiceVote',id:'LEG-9-KEATS-VOICEVOTE'}
+  ];
+  assert.deepEqual(validateProjectEntries(rows),rows);
+});
+
+test('duplicate IDs, malformed IDs and IDs shared by different teams are blocked',()=>{
+  assert.throws(()=>validateProjectEntries([
+    {grade:'6',section:'A',project:'First team',id:'VVP-GROUP-1'},
+    {grade:'9',section:'B',project:'Second team',id:'VVP-GROUP-1'}
+  ]),/Duplicate stable project ID/);
+  assert.throws(()=>validateProjectEntries([
+    {grade:'6',section:'A',project:'First team',id:'invalid space'}
+  ]),/Invalid stable project ID/);
+  assert.throws(()=>validateProjectEntries([
+    {grade:'6',section:'A',project:'First team',id:'=formula'}
+  ]),/Invalid stable project ID/);
+});

@@ -301,7 +301,7 @@ button:disabled, textarea:disabled, input:disabled {
 
   <label for="projectSearch">Quick Find a Project</label>
   <div class="search-box">
-    <input type="search" id="projectSearch" placeholder="Search any of the 300 projects by name…" autocomplete="off" aria-controls="projectSearchResults" aria-expanded="false" aria-describedby="projectSearchStatus" disabled>
+    <input type="search" id="projectSearch" placeholder="Search projects by name…" autocomplete="off" aria-controls="projectSearchResults" aria-expanded="false" aria-describedby="projectSearchStatus" disabled>
     <div id="projectSearchResults" class="search-results" role="group" aria-label="Matching science fair projects" hidden></div>
   </div>
   <p id="projectSearchStatus" class="search-help" role="status" aria-live="polite">Search by project name to auto-select its class and section, or use the dropdowns below.</p>
@@ -581,6 +581,7 @@ function updateSectionLabels() {
 }
 
 let catalogReady = false;
+let selectedCatalogController = null;
 function startCatalog() {
   classSelect.disabled = true;
   retryCatalogBtn.hidden = true;
@@ -607,7 +608,8 @@ function startCatalog() {
     searchSelectedSelector: "#projectSearchSelected",
     isVoteLocked: isVoteLocked,
     preserveExistingGrades: false
-  }).then(function() {
+  }).then(function(controller) {
+    selectedCatalogController = controller;
     catalogReady = true;
     retryCatalogBtn.hidden = true;
     submitButton.disabled = isVoteLocked();
@@ -763,6 +765,8 @@ function submitFeedback() {
     studentClass: classSelect.value,
     section: sectionSelect.value,
     project: projectSelect.value,
+    projectId: selectedCatalogController && selectedCatalogController.getSelectedProjectId
+      ? selectedCatalogController.getSelectedProjectId() : '',
     language: document.getElementById('language').value,
     feedback: document.getElementById('feedback').value.trim(),
     rating: rating

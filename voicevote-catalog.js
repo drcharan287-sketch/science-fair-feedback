@@ -121,6 +121,14 @@
       if (status) status.textContent = message;
     }
 
+    function getSelectedProjectId() {
+      const match = catalog.find(function(entry) {
+        return entry.grade === grade.value &&
+          entry.section === section.value && entry.project === project.value;
+      });
+      return match ? match.id : '';
+    }
+
     function updateProjects() {
       const options = unique(catalog.filter(function (entry) {
         return entry.grade === grade.value && entry.section === section.value;
@@ -146,7 +154,12 @@
           return (typeof entry[key] === 'string' || typeof entry[key] === 'number') && String(entry[key]).trim();
         });
       }).map(function (entry) {
-        return { grade: String(entry.grade).trim(), section: String(entry.section).trim(), project: String(entry.project).trim() };
+        return {
+          grade: String(entry.grade).trim(),
+          section: String(entry.section).trim(),
+          project: String(entry.project).trim(),
+          id: typeof entry.id === 'string' ? entry.id.trim() : ''
+        };
       });
       if (entries.length && !catalog.length) {
         throw new Error('The Projects catalog has no valid rows. Each row needs grade, section and project fields.');
@@ -266,7 +279,7 @@
 
     if (config.catalog) {
       setCatalog(config.catalog);
-      return Promise.resolve({ setCatalog: setCatalog, loadCatalog: loadCatalog });
+      return Promise.resolve({ setCatalog: setCatalog, loadCatalog: loadCatalog, getSelectedProjectId: getSelectedProjectId });
     }
     if (!config.apiUrl) {
       setStatus('Missing Apps Script URL.');
@@ -281,7 +294,7 @@
 
     return request.then(function (entries) {
       setCatalog(entries);
-      return { setCatalog: setCatalog, loadCatalog: loadCatalog };
+      return { setCatalog: setCatalog, loadCatalog: loadCatalog, getSelectedProjectId: getSelectedProjectId };
     }).catch(function (error) {
       setStatus(error.message + ' Please retry.');
       throw error;
