@@ -45,9 +45,9 @@ The spreadsheet and admin results are private. Keep the Google Sheet restricted 
 | Feedback records | Read-only check on 5 Nov 2026 found **2 existing rows**, one legacy and one hashed browser token; no production feedback writes authorized during these development checks. |
 | Visitor pass code | Backend and admin pass-management implementation merged in PR #11, public entry in #12 and post-Pages checks in #13. **Feature deferred; public UI now hidden in the current follow-up release**. No `Visitor Passes` tab was present on 5 Nov 2026. Backend pass mode is not independently readable from GitHub. |
 | Mobile dictation safety | PR #14 merged on 5 Nov 2026: submit is blocked until speech recognition ends, microphone errors remain useful, editing fallback and narrow-screen controls improved. |
-| Known release | At the start of this tracker update, `main` was at `b217794f` (PR #14); Apps Script v22. Always inspect new merges before proceeding. |
+| Known release | As verified on 5 Nov 2026, pass-hiding PR #15 merged as `21d35155`, release-gate PR #16 merged as `445be138`, and Apps Script was last independently confirmed at v22. The living `main` head can move: inspect commits before proceeding. |
 
-**Release validation status:** PR #14 passed 33 Node tests and GitHub Pages publication. This follow-up adds/updates a no-write browser speech-readiness suite and pass-hidden checks. Use Actions on the new merge to verify those results; do not assume a physical-device test from emulation.
+**Release validation status (5 Nov 2026):** PR #15 and PR #16 merged; Node contracts and published Pages browser checks succeeded. The [read-only browser verification run](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/41979800953) confirmed exact HTML publication, hidden passes, valid catalog selections, locally intercepted POST (no feedback sent to Google), and English/Telugu/Hindi simulated speech/error/editing on Android-sized and iPhone-sized Chromium. **These are not tests on real Android/iPhone devices or Safari, and they do not verify real translation.**
 
 ## 4. How we test without blocking a browser or writing feedback
 
@@ -65,9 +65,9 @@ Legend: **DONE** = implemented and verified in the indicated scope; **AUTO PENDI
 
 | ID | Priority | Task / acceptance criteria | Owner | Status |
 | --- | --- | --- | --- | --- |
-| VV-01 | P0 | Hide public pass input/help and alternate-attendee control; leave backend and common QR unchanged; verify live after publication | Developer | AUTO PENDING on current follow-up |
-| VV-02 | P0 | Keep browser POST smoke non-writing; verify hidden-pass field is blank and no Google save reaches server | Developer | AUTO PENDING on current follow-up |
-| VV-03 | P0 | Run automated English, Telugu, Hindi speech lifecycle, final transcript edit, mic denial/no-speech/network error and small-viewport checks | Developer | AUTO PENDING on current follow-up |
+| VV-01 | P0 | Hide public pass input/help and alternate-attendee control; leave backend and common QR unchanged; verify live after publication | Developer | **DONE** — PR #15, published browser run 41979800953 |
+| VV-02 | P0 | Keep browser POST smoke non-writing; verify hidden-pass field is blank and no Google save reaches server | Developer | **DONE** — intercepted POST confirmed; no Google save |
+| VV-03 | P0 | Run automated English, Telugu, Hindi speech lifecycle, final transcript edit, mic denial/no-speech/network error and small-viewport checks | Developer | **DONE (simulations only)** — both viewport suites green |
 | VV-04 | P0 | Verify browser speech recognition and editable transcription with **real** Android Chrome and iPhone Safari; record versions, mic permission behavior and fallback | QA / organizer | MANUAL PENDING; batch near event readiness |
 | VV-05 | P0 | Validate actual Google translation for Telugu/Hindi and saved receipt in an isolated test Sheet/deployment; check no user feedback is lost | Developer + organizer | MANUAL PENDING; approval required for any production write |
 | VV-06 | P0 | Ensure Apps Script is still in visitor-pass **preparation/not-required** mode before event; no pass-ledger activation or issuance | Organizer | MANUAL PENDING; do not turn on required mode |
@@ -96,7 +96,8 @@ Record device model, language, result, any error text, and whether the test was 
 - **2026-11-05:** Synchronized GitHub source and read-only Sheet metadata. Confirmed two active projects, two existing feedback records, existing Apps Script v22, and major admin features.
 - **2026-11-05:** Management-dependent single-use visitor pass rollout deferred. Its public field should no longer be displayed after this follow-up deploy; backend retained in preparation.
 - **2026-11-05:** PR #14 — safer dictation/phone UI; Node tests and Pages deployment passed.
-- **2026-11-05:** Follow-up work adds hidden-pass UI, non-writing multilingual mobile simulations, and this continuity tracker. Check the latest Actions/PR before marking items VV-01 to VV-03 DONE.
+- **2026-11-05:** PR #15 merged — hides pass UI and shared-phone controls, adds non-writing multilingual mobile simulations and this tracker. PR #16 merged — ensures browser smoke runs from a `main` push only after checking exact published HTML.
+- **2026-11-05:** Run [41979800953](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/41979800953) succeeded: published HTML match; catalog and intercepted POST; English/Telugu/Hindi mocked speech, transcript edits, microphone error fallback and responsive phone-sized Chromium. No real feedback sent, no production browser vote used.
 
 For each future change: (1) read this file; (2) compare actual `main` to latest logged baseline; (3) make a small branch/PR; (4) pass `node --test`; (5) verify Pages/browser Actions without an actual submission; (6) update relevant rows, evidence links and last-reviewed date; (7) only then proceed. Keep production feedback rows immutable except for explicitly audited moderation.
 
@@ -104,4 +105,4 @@ For each future change: (1) read this file; (2) compare actual `main` to latest 
 
 > Continue PulsePlus / VoiceVote from `PROJECT_STATUS.md` in `drcharan287-sketch/science-fair-feedback`. Read the current GitHub `main` branch, PRs and Actions first, and update the tracker. Visitor voting passes are deferred and hidden; never enable mandatory passes. Use read-only/nonwriting browser smoke tests and mocks; don't submit production feedback or clear user browser storage. Preserve the common QR, deployed Apps Script and existing Feedback Sheet data. Work from the highest-priority incomplete tracker item, using reviewed PRs and evidence of tests. End every reply with the next best constructive step.
 
-**Next best step:** Check the post-publication CI/browser results for this follow-up, then schedule the real-device English/Telugu/Hindi sign-off as one controlled batch rather than repeated production voting tests.
+**Next best step:** Keep visitor passes deferred; finish remaining independent non-writing/error-recovery checks, obtain the official project roster, then run **one** organized physical-device Android Chrome/iPhone Safari English/Telugu/Hindi acceptance batch in a separate test deployment or with explicit production-write approval.
