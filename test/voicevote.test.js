@@ -381,7 +381,7 @@ test('actual backend catalog and save JSONP interoperate with frontend', async (
   const receipt = b.context.doPost({ parameter: params });
   assert.match(receipt.html, /Thank you! Feedback saved/);
   assert.equal(params.language, 'hi-IN');
-  assert.deepEqual(b.writes[0], ['Date', 'Project', 'Class', 'Section', 'Original Feedback', 'Rating', 'Language', 'English Translation', 'Submission ID', 'Device hash', 'Vote status', 'Visitor pass serial']);
+  assert.deepEqual(b.writes[0], ['Date', 'Project', 'Class', 'Section', 'Original Feedback', 'Rating', 'Language', 'English Translation', 'Submission ID', 'Device hash', 'Vote status', 'Visitor pass serial', 'Project ID']);
   assert.deepEqual(b.writes[1].slice(1, 8), ['Robot', '6', 'A', "'=great", 5, 'hi-IN', 'hi:en:=great']);
   assert.match(b.writes[1][9], /^[0-9a-f]{64}$/);
   assert.equal(b.wasReleased(), true);
@@ -619,4 +619,47 @@ test('synchronous browser navigation failure resets only pending state and keeps
   assert.equal(a.elements.feedback.value,'Unsaved editing test');
   assert.equal(a.elements.submitBtn.disabled,false);
   assert.match(a.elements.status.textContent,/Mock local submit failed/);
+});
+
+
+test('stable project ID flows from catalog to form and server rejects mismatches without saving', async () => {
+  const a=app();
+  const b=backend([
+    ['Class/Grade','Section','Project Name','Active','Project ID'],
+    ['6','Heidelberg','XenoChat','TRUE','VVP-VI_HEIDELBERG-G1-S1'],
+    ['9','Keats','VoiceVote','TRUE','LEG-9-KEATS-VOICEVOTE']
+  ]);
+  serve(a,b); await tick();
+  a.elements.studentClass.value='9';
+  a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value='Keats';
+  a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value='VoiceVote';
+  a.elements.feedback.value='An educational demonstration';
+  a.stars[4].dispatchEvent(new a.context.Event('click'));
+  a.context.submitFeedback();
+  const fields=Object.fromEntries(a.forms[0].children.map(x=>[x.name,x.value]));
+  assert.equal(fields.projectId,'LEG-9-KEATS-VOICEVOTE');
+  const rejected=b.context.doPost({parameter:{...fields,projectId:'VVP-FORGED-G10-S1'}});
+  assert.match(rejected.html,/Feedback not confirmed/);
+  assert.equal(b.writes.length,0,'Forged ID must not append or lock feedback');
+  const accepted=b.context.doPost({parameter:fields});
+  assert.match(accepted.html,/Thank you! Feedback saved/);
+  assert.equal(b.writes[1][12],'LEG-9-KEATS-VOICEVOTE');
+  assert.equal(b.writes.length,2);
+});
+
+test('older visitor form may omit project ID; server resolves it from active roster',()=>{
+  const b=backend([
+    ['Class/Grade','Section','Project Name','Active','Project ID'],
+    ['6','Heidelberg','XenoChat','TRUE','LEG-6-HEIDELBERG-XENOCHAT']
+  ]);
+  const fields={
+    action:'save',submissionId:'123e4567-e89b-42d3-a456-426614174000',
+    deviceToken:'123e4567-e89b-42d3-a456-426614174001',
+    studentClass:'6',section:'Heidelberg',project:'XenoChat',
+    feedback:'Works',rating:'5',language:'en-IN'
+  };
+  assert.match(b.context.doPost({parameter:fields}).html,/Thank you! Feedback saved/);
+  assert.equal(b.writes[1][12],'LEG-6-HEIDELBERG-XENOCHAT');
 });
