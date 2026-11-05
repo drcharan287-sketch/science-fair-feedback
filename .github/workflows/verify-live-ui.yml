@@ -8,6 +8,10 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'results.html'
+      - 'results.css'
+      - 'results.js'
+      - 'voicevote-theme.css'
       - 'voicevote-catalog.js'
       - 'projects.json'
       - 'scripts/verify-*.mjs'
