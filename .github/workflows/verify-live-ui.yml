@@ -1,10 +1,18 @@
 name: Verify VoiceVote in real browser
-# Browser checks must start after the hosted Pages deploy, never race the build.
+# GitHub's dynamic Pages deployment does not reliably emit workflow_run for
+# downstream workflows. Run on source changes and explicitly wait for the live
+# published HTML to match the current checkout before testing.
 
 on:
-  workflow_run:
-    workflows: ["pages build and deployment"]
-    types: [completed]
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'voicevote-catalog.js'
+      - 'projects.json'
+      - 'scripts/verify-*.mjs'
+      - 'scripts/wait-for-pages.mjs'
+      - '.github/workflows/verify-live-ui.yml'
   workflow_dispatch:
 
 permissions:
@@ -12,21 +20,22 @@ permissions:
 
 jobs:
   browser-smoke:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
-      - name: Checkout source
+      - name: Checkout source commit
         uses: actions/checkout@v4
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Wait until GitHub Pages serves this exact source (read-only)
+        run: node scripts/wait-for-pages.mjs
       - name: Install headless browser driver
         run: npm install --no-save playwright-core
-      - name: Check live site and dependent selections in Chromium
+      - name: Verify hosted project catalog and selection in Chromium
         run: node scripts/verify-hosted-ui.mjs
-      - name: Intercept live feedback POST and inspect request without sending it
+      - name: Intercept feedback POST locally instead of contacting Google
         run: node scripts/verify-post-form-dry-run.mjs
-      - name: Simulate English Telugu Hindi speech and mobile layouts without voting
+      - name: Simulate English Telugu Hindi recognition and phone layouts, without saving
         run: node scripts/verify-speech-readiness.mjs
