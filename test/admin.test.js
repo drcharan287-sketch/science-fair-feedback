@@ -15,6 +15,8 @@ function setup() {
   let sheetOpens = 0;
   const props = new Map();
   const sheets = {};
+  const faults = { auditAppend:false, auditFinalize:false, auditFlush:false, feedbackWrite:false, propertyWrite:false };
+  let uuidCounter = 0;
   const feedbackRows = [
     ['Date','Project','Class','Section','Original Feedback','Rating','Language','English Translation','Submission ID','Device hash','Vote status'],
     [new Date('2026-11-04T12:00:00Z'),'XenoChat','6','Heidelberg','ఈ ప్రాజెక్టు చాలా బాగుంది',5,'te-IN','This project is very good.','','',''],
@@ -25,7 +27,10 @@ function setup() {
     getRange: (r,c,count=1,width=1) => ({
       getValues: () => feedbackRows.slice(r-1,r-1+count).map(row =>
         Array.from({length:width}, (_,i)=>row[c-1+i] ?? '')),
-      setValue: value => {feedbackRows[r-1][c-1] = value;return feedback;}
+      setValue: value => {
+        if (faults.feedbackWrite) throw new Error('Simulated feedback write failure');
+        feedbackRows[r-1][c-1] = value;return feedback;
+      }
     }),
     appendRow: row => feedbackRows.push([...row])
   };
@@ -35,7 +40,29 @@ function setup() {
     getSheetByName: name => sheets[name]||null,
     insertSheet: name => {
       const rows = [];
-      const sheet = {appendRow: r => rows.push([...r]), rows};
+      const sheet = {
+        rows,
+        getLastRow: () => rows.length,
+        appendRow: r => {
+          if (faults.auditAppend && name === 'Admin Action Log' && r[0] !== 'Date') {
+            throw new Error('Simulated audit append failure');
+          }
+          rows.push([...r]);
+        },
+        getRange: (r,c,h=1,w=1) => ({
+          getValues: () => Array.from({length:h},(_,i) =>
+            Array.from({length:w},(_,j)=>rows[r+i-1]?.[c+j-1] ?? '')),
+          setValue: value => {
+            if (faults.auditFinalize && name === 'Admin Action Log' && c === 6) {
+              throw new Error('Simulated audit finalization failure');
+            }
+            rows[r-1] ||= [];rows[r-1][c-1] = value;
+          },
+          setValues: values => values.forEach((a,i)=>a.forEach((v,j)=>{
+            rows[r+i-1] ||= [];rows[r+i-1][c+j-1] = v;
+          }))
+        })
+      };
       sheets[name]=sheet;
       return sheet;
     }
@@ -43,10 +70,14 @@ function setup() {
   const context = {
     Date, JSON, Math,
     ContentService:{MimeType:{JAVASCRIPT:'javascript'},createTextOutput:t=>({text:t,setMimeType(){return this}})},
-    SpreadsheetApp:{openById:()=>{sheetOpens++;return ss}},
+    SpreadsheetApp:{openById:()=>{sheetOpens++;return ss},
+      flush:()=>{if(faults.auditFlush)throw new Error('Simulated audit flush failure');}},
     PropertiesService:{getScriptProperties:()=>({
       getProperty:k=>props.get(k) ?? null,
-      setProperty:(k,v)=>props.set(k,String(v))
+      setProperty:(k,v)=>{
+        if(faults.propertyWrite)throw new Error('Simulated property write failure');
+        props.set(k,String(v));
+      }
     })},
     HtmlService:{
       createHtmlOutputFromFile:name=>({name,setTitle(t){this.title=t;return this}}),
@@ -54,7 +85,8 @@ function setup() {
     },
     LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},
     Utilities:{DigestAlgorithm:{SHA_256:'SHA_256'},
-      computeDigest:(_,v)=>Array.from(createHash('sha256').update(String(v)).digest())},
+      computeDigest:(_,v)=>Array.from(createHash('sha256').update(String(v)).digest()),
+      getUuid:()=> 'fake-audit-id-' + ++uuidCounter},
     LanguageApp:{translate:t=>t},
   };
   vm.createContext(context);
@@ -68,7 +100,7 @@ function setup() {
   );
   assert.notEqual(testSource,adminSource,'Must swap production hash for local fake key');
   vm.runInContext(testSource,context);
-  return {context,props,sheets,feedbackRows,opens:()=>sheetOpens};
+  return {context,props,sheets,feedbackRows,faults,opens:()=>sheetOpens};
 }
 
 test('anonymous and incorrect admin credentials cannot read private results or moderate voters',()=>{
