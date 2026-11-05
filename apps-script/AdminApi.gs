@@ -159,6 +159,7 @@ function adminGetOverview(key) {
     protectedVotes: protectedCount,
     legacyVotes: votes.length - protectedCount,
     auditPendingActions: adminAuditPending_(ss).length,
+    publicResultsMode: publicResultsMode_(),
     votingOpen: PropertiesService.getScriptProperties()
       .getProperty(VOICEVOTE_VOTING_DISABLED_KEY) !== '1',
     languages: Object.keys(langCounts).sort().map(function(k) {
