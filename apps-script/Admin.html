@@ -230,16 +230,25 @@
     let reviewProject = null;
     let reviewOffset = 0;
     let voters = [];
+    // A sign-out or new login attempt invalidates all outstanding admin RPCs.
+    // Google Apps Script calls cannot be cancelled after dispatch, but stale
+    // responses must never repopulate private DOM or in-memory dashboard data.
+    let authEpoch = 0;
+    let reviewEpoch = 0;
+    let reviewsLoading = false;
 
     function text(node, value) { node.textContent = String(value == null ? '' : value); }
     function call(fn, args, success, fail) {
+      const epoch = authEpoch;
+      const onSuccess = data => { if (authEpoch === epoch) success(data); };
+      const onFailure = err => { if (authEpoch === epoch) (fail || showError)(err); };
       if (!window.google || !google.script || !google.script.run) {
-        (fail || showError)(new Error('This page must be opened from the private Apps Script admin URL.'));
+        onFailure(new Error('This page must be opened from the private Apps Script admin URL.'));
         return;
       }
       google.script.run
-        .withSuccessHandler(success)
-        .withFailureHandler(fail || showError)[fn](...args);
+        .withSuccessHandler(onSuccess)
+        .withFailureHandler(onFailure)[fn](...args);
     }
     function showError(err) { text($('adminStatus'), 'Error: ' + (err.message || String(err))); }
     function node(name, className, value) {
@@ -249,9 +258,32 @@
       return el;
     }
     function noReviews() {
+      reviewEpoch++;
+      reviewsLoading = false;
+      reviewOffset = 0;
+      reviewProject = null;
       $('reviewPanel').hidden = true;
       $('reviewsList').replaceChildren();
-      reviewProject = null;
+      $('moreReviews').hidden = true;
+      $('moreReviews').disabled = false;
+    }
+    function clearPrivateView() {
+      // Hidden panels still contain DOM nodes. Remove their sensitive values,
+      // not merely the visible login state, when an organizer signs out.
+      ['rankingRows', 'voterRows', 'passesRows'].forEach(id => $(id).replaceChildren());
+      ['projectCount','voteCount','ratedCount','langCount','protectedCount',
+        'legacyCount','excludedCount','rankingCount','reviewsTitle',
+        'reviewsStatus','adminStatus','votingState','passesAvailable',
+        'passesUsed','passesRevoked','passesInfo','passModeLabel',
+        'passModeHelp','passCopyStatus'].forEach(id => text($(id),''));
+      $('issuedPassOutput').value = '';
+      $('issuedPassPanel').hidden = true;
+      $('rankSearch').value = '';
+      $('classFilter').replaceChildren(new Option('All classes',''));
+      $('classFilter').value = '';
+      $('reissueSerial').value = '';
+      $('reissueReason').value = '';
+      noReviews();
     }
     function stars(n) { return Number(n).toFixed(2) + ' / 5'; }
     function renderRankings() {
@@ -302,6 +334,7 @@
     }
     function refresh() { call('adminGetOverview',[key],renderOverview); }
     function showReviews(p) {
+      noReviews();
       reviewProject = p;
       reviewOffset = 0;
       $('reviewsList').replaceChildren();
@@ -311,11 +344,17 @@
       $('reviewPanel').scrollIntoView({behavior:'smooth',block:'start'});
     }
     function fetchReviews() {
-      if (!reviewProject) return;
+      if (!reviewProject || reviewsLoading) return;
       const requestedId = reviewProject.id;
+      const requestedOffset = reviewOffset;
+      const requestEpoch = reviewEpoch;
+      reviewsLoading = true;
+      $('moreReviews').disabled = true;
       text($('reviewsStatus'),'Loading private feedback…');
-      call('adminGetReviews',[key,requestedId,reviewOffset],data=>{
-        if (!reviewProject || reviewProject.id!==requestedId) return;
+      call('adminGetReviews',[key,requestedId,requestedOffset],data=>{
+        if (requestEpoch !== reviewEpoch || !reviewProject || reviewProject.id!==requestedId) return;
+        reviewsLoading = false;
+        $('moreReviews').disabled = false;
         data.reviews.forEach(r=>{
           const card=node('article','review');
           const title=node('div');
@@ -332,6 +371,12 @@
         reviewOffset += data.reviews.length;
         text($('reviewsStatus'),data.total+' feedback record(s) · '+reviewOffset+' shown');
         $('moreReviews').hidden = reviewOffset>=data.total;
+      },err=>{
+        if (requestEpoch !== reviewEpoch) return;
+        reviewsLoading = false;
+        $('moreReviews').disabled = false;
+        showError(err);
+        text($('reviewsStatus'),'Could not load private feedback. Try again.');
       });
     }
     function changeTab(tab) {
@@ -480,6 +525,7 @@
     $('loginForm').addEventListener('submit',event=>{
       event.preventDefault();
       const candidate=$('adminKey').value.trim();
+      authEpoch++;
       $('loginBtn').disabled=true;
       text($('loginError'),'Checking admin access…');
       call('adminGetOverview',[candidate],data=>{
@@ -496,9 +542,9 @@
       });
     });
     $('logoutBtn').addEventListener('click',()=>{
-      key='';overview=null;voters=[];noReviews();
-      $('issuedPassOutput').value='';
-      $('issuedPassPanel').hidden=true;
+      authEpoch++;
+      key='';overview=null;voters=[];
+      clearPrivateView();
       $('adminPanel').hidden=true;$('loginPanel').hidden=false;
       $('adminKey').value='';$('adminKey').focus();
     });
