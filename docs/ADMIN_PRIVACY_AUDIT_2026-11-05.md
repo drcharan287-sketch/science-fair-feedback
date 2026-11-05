@@ -38,6 +38,8 @@
 - Existing `scripts/verify-admin-access.mjs`: real published login shell with a deliberately invalid key. It cannot verify authorized login or a real moderation audit.
 - GitHub Actions `Deploy VoiceVote Apps Script` is configured to pull the existing app, overlay reviewed sources, deploy the same web app, then run catalog, POST-probe and invalid-admin-key checks, with deployment rollback on smoke-test failure. Check the specific run before marking this update deployed.
 
+**Verified release evidence:** [PR #22](https://github.com/drcharan287-sketch/science-fair-feedback/pull/22) merged into `main` as `588baad4`. The [Apps Script production workflow](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42004182528) completed successfully, updating the existing deployment to **version 23**. All **41** contract tests passed; the live catalog, no-write POST probe, and deliberately invalid admin login passed. A subsequent [nonwriting POST verification](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42004325921) passed. A fresh read-only Sheet check still found two feedback records and one owner + two editors with no broad sharing role. No production records or moderation state were changed.
+
 **Not established by this review:** independent penetration-test assurance, secret rotation, named-user identity, actual signed-in organizer acceptance, audit failure recovery, physical iPhone Safari behavior, or real Telugu/Hindi translation.
 
 ## 5. Administrator handoff checklist
