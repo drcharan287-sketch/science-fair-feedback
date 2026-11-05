@@ -125,7 +125,8 @@ jobs:
           const publicResultsSource = fs.readFileSync('apps-script/PublicResults.gs','utf8');
           if (!/function publicSummary_\(/.test(publicResultsSource) ||
               !/function adminSetPublicResultsMode\(/.test(publicResultsSource) ||
-              !/function publicApprovedHighlights_\(/.test(publicResultsSource)) {
+              !/function adminCreatePresenterSession\(/.test(publicResultsSource) ||
+              !/function publicVerifyPresenterSession_\(/.test(publicResultsSource)) {
             throw new Error('Safe public results module missing; refusing deployment');
           }
           fs.writeFileSync('.voicevote-live/PublicResults.js', publicResultsSource);
