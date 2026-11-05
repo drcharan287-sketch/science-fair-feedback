@@ -10,6 +10,12 @@ function doGet(e) {
   if (params.action === 'test') {
     return ContentService.createTextOutput('VoiceVote backend connected successfully!');
   }
+  if (params.action === 'admin') {
+    // The HTML shell itself is public, but every data/RPC action requires
+    // the 256-bit administrator key. Never return feedback from doGet.
+    return HtmlService.createHtmlOutputFromFile('Admin')
+      .setTitle('VoiceVote | AI Admin Console');
+  }
   if (params.action === 'catalog') {
     let result;
     try {
@@ -144,6 +150,13 @@ function saveFeedback_(params) {
       // backward compatibility without adding new properties for each voter.
       if (PropertiesService.getScriptProperties().getProperty('vv:' + submissionId)) {
         return { success: true, duplicate: true, message: 'This feedback was already saved.' };
+      }
+      // A server-side pause wins even if a visitor is using an older page.
+      // Check after duplicate-ID handling, so a retry of an earlier success
+      // still returns its original receipt rather than writing a new row.
+      if (PropertiesService.getScriptProperties()
+          .getProperty('VOICEVOTE_VOTING_DISABLED') === '1') {
+        return { success: false, message: 'Voting is temporarily paused by the organizers.' };
       }
       const headers = [
         'Date', 'Project', 'Class', 'Section', 'Original Feedback',
