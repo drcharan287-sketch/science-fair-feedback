@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/sync-projects.mjs'
+      - 'scripts/catalog-integrity.mjs'
       - '.github/workflows/sync-projects.yml'
 
 permissions:
