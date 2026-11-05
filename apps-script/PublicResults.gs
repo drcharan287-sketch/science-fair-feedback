@@ -5,11 +5,10 @@
  *  LIVE      - anonymous, aggregate participation only.
  *  PUBLISHED - aggregate rankings by stable project ID; explicit admin action.
  * Review text is NEVER read from Feedback for this endpoint.
- * The optional Public Highlights tab is a separate hand-curated allowlist.
+ * No manual public feedback approval workflow is required.
  */
 const VOICEVOTE_PUBLIC_RESULTS_MODE_KEY = 'VOICEVOTE_PUBLIC_RESULTS_MODE';
 const VOICEVOTE_RESULTS_MODES = ['DEMO','LIVE','PUBLISHED'];
-const VOICEVOTE_PUBLIC_HIGHLIGHTS_TAB = 'Public Highlights';
 
 function publicResultsMode_() {
   const stored = String(PropertiesService.getScriptProperties()
@@ -92,7 +91,6 @@ function publicSummary_() {
     return Number(a)-Number(b);
   }).map(function(grade) { return {grade:String(grade),count:gradeCounts[grade]}; });
   payload.updatedAt = new Date().toISOString();
-  payload.highlights = publicApprovedHighlights_(ss, byId);
 
   if (mode === 'PUBLISHED') {
     payload.rankings = Object.values(byId).filter(function(p) { return p.votes > 0; })
@@ -116,35 +114,6 @@ function publicSummary_() {
   }
   publicResultsSaveCache_(cache,mode,payload);
   return payload;
-}
-
-/**
- * Only explicitly approved, attribution-free excerpts may be displayed.
- * Sheet columns: Approval Status, Project ID, Quote, English Translation,
- * Language, Approved By. This never reads unrestricted Feedback text.
- */
-function publicApprovedHighlights_(ss, byId) {
-  const sheet = ss.getSheetByName(VOICEVOTE_PUBLIC_HIGHLIGHTS_TAB);
-  if (!sheet || sheet.getLastRow() < 2) return [];
-  const out = [];
-  const data = sheet.getRange(2,1,Math.min(sheet.getLastRow()-1,200),6).getValues();
-  data.forEach(function(row) {
-    if (out.length >= 8) return;
-    if (String(row[0] || '').trim().toUpperCase() !== 'APPROVED') return;
-    const id = String(row[1] || '').trim();
-    const source = byId[id];
-    const quote = String(row[2] || '').trim();
-    const approvedBy = String(row[5] || '').trim();
-    if (!source || !quote || quote.length > 240 || !approvedBy) return;
-    const code = String(row[4] || '').trim();
-    out.push({
-      project: source.project, grade: source.grade,
-      language: ['en-IN','te-IN','hi-IN','ta-IN','kn-IN'].includes(code) ? code : 'en-IN',
-      quote: quote,
-      translation: String(row[3] || '').trim().slice(0,240)
-    });
-  });
-  return out;
 }
 
 /** Authenticated, audited publication control. No automatic public promotion. */
@@ -179,5 +148,49 @@ function adminSetPublicResultsMode(key, requested, reason) {
     return {mode:mode,changed:true};
   } finally {
     lock.releaseLock();
+  }
+}
+
+
+/**
+ * Temporary owner-presenter ticket for the EXISTING Voting UI.
+ *
+ * Only the already-authenticated Admin Console can issue a ticket. Tokens are
+ * never embedded in public GitHub source or exposed in a normal voting link.
+ * The 64-hex opaque capability goes in the URL fragment (not sent to GitHub
+ * Pages by the browser), and is valid for no more than two hours.
+ *
+ * Important: this ticket grants only a NO-WRITE demo UI. It is not a voting
+ * credential and cannot change actual feedback or Results publication.
+ */
+const VOICEVOTE_PRESENTER_TTL_SECONDS = 7200;
+function presenterTicketCacheKey_(token) {
+  return 'voicevote-presenter-v1-' + adminDigest_(String(token));
+}
+function adminCreatePresenterSession(key) {
+  adminRequireKey_(key);
+  if (typeof CacheService === 'undefined') {
+    throw new Error('Temporary presenter sessions are unavailable.');
+  }
+  const a = Utilities.getUuid().replace(/-/g,'').toLowerCase();
+  const b = Utilities.getUuid().replace(/-/g,'').toLowerCase();
+  const ticket = a + b;
+  if (!/^[a-f0-9]{64}$/.test(ticket)) {
+    throw new Error('Cannot generate a secure presenter session.');
+  }
+  const cache = CacheService.getScriptCache();
+  if (!cache) throw new Error('Temporary presenter sessions are unavailable.');
+  cache.put(presenterTicketCacheKey_(ticket), 'PRESENTER', VOICEVOTE_PRESENTER_TTL_SECONDS);
+  return {token:ticket,expiresInSeconds:VOICEVOTE_PRESENTER_TTL_SECONDS};
+}
+function publicVerifyPresenterSession_(token) {
+  const t = String(token || '').trim();
+  if (!/^[a-f0-9]{64}$/i.test(t)) return false;
+  try {
+    const cache = CacheService.getScriptCache();
+    return !!cache && cache.get(presenterTicketCacheKey_(t)) === 'PRESENTER';
+  } catch (_) {
+    // Cache expiry/outage is a DENIAL, never a reason to permit demo or vote.
+    return false;
   }
 }
