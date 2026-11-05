@@ -15,8 +15,9 @@ function setup() {
   let sheetOpens = 0;
   const props = new Map();
   const sheets = {};
-  const faults = { auditAppend:false, auditFinalize:false, auditFlush:false, feedbackWrite:false, propertyWrite:false };
-  let uuidCounter = 0;
+  const faults = { auditAppend:false, auditFinalize:false, auditFlush:false,
+    failOnFlush:0, feedbackWrite:false, propertyWrite:false };
+  let uuidCounter = 0, flushCount = 0;
   const feedbackRows = [
     ['Date','Project','Class','Section','Original Feedback','Rating','Language','English Translation','Submission ID','Device hash','Vote status'],
     [new Date('2026-11-04T12:00:00Z'),'XenoChat','6','Heidelberg','ఈ ప్రాజెక్టు చాలా బాగుంది',5,'te-IN','This project is very good.','','',''],
@@ -71,7 +72,12 @@ function setup() {
     Date, JSON, Math,
     ContentService:{MimeType:{JAVASCRIPT:'javascript'},createTextOutput:t=>({text:t,setMimeType(){return this}})},
     SpreadsheetApp:{openById:()=>{sheetOpens++;return ss},
-      flush:()=>{if(faults.auditFlush)throw new Error('Simulated audit flush failure');}},
+      flush:()=>{
+        flushCount++;
+        if(faults.auditFlush || faults.failOnFlush === flushCount) {
+          throw new Error('Simulated audit flush failure');
+        }
+      }},
     PropertiesService:{getScriptProperties:()=>({
       getProperty:k=>props.get(k) ?? null,
       setProperty:(k,v)=>{
@@ -312,10 +318,24 @@ test('successful journal entry marks APPLIED and legacy log rows remain intact',
   journal.rows[0]=journal.rows[0].slice(0,5);
   journal.rows.splice(1,1,[new Date(),'PAUSE_VOTING','','Prior action','Admin credential']);
   a.context.adminSetVotingOpen(DEMO_KEY,false,'New audited pause action');
-  assert.deepEqual(journal.rows[1].slice(0,5).map(String),
-    journal.rows[1].slice(0,5).map(String));
   assert.equal(journal.rows[1].length,5,'Legacy record must be unchanged');
   assert.equal(journal.rows[0][5],'State');
   assert.equal(journal.rows[2][5],'APPLIED');
   assert.equal(a.context.adminGetOverview(DEMO_KEY).auditPendingActions,0);
+});
+
+
+test('target flush failure leaves durable PENDING instead of an inaccurate APPLIED audit',()=>{
+  const a=setup();
+  const vote=a.context.adminGetVoterActivity(DEMO_KEY).find(x=>x.row===2);
+  a.faults.failOnFlush=2; // First flush persists journal; second flush targets data.
+  assert.throws(()=>a.context.adminSetVoteStatus(DEMO_KEY,2,vote.rowProof,'VOID',
+    'Failure while flushing the protected change'),/needs reconciliation/);
+  assert.equal(a.feedbackRows[1][10],'VOID',
+    'In-memory target may have changed even when persistence confirmation failed');
+  const log=a.sheets['Admin Action Log'].rows;
+  assert.equal(log[1][5],'PENDING','Must not report APPLIED before target flush succeeds');
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).auditPendingActions,1);
+  assert.throws(()=>a.context.adminSetVotingOpen(DEMO_KEY,false,
+    'Unsafe additional change blocked'),/Unresolved PENDING admin audit/);
 });
