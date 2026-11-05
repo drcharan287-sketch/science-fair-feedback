@@ -1,4 +1,5 @@
 name: Verify VoiceVote in real browser
+# Recheck after GitHub Pages completes publishing the eligible-voter button fix.
 
 on:
   push:
