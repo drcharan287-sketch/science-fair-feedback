@@ -34,7 +34,6 @@ jobs:
           node --check scripts/verify-recovery-readiness.mjs
           node --check scripts/verify-results-ui.mjs
           node --check results.js
-          node --check practice-vote.js
-          node --check scripts/verify-practice-vote.mjs
+          node --check scripts/verify-owner-demo.mjs
           node --check scripts/smoke-public-results.mjs
           node -e "const p=require('./projects.json'); if(!p.success || !Array.isArray(p.projects) || !p.projects.length) process.exit(1)"
