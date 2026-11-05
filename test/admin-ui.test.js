@@ -149,3 +149,14 @@ test('switching projects invalidates older review pagination responses',()=>{
   assert.equal(a.elements.reviewsList.children.length,1);
   assert.equal(a.elements.reviewsList.children[0].children[1].textContent,'correct project');
 });
+
+
+test('unresolved audit warning is visible only during an authenticated admin session',()=>{
+  const a=harness();
+  a.login({...overview(),auditPendingActions:2});
+  assert.equal(a.elements.auditAlert.hidden,false);
+  assert.match(a.elements.auditAlert.textContent,/2 unresolved administrator action/);
+  a.dispatch('logoutBtn');
+  assert.equal(a.elements.auditAlert.hidden,true);
+  assert.equal(a.elements.auditAlert.textContent,'');
+});
