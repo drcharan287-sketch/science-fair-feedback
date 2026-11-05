@@ -71,7 +71,7 @@
       if (searchStatus) searchStatus.textContent =
         'Project selected. Add your feedback and star rating below.';
       hideSearchResults();
-      if (search) search.blur();
+      project.focus();
     }
 
     function renderQuickSearch() {
