@@ -1,5 +1,7 @@
 # VoiceVote: single-use visitor voting passes
 
+> **CURRENT DECISION (5 November 2026): DEFERRED.** The visitor pass input and shared-phone pass control are hidden in the public app, and mandatory pass mode must not be enabled without a fresh organizer decision. The implementation below is retained for future planning only. See [PROJECT_STATUS.md](../PROJECT_STATUS.md).
+
 ## Safe rollout (no additional QR codes)
 
 VoiceVote keeps the **one common project QR** and the same GitHub Pages voting URL. Each **attendee**, not each project or physical phone, receives a unique code at an organizer-controlled check-in desk.
