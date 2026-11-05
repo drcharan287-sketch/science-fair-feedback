@@ -221,6 +221,9 @@ function adminAuditedChange_(ss, kind, row, details, before, after, change) {
   const audit = adminAuditBegin_(ss, kind, row, details, before, after);
   try {
     change();
+    // Confirm the target write is dispatched before claiming the audit applied.
+    // If this flush fails the durable prior intent remains PENDING.
+    SpreadsheetApp.flush();
     audit.sheet.getRange(audit.row, 6).setValue('APPLIED');
     SpreadsheetApp.flush();
   } catch (error) {
