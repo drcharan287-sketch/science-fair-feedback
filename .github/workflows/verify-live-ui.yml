@@ -49,5 +49,5 @@ jobs:
         run: node scripts/verify-recovery-readiness.mjs
       - name: Verify smart-board and phone Results modes with all backend calls intercepted
         run: node scripts/verify-results-ui.mjs
-      - name: Verify repeatable Practice Voting with the real voting lock preserved and zero outbound POST
-        run: node scripts/verify-practice-vote.mjs
+      - name: Verify owner-only demonstration uses real Voting UI without writing feedback
+        run: node scripts/verify-owner-demo.mjs
