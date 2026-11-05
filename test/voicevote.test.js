@@ -487,3 +487,78 @@ test('secure POST probe makes no writes and duplicate POSTs append only once', (
   assert.match(invalid.html, /Feedback not confirmed/);
   assert.equal(b.writes.length, 2);
 });
+
+
+test('speech capture waits for the final transcript before submitting feedback', async () => {
+  const a = app();
+  respond(a, {success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  a.elements.studentClass.value='9';
+  a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value='Keats';
+  a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value='VoiceVote';
+  a.stars[4].dispatchEvent(new a.context.Event('click'));
+  let recognizer;
+  class FakeSpeechRecognition {
+    constructor() { recognizer=this; }
+    start() { this.started=true; }
+    stop() { this.stopRequested=true; }
+  }
+  a.context.webkitSpeechRecognition=FakeSpeechRecognition;
+  a.context.startRecording();
+  assert.equal(recognizer.started,true);
+  assert.equal(recognizer.lang,'hi-IN','recording honors selected language');
+  assert.equal(a.elements.submitBtn.disabled,true,'no submission while recognition is live');
+  assert.equal(a.elements.language.disabled,true,'language cannot change mid-utterance');
+  assert.equal(a.elements.feedback.disabled,true,'manual edits cannot be overwritten by interim speech');
+  assert.equal(a.elements.stopBtn.disabled,false);
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,0,'direct submit call cannot bypass recording lock');
+  recognizer.onresult({resultIndex:0,results:[{0:{transcript:'Creative scientific presentation'},isFinal:true}]});
+  a.context.stopRecording();
+  assert.equal(recognizer.stopRequested,true);
+  assert.equal(a.elements.submitBtn.disabled,true,'stopping is asynchronous; still wait for final result');
+  recognizer.onend();
+  assert.equal(a.elements.submitBtn.disabled,false);
+  assert.equal(a.elements.feedback.disabled,false);
+  assert.equal(a.elements.stopBtn.disabled,true);
+  assert.match(a.elements.status.textContent,/Review or edit/);
+  assert.equal(a.elements.feedback.value,'Creative scientific presentation');
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,1);
+  const fields=Object.fromEntries(a.forms[0].children.map(x=>[x.name,x.value]));
+  assert.equal(fields.feedback,'Creative scientific presentation');
+});
+
+test('microphone permission errors survive onend and permit typed feedback', async () => {
+  const a=app();
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  let recognizer;
+  a.context.webkitSpeechRecognition=class {
+    constructor(){recognizer=this;}
+    start(){}
+    stop(){}
+  };
+  a.context.startRecording();
+  assert.equal(a.elements.startBtn.disabled,true);
+  recognizer.onerror({error:'not-allowed'});
+  recognizer.onend();
+  assert.match(a.elements.status.textContent,/Microphone permission was denied/);
+  assert.equal(a.elements.feedback.disabled,false);
+  assert.equal(a.elements.startBtn.disabled,false);
+  assert.equal(a.elements.stopBtn.disabled,true);
+  assert.equal(a.forms.length,0);
+});
+
+test('unsupported speech recognition offers manual entry without blocking voting', async () => {
+  const a=app();
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  a.context.startRecording();
+  assert.match(a.elements.status.textContent,/type your feedback instead/);
+  assert.equal(a.elements.feedback.disabled,false);
+  assert.equal(a.elements.submitBtn.disabled,false);
+  assert.match(fs.readFileSync('index.html','utf8'),/textarea id="feedback" maxlength="2000"/);
+});
