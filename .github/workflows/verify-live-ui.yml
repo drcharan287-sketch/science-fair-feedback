@@ -28,3 +28,5 @@ jobs:
         run: node scripts/verify-hosted-ui.mjs
       - name: Intercept live feedback POST and inspect request without sending it
         run: node scripts/verify-post-form-dry-run.mjs
+      - name: Simulate English Telugu Hindi speech and mobile layouts without voting
+        run: node scripts/verify-speech-readiness.mjs
