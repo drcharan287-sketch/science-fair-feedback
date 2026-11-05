@@ -27,4 +27,7 @@ jobs:
           node --check scripts/sync-projects.mjs
           node --check scripts/verify-post-probe.mjs
           node --check scripts/verify-hosted-search.mjs
+          node --check scripts/verify-speech-readiness.mjs
+          node --check scripts/wait-for-pages.mjs
+          node --check scripts/verify-post-form-dry-run.mjs
           node -e "const p=require('./projects.json'); if(!p.success || !Array.isArray(p.projects) || !p.projects.length) process.exit(1)"
