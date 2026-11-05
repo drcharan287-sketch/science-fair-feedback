@@ -318,6 +318,10 @@ function syncVoteStatus() {
   notice.textContent = voted
     ? "Thank you for voting! This browser has already submitted feedback and cannot vote again."
     : "";
+  // Keep the actual button in sync with catalog readiness and the vote token.
+  // The HTML starts disabled while projects load; a fresh eligible visitor
+  // should not remain blocked after choosing a project and rating.
+  submitButton.disabled = voted || !catalogReady;
   if (voted) {
     submitButton.disabled = true;
     const startButton = document.getElementById("startBtn");
@@ -417,6 +421,7 @@ document.querySelectorAll(".star").forEach(function(star) {
       item.classList.toggle("active", value <= rating);
       item.setAttribute("aria-pressed", String(value === rating));
     });
+    syncVoteStatus();
   });
 });
 
