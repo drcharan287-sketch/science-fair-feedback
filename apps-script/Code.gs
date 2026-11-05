@@ -105,6 +105,7 @@ function saveFeedback_(params) {
     const language = String(params.language || 'en-IN');
     const submissionId = String(params.submissionId || '').trim();
     const deviceToken = String(params.deviceToken || '').trim();
+    const requestedProjectId = String(params.projectId || '').trim();
     const uuid = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
     if (!project || !studentClass || !section || !feedback ||
         !Number.isInteger(rating) || rating < 1 || rating > 5 ||
@@ -117,10 +118,17 @@ function saveFeedback_(params) {
     if (!['en-IN', 'te-IN', 'hi-IN', 'ta-IN', 'kn-IN'].includes(language)) {
       throw new Error('Unsupported feedback language.');
     }
-    if (!readProjectCatalog_().some(function(item) {
+    const selectedProject = readProjectCatalog_().find(function(item) {
       return item.grade === studentClass && item.section === section && item.project === project;
-    })) {
+    });
+    if (!selectedProject) {
       throw new Error('This project is not in the active science fair catalog.');
+    }
+    // A stale or forged project ID must never be associated with a different
+    // visible selection. Older clients omit it; the server resolves it from
+    // the active catalog, preserving the existing common QR and browser flow.
+    if (requestedProjectId && requestedProjectId !== (selectedProject.id || '')) {
+      throw new Error('Project details changed. Reload VoiceVote and choose the project again.');
     }
     // Store only the SHA-256 digest, never a raw browser token or hardware ID.
     const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, deviceToken);
@@ -172,7 +180,7 @@ function saveFeedback_(params) {
       const headers = [
         'Date', 'Project', 'Class', 'Section', 'Original Feedback',
         'Rating', 'Language', 'English Translation', 'Submission ID',
-        'Device hash', 'Vote status', 'Visitor pass serial'
+        'Device hash', 'Vote status', 'Visitor pass serial', 'Project ID'
       ];
       if (sheet.getLastRow() === 0) sheet.appendRow(headers);
       const languages = {
@@ -193,7 +201,8 @@ function saveFeedback_(params) {
         new Date(), safeSheetText_(project), safeSheetText_(studentClass),
         safeSheetText_(section), safeSheetText_(feedback), rating,
         safeSheetText_(language), safeSheetText_(translation),
-        submissionId, deviceHash, '', passEntry.legacy ? '' : passEntry.serial
+        submissionId, deviceHash, '', passEntry.legacy ? '' : passEntry.serial,
+        selectedProject.id || ''
       ]);
       // If ledger finalization fails after append, Feedback!L still proves
       // this serial was used; a second attempt is blocked under the same lock.
@@ -234,11 +243,13 @@ function readProjectCatalog_() {
   const sectionCol = indexOfAny(['section']);
   const projectCol = indexOfAny(['project name', 'project']);
   const activeCol = indexOfAny(['active']);
+  const idCol = indexOfAny(['project id', 'project id (stable)', 'id']);
   if (gradeCol < 0 || sectionCol < 0 || projectCol < 0) {
     throw new Error('Projects tab must contain Class/Grade, Section and Project Name headers.');
   }
   const output = [];
   const seen = {};
+  const seenIds = Object.create(null);
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const grade = String(row[gradeCol] || '').trim();
@@ -250,7 +261,17 @@ function readProjectCatalog_() {
     const key = JSON.stringify([grade, section, project]);
     if (seen[key]) continue;
     seen[key] = true;
-    output.push({ grade: grade, section: section, project: project });
+    const id = idCol < 0 ? '' : String(row[idCol] || '').trim();
+    if (id && !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(id)) {
+      throw new Error('Invalid stable project ID in Projects row ' + (i + 1) + '.');
+    }
+    if (id && seenIds[id]) {
+      throw new Error('Duplicate stable project ID in Projects row ' + (i + 1) + '.');
+    }
+    if (id) seenIds[id] = true;
+    const entry = { grade: grade, section: section, project: project };
+    if (id) entry.id = id;
+    output.push(entry);
   }
   return output;
 }
