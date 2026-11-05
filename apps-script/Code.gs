@@ -22,7 +22,9 @@ function doGet(e) {
   if (params.action !== 'save') {
     return ContentService.createTextOutput('VoiceVote is running.');
   }
-  return jsonpResponse_(saveFeedback_(params), params.callback);
+  // GET submissions lack reliable same-origin protection and expose private
+  // feedback in the URL. Reject all GET saves, including legacy clients.
+  return jsonpResponse_({ success: false, message: 'POST required for feedback submission.' }, params.callback);
 }
 
 function doPost(e) {
@@ -55,12 +57,17 @@ function doPost(e) {
  *  Submitted text travels in an HTTPS POST body, not a GET URL. */
 function voiceVoteReceipt_(result) {
   const success = result && result.success === true;
-  const title = success ? 'Thank you! Feedback saved.' : 'Feedback not confirmed';
+  const alreadyVoted = result && result.alreadyVoted === true;
+  const title = success ? 'Thank you! Feedback saved.'
+    : alreadyVoted ? 'This browser has already voted.' : 'Feedback not confirmed';
   const explanation = success
     ? (result.duplicate ? 'Your feedback was previously saved; no duplicate was added.' :
         'Your feedback was saved successfully in VoiceVote.')
-    : 'The save could not be confirmed. Do not resubmit immediately; ask the science fair organizer to check the Feedback sheet.';
-  const pageUrl = 'https://drcharan287-sketch.github.io/science-fair-feedback/';
+    : alreadyVoted
+      ? 'Only one project rating and feedback is allowed per browser for this science fair. No additional feedback was recorded.'
+      : 'The save could not be confirmed. Do not resubmit immediately; ask the science fair organizer to check the Feedback sheet.';
+  const pageUrl = 'https://drcharan287-sketch.github.io/science-fair-feedback/' +
+    (success || alreadyVoted ? '?vote=success' : '?vote=retry');
   const html = '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
     '<title>VoiceVote feedback receipt</title><style>' +
@@ -86,10 +93,30 @@ function saveFeedback_(params) {
     const feedback = String(params.feedback || '').trim();
     const rating = Number(params.rating);
     const language = String(params.language || 'en-IN');
+    const submissionId = String(params.submissionId || '').trim();
+    const deviceToken = String(params.deviceToken || '').trim();
+    const uuid = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
     if (!project || !studentClass || !section || !feedback ||
-        !Number.isInteger(rating) || rating < 1 || rating > 5) {
-      throw new Error('Missing or invalid feedback details.');
+        !Number.isInteger(rating) || rating < 1 || rating > 5 ||
+        feedback.length > 2000 || project.length > 200) {
+      throw new Error('Missing, invalid or excessively long feedback details.');
     }
+    if (!uuid.test(submissionId) || !uuid.test(deviceToken)) {
+      throw new Error('A valid browser voting token is required. Reload the updated VoiceVote page.');
+    }
+    if (!['en-IN', 'te-IN', 'hi-IN', 'ta-IN', 'kn-IN'].includes(language)) {
+      throw new Error('Unsupported feedback language.');
+    }
+    if (!readProjectCatalog_().some(function(item) {
+      return item.grade === studentClass && item.section === section && item.project === project;
+    })) {
+      throw new Error('This project is not in the active science fair catalog.');
+    }
+    // Store only the SHA-256 digest, never a raw browser token or hardware ID.
+    const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, deviceToken);
+    const deviceHash = bytes.map(function(byte) {
+      return ('0' + ((byte + 256) % 256).toString(16)).slice(-2);
+    }).join('');
     const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('Feedback');
     if (!sheet) {
       throw new Error('Create a sheet tab named "Feedback".');
@@ -97,24 +124,32 @@ function saveFeedback_(params) {
     const lock = LockService.getScriptLock();
     lock.waitLock(15000);
     try {
-      // POST requests use a browser-generated ID so accidental retries do not
-      // append the same feedback twice. Legacy GET requests remain compatible.
-      const submissionId = String(params.submissionId || '').trim();
-      if (submissionId && !/^[a-f0-9-]{36}$/i.test(submissionId)) {
-        throw new Error('Invalid submission ID.');
+      // Protect against both a repeated submission and a different project
+      // submission from the same browser. Always check under the script lock.
+      // I/J are hidden administration columns: Submission ID and device hash.
+      // Unlike ScriptProperties, this scales beyond its total-storage quota.
+      const existing = sheet.getLastRow();
+      if (existing > 1) {
+        const known = sheet.getRange(2, 9, existing - 1, 2).getValues();
+        for (let i = 0; i < known.length; i++) {
+          if (String(known[i][0]) === submissionId) {
+            return { success: true, duplicate: true, message: 'This feedback was already saved.' };
+          }
+          if (String(known[i][1]) === deviceHash) {
+            return { success: false, alreadyVoted: true, message: 'This browser has already voted.' };
+          }
+        }
       }
-      const props = submissionId ? PropertiesService.getScriptProperties() : null;
-      const key = submissionId ? 'vv:' + submissionId : '';
-      if (props && props.getProperty(key)) {
+      // Previous version used ScriptProperties for same-ID retries. Retain
+      // backward compatibility without adding new properties for each voter.
+      if (PropertiesService.getScriptProperties().getProperty('vv:' + submissionId)) {
         return { success: true, duplicate: true, message: 'This feedback was already saved.' };
       }
       const headers = [
         'Date', 'Project', 'Class', 'Section', 'Original Feedback',
-        'Rating', 'Language', 'English Translation'
+        'Rating', 'Language', 'English Translation', 'Submission ID', 'Device hash'
       ];
-      if (sheet.getLastRow() === 0) {
-        sheet.appendRow(headers);
-      }
+      if (sheet.getLastRow() === 0) sheet.appendRow(headers);
       const languages = {
         'te-IN': 'te', 'hi-IN': 'hi', 'ta-IN': 'ta',
         'kn-IN': 'kn', 'en-IN': 'en'
@@ -132,9 +167,9 @@ function saveFeedback_(params) {
       sheet.appendRow([
         new Date(), safeSheetText_(project), safeSheetText_(studentClass),
         safeSheetText_(section), safeSheetText_(feedback), rating,
-        safeSheetText_(language), safeSheetText_(translation)
+        safeSheetText_(language), safeSheetText_(translation),
+        submissionId, deviceHash
       ]);
-      if (props) props.setProperty(key, String(Date.now()));
     } finally {
       lock.releaseLock();
     }
