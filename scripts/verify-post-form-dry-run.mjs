@@ -7,7 +7,13 @@ const site = 'https://drcharan287-sketch.github.io/science-fair-feedback/';
 const origin = new URL(site).origin;
 const browser = await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox']});
 try {
-  const page = await browser.newPage();
+  // Each run simulates a fresh visitor without previous vote history.
+  const context = await browser.newContext();
+  await context.addInitScript(() => {
+    try { if (location.hostname.endsWith('github.io')) localStorage.clear(); }
+    catch (_) { /* browser storage might be unavailable */ }
+  });
+  const page = await context.newPage();
   let captured = null;
   await page.route('**/*', async route => {
     const request = route.request();
@@ -46,7 +52,23 @@ try {
       await page.selectOption('#project','VoiceVote');
       await page.fill('#feedback','AUTOMATED DRY RUN - never transmitted to Google.');
       await page.locator('.star[data-value="5"]').click();
-      await page.locator('#submitBtn').click();
+      // Project selections are populated before the app's final ready callback.
+      // Wait for the actual Submit button too, rather than racing that callback.
+      try {
+        await page.waitForFunction(() => {
+          const b = document.getElementById('submitBtn');
+          return b && !b.disabled;
+        }, null, { timeout: 7000 });
+      } catch (e) {
+        const state = await page.evaluate(() => ({
+          status: document.getElementById('status')?.textContent,
+          catalogStatus: document.getElementById('catalogStatus')?.textContent,
+          voted: localStorage.getItem('voicevote_voted_v1'),
+          submitDisabled: document.getElementById('submitBtn')?.disabled
+        }));
+        throw new Error('VoiceVote submit was disabled: ' + JSON.stringify(state));
+      }
+      await page.locator('#submitBtn').click({ timeout: 10000 });
 
       for(let i=0;i<50 && !captured;i++){
         await new Promise(resolve=>setTimeout(resolve,100));
