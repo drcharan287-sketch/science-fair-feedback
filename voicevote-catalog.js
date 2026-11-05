@@ -46,7 +46,7 @@
     }
 
     function normalizeTerm(value) {
-      return String(value || '').normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').toLocaleLowerCase().trim();
+      return String(value || '').normalize('NFKD').replace(/\p{M}/gu, '').toLocaleLowerCase().trim();
     }
 
     function hideSearchResults() {
@@ -85,7 +85,7 @@
           'Type at least 2 characters to find a project across all classes and sections.';
         return;
       }
-      const terms = query.split(/\\s+/).filter(Boolean);
+      const terms = query.split(/\s+/).filter(Boolean);
       const matches = catalog.filter(function(entry) {
         const haystack = normalizeTerm(entry.project + ' ' + entry.grade + ' ' + entry.section);
         return terms.every(function(term) { return haystack.includes(term); });
