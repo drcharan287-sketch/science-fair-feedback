@@ -103,6 +103,18 @@ jobs:
           if (!/^[a-zA-Z0-9_-]{20,}$/.test(sheetId)) throw Error('Invalid existing Spreadsheet ID');
           // Only the pulled backend Code.js is changed (clasp maps it to Code.gs in Apps Script). Preserve manifest, Index.html and all other files.
           fs.writeFileSync('.voicevote-live/Code.js', source.replace(marker, JSON.stringify(sheetId)));
+          // Admin API code and HTML page are kept in the private Apps Script
+          // deployment, never in GitHub Pages. The public repository contains
+          // only a SHA-256 digest of a randomly generated admin credential.
+          const adminSource = fs.readFileSync('apps-script/Admin.gs','utf8');
+          const adminPage = fs.readFileSync('apps-script/Admin.html','utf8');
+          if (!/function adminRequireKey_\(/.test(adminSource) ||
+              !/adminRequireKey_\(key\)/.test(adminSource) ||
+              !/id="loginPanel"/.test(adminPage)) {
+            throw new Error('Missing protected admin backend or login page; refusing to deploy');
+          }
+          fs.writeFileSync('.voicevote-live/Admin.js', adminSource);
+          fs.writeFileSync('.voicevote-live/Admin.html', adminPage);
           NODE
       - name: Push source and update existing deployment
         if: github.event_name == 'push' || inputs.mode == 'deploy'
@@ -124,6 +136,9 @@ jobs:
         run: |
           npm install --no-save playwright-core
           node scripts/verify-post-probe.mjs
+      - name: Verify admin shell denies invalid credentials (no private reads)
+        if: github.event_name == 'push' || inputs.mode == 'deploy'
+        run: node scripts/verify-admin-access.mjs
       - name: Restore previous live deployment if smoke test fails
         if: failure() && (github.event_name == 'push' || inputs.mode == 'deploy')
         env:
