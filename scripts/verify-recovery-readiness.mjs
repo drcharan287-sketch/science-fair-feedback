@@ -26,7 +26,7 @@ async function newIsolatedPage(mode = 'block') {
   page.on('pageerror', error => errors.push(error.message));
   // All non-GitHub requests are intercepted, including Google endpoints.
   // Even synthetic success/retry is generated locally: no real save can occur.
-  await page.route('**/*', async route => {
+  await context.route('**/*', async route => {
     const request = route.request();
     const url = new URL(request.url());
     if (url.origin === origin && request.method() === 'GET') {
@@ -142,21 +142,27 @@ try {
       if (a.count === 0) throw e;
     }
     assert.equal(a.count, 1, 'Exactly one intercepted POST attempt');
-    await loadPage(page);
-    let lock = await inspectLock(page, 'interrupted + new load');
+    // Chromium can finish navigating the original tab to chrome-error://
+    // *after* an aborted POST. A second tab shares the same localStorage
+    // but cannot race the first tab's error-page navigation.
+    // The context-wide route still blocks EVERY POST in both tabs.
+    const recoveryPage = await context.newPage();
+    recoveryPage.on('pageerror', error => errors.push(error.message));
+    await loadPage(recoveryPage);
+    let lock = await inspectLock(recoveryPage, 'interrupted + new load');
     assert.equal(lock.pending, '1');
     assert.equal(lock.voted, null);
     assert.match(lock.message, /may already be saved|awaiting confirmation/i);
     assert.match(lock.message, /organizer/i);
-    await page.reload({ waitUntil: 'domcontentloaded', timeout: 25000 });
-    lock = await inspectLock(page, 'Refresh');
+    await recoveryPage.reload({ waitUntil: 'domcontentloaded', timeout: 25000 });
+    lock = await inspectLock(recoveryPage, 'Refresh');
     assert.equal(lock.pending, '1');
-    await page.goto(site + '?recoveryBack=' + Date.now(),
+    await recoveryPage.goto(site + '?recoveryBack=' + Date.now(),
       { waitUntil: 'domcontentloaded', timeout: 25000 });
-    await page.goBack({ waitUntil: 'domcontentloaded', timeout: 20000 });
-    lock = await inspectLock(page, 'Back');
+    await recoveryPage.goBack({ waitUntil: 'domcontentloaded', timeout: 20000 });
+    lock = await inspectLock(recoveryPage, 'Back');
     assert.equal(lock.pending, '1');
-    await page.evaluate(() => submitFeedback());
+    await recoveryPage.evaluate(() => submitFeedback());
     assert.equal(a.count, 1, 'No duplicate POST after interrupted navigation/Back/Refresh');
     console.log('PASS: interrupted save stays locked across reload, Back and direct submit call');
     await context.close();
