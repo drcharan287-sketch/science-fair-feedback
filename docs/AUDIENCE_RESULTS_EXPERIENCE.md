@@ -1,53 +1,47 @@
-# VoiceVote audience display — smart board, parents and privacy
+# VoiceVote — one voting experience, owner demonstration and audience results
 
-**Created:** 5 November 2026  
-**Voting URL / existing common QR:** https://drcharan287-sketch.github.io/science-fair-feedback/  
-**Audience experience:** https://drcharan287-sketch.github.io/science-fair-feedback/results.html
+**Reviewed:** 5 November 2026  
+**Public Voting/common QR:** https://drcharan287-sketch.github.io/science-fair-feedback/  
+**Audience Results:** https://drcharan287-sketch.github.io/science-fair-feedback/results.html  
+**Owner Demonstration:** Launch a temporary link from the **authenticated Admin Console**. Do not share the link; it opens the **same Voting page** and expires within two hours.
 
-## What is implemented
+## Three purposes, no duplicate public Practice application
 
-The new `results.html` is independent from the private Admin Console. It has:
-- A visually distinctive 16:9 smart-board layout, larger text, grade-oriented cards, language distribution and a curated feedback wall.
-- Parent-friendly, responsive phone layout; smart-board fullscreen toggle, bright-room mode, and optional grade auto-rotation.
-- **DEMO:** default; only synthetic, clearly labeled sample scores and sample remarks; uses real public project *count* but reads **no Feedback**. Never treats samples as real votes.
-- **LIVE:** only public counts of accepted ratings, appreciated exhibits and language activity; **never publishes rankings**.
-- **PUBLISHED:** grade-wise weighted audience rankings *only* after a deliberate authenticated organizer mode change. The calculation matches private Admin (five-vote 3.5-star prior). These are **not official jury awards**.
-- Raw private feedback, browser tokens, submission IDs, admin credentials and the full Feedback sheet are never sent by the audience API.
-- Separately curated highlights only: an optional restricted tab `Public Highlights` with six columns:
-  `Approval Status | Project ID | Quote | English Translation | Language | Approved By`.
-  A row is public only if its status is `APPROVED`, the project ID is active, the quote is nonempty and ≤240 characters, and `Approved By` is nonempty. Moderators must remove names, phone numbers and identifying details **before** setting APPROVED. The system does not automatically extract or approve raw visitor remarks.
+**Parents:** Use the common event QR for a real vote. Once submitted or pending, the existing browser lock protects against another submission on that browser. Nothing about this safety behavior is changed by the Results mode.
 
-The backend caches only mode-scoped, privacy-safe display payloads for up to 45 seconds, rechecking the server-owned publication mode on every request. Public viewers poll at most about every 75 seconds while visible; the cache reduces repeated Google Sheets reads when multiple phones or displays are open.
+**Owner and student presenters:** The owner opens the existing Admin Console, signs in, expands **Owner Demonstration**, and clicks **Create temporary owner demo link**. The generated link uses an opaque, short-lived ticket in the URL *fragment*, verified with a read-only Apps Script request. An expired/invalid link cannot unlock the page. Only the authenticated, verified owner session enables repeated in-memory sample confirmations using the exact same grade/section/project, speech recognition, editable transcript and star UI as the real Voting page. No form POST, Feedback write, browser-token change, or ranking change occurs. A sample receipt explicitly says **NOTHING SAVED**. To rehearse again, click **Demonstrate Again**.
 
-The public Results endpoint is Apps Script `/exec?action=publicResults&callback=...`. It returns *only allowed fields for the server-owned mode*. It accepts no client-provided override of mode. Apps Script `doGet` remains read-only; feedback uses the existing POST form.
+**Audience:** Results stays a separate, optimized 16:9 smart-board/phone page. It supports fullscreen, high-contrast bright-room mode, and grade-wise spotlight rotation. Results publication is independent of presenter demonstration and of real voting permissions.
 
-## Publication controls (private)
+## AI — truthful demonstration
 
-After signing in to the existing Admin Console, expand **Audience Display · publication controls**. Select DEMO, LIVE or PUBLISHED, enter a meaningful 8–200 character reason, and confirm. The backend validates the admin key and writes an audit journal before setting the Script Property `VOICEVOTE_PUBLIC_RESULTS_MODE`.
+Speech-to-text uses the browser's native recognition API when supported and appropriate microphone permission is granted. Real submit translates supported non-English feedback into English in the Apps Script backend. **The owner demo deliberately does not call the translation backend**, so it does not display a pretend live translation or send user speech via an extra app endpoint. Presenters may explain the real translation stage using the fixed **From voice to insight** educational section on Results, without live submissions.
 
-**The feature is deployed in DEMO mode by default.** Do not select LIVE or PUBLISHED before organizer approval and sufficient representative attendance. One can revert to DEMO using the same audited control. No visitor passes or private comments become public from this change.
+## Feedback, rankings and privacy
 
-## Smart-board operation
+Feedback is automatically recorded and translated when parents submit. There is **no public feedback approval queue and no requirement for students to moderate reviews**.
 
-1. Open the audience URL in the Senses Electronics board browser or mirror it from a laptop.
-2. Choose **Brightness** for brightly lit halls; choose **Full screen** where supported.
-3. Select a Grade or use **Auto-rotate grades** for hands-free presentations. Disable auto-rotation during explanations.
-4. Verify the top banner says **DEMO MODE · SAMPLE DATA** before student demonstrations.
-5. For parents, keep the common QR directed at the existing voting URL. The Results link is navigational only; opening it never votes.
+The public Results API never returns individual original or translated visitor comments, browser identifiers, tokens, or admin keys. Instead the page displays the actual pipeline (speech → translation → score calculation), and aggregated language/participation trends. Full original and translated reviews remain available on demand in the existing private Admin Console; it retains optional exceptional vote-exclusion and audit controls, which are not a per-comment approval process.
 
-No specific board resolution is assumed. Layout is tuned to bright 16:9 displays and 360–430px mobile screens, with responsive scaling and reduced-motion accessibility. HTML/CSS/JS are deliberately self-hosted without external frontend frameworks or required fonts.
+Audience Results server-owned modes:
+- **DEMO:** default; preview of interface cards labeled clearly **fictional**; real project count only, and no fake participation totals or visitor comments.
+- **LIVE:** real anonymous participation aggregates, *no project rankings*.
+- **PUBLISHED:** grade-wise weighted audience rankings, enabled only by a signed-in organizer after an audited decision. Ratings are **not** official jury awards.
 
-## Score/fairness note
+The weighted score is `(total_stars + 17.5) / (valid_votes + 5)`. A mode-specific 45-second cache reduces repeated read-only Sheet access; the server checks publication mode for every request. A URL parameter cannot force results publication.
 
-Published rankings are computed using the same weighted score as the Admin Console:
-`(total_stars + 17.5) / (valid_votes + 5)`. All VOID votes and votes for unknown/inactive projects are excluded. Grade ranks reset independently. Before PUBLISHED mode is authorized, live participation totals are safer than a premature winner announcement.
+## No-write release checklist
 
-## Tests and release gate
+- Run `node --test` on the PR before merging.
+- Ensure the direct public Voting page is still locked after an already-recorded or pending submission and shows no Practice link.
+- Test an invalid/expired presenter fragment: locked and no POST.
+- Test a server-verified presenter fragment: allow two or more sample confirmations in the same Voting interface; never change `localStorage` or send a POST. Test English, Telugu and Hindi mocked speech recognition, transcript editing and stars on board/phone viewports.
+- Validate Results has no public comment approval workflow or dynamic visitor quote rendering, and publication modes still gate numerical rankings.
+- After merge, run the published read-only browser test suite; verify 407 active projects/stable IDs and unchanged production feedback count.
+- The actual Senses Electronics smart board, Android Chrome microphone, and iPhone Safari require physical-device acceptance checks before the fair.
 
-- Local in-memory tests verify default DEMO does not read Feedback, LIVE has no rankings, PUBLISHED uses correct scores, approved-only excerpts, and admin-key/audit gating.
-- Browser tests intercept **all** Apps Script GET responses with synthetic fixtures (and block every non-GET request). They check projector and phone widths, bright-room toggle, grade filtering, demo-only query bypass, quote HTML injection safety and zero production votes.
-- Publication gate verifies the exact committed Voting/Results HTML/CSS/JS before browser smoke tests.
-- Existing Apps Script deployment workflow stages reviewed code and includes read-only catalog, no-save POST probe, invalid-key access rejection and rollback on smoke failure.
-- Real physical Senses board brightness/touch behaviour, iPhone Safari and real microphone transcription remain organizer/device checks.
+## Simplicity rules
 
-**Future enhancement:** A richer public feedback moderation workflow, greater than eight highlight rotation, and detailed grade analytics can be staged later. Keep the current display safe and fast for the 7 November event.
+No public Practice link. No separate Practice voting application. No manual feedback approvals. No browser-storage resets for demos. No visitor-pass rollout. Preserve the live QR, stable project identities, feedback records and Google-hosted receipt.
+
+**Next constructive step:** Validate owner-generated temporary demo access on the actual demonstration device, rehearse twice using the common Voting page, and keep Results in its existing DEMO publication state until the organizer deliberately changes it.
