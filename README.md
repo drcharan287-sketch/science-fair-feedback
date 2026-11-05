@@ -1,5 +1,7 @@
 # VoiceVote — Science Fair Feedback
 
+**Living project handover and validation tracker:** [PROJECT_STATUS.md](PROJECT_STATUS.md). Read this first when resuming in a new ChatGPT thread.
+
 VoiceVote is a multilingual, speech-to-text science fair feedback app for a school event with roughly 300 projects. Visitors use **one shared event QR code** to open the GitHub Pages form, choose a class/section/project, rate it, and submit translated feedback to Google Sheets.
 
 ## Live architecture
@@ -14,7 +16,7 @@ VoiceVote is a multilingual, speech-to-text science fair feedback app for a scho
 
 The frontend stores an anonymous, random browser token in `localStorage` and includes it in the POST body. The backend SHA-256-hashes it; under a script lock, it checks **all project submissions** against the stored hashes and rejects subsequent submissions from the same token. A repeated submission ID is idempotent. The backend also verifies the selected project exists in the active roster. Returning from a successful receipt marks the browser as already voted.
 
-This is **not** an unbreakable one-person-or-one-physical-device guarantee: clearing site storage, using a private window, switching browsers, or using another device can create a new token. Shared browsers allow only one visitor to vote. We deliberately do **not** fingerprint users, collect hardware IDs, IP addresses or email addresses. For stronger voting integrity, introduce organizer-issued single-use attendee codes (no extra QR per project required). See `docs/VOTE_GUARD_SECURITY.md`.
+This is **not** an unbreakable one-person-or-one-physical-device guarantee: clearing site storage, using a private window, switching browsers, or using another device can create a new token. Shared browsers allow only one visitor to vote. We deliberately do **not** fingerprint users, collect hardware IDs, IP addresses or email addresses. An organizer-issued single-use pass mechanism exists in the backend but is **deferred and hidden from the public form** pending school management coordination. Do not enable mandatory passes. See `PROJECT_STATUS.md` and `docs/VOTE_GUARD_SECURITY.md`.
 
 ## Release safety
 
@@ -26,4 +28,4 @@ Read `DEPLOYMENT_AUTOMATION.md` for deployment configuration and `docs/VOTE_GUAR
 
 ## Deferred enhancements
 
-Project-specific QR codes and stall numbers are postponed until stall allocations are confirmed. Priorities after voter protection are a searchable project picker, mobile-first UI and accessibility improvements, moderation workflow, and judging analytics. Public leaderboard publication should remain opt-in until the event organizer approves it.
+Project-specific QR codes and stall numbers are postponed until stall allocations are confirmed. Quick project search, responsive feedback entry and a private admin dashboard are implemented. The next priorities are non-writing mobile/multilingual readiness tests, a final live-device test batch and the official full project roster. Public leaderboard publication remains opt-in, and visitor passes remain deferred. See `PROJECT_STATUS.md`.
