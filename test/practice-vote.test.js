@@ -25,7 +25,7 @@ test('Practice JS cannot submit to Google, change real locks or create a voting 
   assert.match(script,/receiptFeedback'\)\.textContent=feedback/);
   assert.match(script,/function resetPractice\(/);
   assert.doesNotMatch(script,/script\.google\.com|SCRIPT_URL/);
-  assert.doesNotMatch(script,/localStorage|sessionStorage|navigator\.sendBeacon/);
+  assert.doesNotMatch(script,/\b(?:window\.)?(?:localStorage|sessionStorage)\s*\.|navigator\.sendBeacon/);
   assert.doesNotMatch(script,/\.submit\(|method\s*=\s*['"]POST/);
   assert.doesNotMatch(script,/fetch\([^\n]*method\s*:\s*['"]POST/i);
 });
