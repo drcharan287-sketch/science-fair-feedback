@@ -317,7 +317,7 @@
         'passModeHelp','passCopyStatus','auditAlert','publicDisplayStatus',
         'publicDisplayMessage'].forEach(id => text($(id),'')); 
       const ownerLink=$('ownerPresenterLink');
-      ownerLink.hidden=true;ownerLink.removeAttribute('href');
+      ownerLink.hidden=true;ownerLink.href='';
       $('presenterPanel').open=false;
       text($('presenterMessage'),'Sign in to create a temporary owner demo link.'); 
       $('publicDisplayMode').value='DEMO';
@@ -585,7 +585,7 @@
     $('createPresenterLink').addEventListener('click',()=>{
       $('createPresenterLink').disabled=true;
       $('ownerPresenterLink').hidden=true;
-      $('ownerPresenterLink').removeAttribute('href');
+      $('ownerPresenterLink').href='';
       text($('presenterMessage'),'Creating a temporary no-save presenter session…');
       call('adminCreatePresenterSession',[key],result=>{
         $('createPresenterLink').disabled=false;
