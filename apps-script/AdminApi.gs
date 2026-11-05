@@ -202,7 +202,12 @@ function adminAuditPending_(ss) {
   // Legacy rows have no event ID and are not mistaken for interrupted intents.
   return states.map(function(row, i) {
     return { row: i + 2, state: String(row[0] || ''), id: String(row[1] || '') };
-  }).filter(function(entry) { return entry.id && entry.state !== 'APPLIED'; });
+  }).filter(function(entry) {
+    // A human organizer may resolve an ambiguous action ONLY after comparing
+    // the live state against the journal and documenting the disposition.
+    const resolved = ['APPLIED', 'NOT_APPLIED', 'RECONCILED'];
+    return entry.id && resolved.indexOf(entry.state) === -1;
+  });
 }
 function adminAuditBegin_(ss, kind, row, details, before, after) {
   if (adminAuditPending_(ss).length) {
