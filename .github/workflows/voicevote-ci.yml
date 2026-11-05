@@ -30,4 +30,5 @@ jobs:
           node --check scripts/verify-speech-readiness.mjs
           node --check scripts/wait-for-pages.mjs
           node --check scripts/verify-post-form-dry-run.mjs
+          node --check scripts/verify-recovery-readiness.mjs
           node -e "const p=require('./projects.json'); if(!p.success || !Array.isArray(p.projects) || !p.projects.length) process.exit(1)"

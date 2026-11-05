@@ -39,3 +39,5 @@ jobs:
         run: node scripts/verify-post-form-dry-run.mjs
       - name: Simulate English Telugu Hindi recognition and phone layouts, without saving
         run: node scripts/verify-speech-readiness.mjs
+      - name: Verify offline catalog, Back/Refresh and interrupted receipt recovery without saving
+        run: node scripts/verify-recovery-readiness.mjs
