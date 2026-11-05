@@ -20,7 +20,7 @@ try {
     return search && !search.disabled;
   }, null, {timeout: 20000});
 
-  await page.locator('#projectSearch').fill('Xeno');
+  await page.locator('#projectSearch').fill('XenoChat');
   await page.locator('#projectSearchResults button').first().click();
   assert.equal(await page.locator('#studentClass').inputValue(), '6');
   assert.equal(await page.locator('#section').inputValue(), 'Heidelberg');

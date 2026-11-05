@@ -64,3 +64,32 @@ export function validateProjectEntries(entries) {
     a.project.localeCompare(b.project,undefined,{numeric:true})
   );
 }
+
+
+/**
+ * Once public project IDs have been published, never silently replace them
+ * with a catalog that is missing IDs (for example, a sync racing an older
+ * Apps Script deployment). A project name may change while its ID remains.
+ * This is a safeguard on the public snapshot only; it never updates Sheets.
+ */
+export function assertCatalogIdentityContinuity(previous, next) {
+  if (!Array.isArray(previous) || !Array.isArray(next)) {
+    throw new Error('Cannot verify project catalog identity continuity.');
+  }
+  const hasStableBaseline = previous.some(p => p && p.id);
+  if (!hasStableBaseline) return;
+  if (next.some(p => !p.id)) {
+    throw new Error('Catalog identity regression: server omitted stable project IDs. Existing snapshot retained.');
+  }
+  const canonical = p => JSON.stringify(
+    [p.grade, p.section, p.project].map(v =>
+      String(v).normalize('NFKC').replace(/\s+/gu, ' ').trim().toLowerCase())
+  );
+  const prior = new Map(previous.filter(p => p && p.id).map(p => [canonical(p), p.id]));
+  for (const p of next) {
+    const was = prior.get(canonical(p));
+    if (was && was !== p.id) {
+      throw new Error('Catalog identity regression: a project ID changed without an approved rename.');
+    }
+  }
+}

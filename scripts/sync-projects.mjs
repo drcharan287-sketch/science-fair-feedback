@@ -4,7 +4,7 @@
  * Avoids asking visitors' browsers to follow Google JSONP redirects.
  */
 import { readFile, writeFile } from 'node:fs/promises';
-import { validateProjectEntries } from './catalog-integrity.mjs';
+import { validateProjectEntries, assertCatalogIdentityContinuity } from './catalog-integrity.mjs';
 
 const html = await readFile('index.html', 'utf8');
 const match = html.match(/\bconst\s+SCRIPT_URL\s*=\s*["'](https:\/\/script\.google\.com\/macros\/s\/[a-zA-Z0-9_-]+\/exec)["']/);
@@ -31,6 +31,8 @@ if (!payload || payload.success !== true || !Array.isArray(payload.projects)) {
 // Any ambiguous identity or non-submittable field rejects this sync. The last
 // valid projects.json remains untouched until organizers fix the Sheet data.
 const projects = validateProjectEntries(payload.projects);
+const prior = JSON.parse(await readFile('projects.json', 'utf8'));
+assertCatalogIdentityContinuity(prior.projects, projects);
 const next = JSON.stringify({success:true,projects}, null, 2) + '\n';
 await writeFile('projects.json', next, 'utf8');
 console.log('Read-only catalog sync validated ' + projects.length + ' active projects.');
