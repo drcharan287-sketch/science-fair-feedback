@@ -104,6 +104,7 @@ function setup(projectRows=PROJECTS, aliasRows=[]) {
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('apps-script/Code.gs','utf8'),context);
   vm.runInContext(fs.readFileSync('apps-script/VisitorPasses.gs','utf8'),context);
+  vm.runInContext(fs.readFileSync('apps-script/PublicResults.gs','utf8'),context);
   const adminSource=fs.readFileSync('apps-script/AdminApi.gs','utf8');
   assert.match(adminSource,/VOICEVOTE_ADMIN_KEY_SHA256/);
   const testSource=adminSource.replace(
