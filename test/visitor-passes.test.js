@@ -26,8 +26,19 @@ function setup(){
   const feedback=makeSheet([['Date','Project','Class','Section','Original Feedback','Rating','Language','English Translation','Submission ID','Device hash','Vote status','Visitor pass serial']]);
   const projects={getDataRange:()=>({getDisplayValues:()=>[['Class/Grade','Section','Project Name','Active'],['6','Heidelberg','XenoChat','TRUE']]})};
   const sheets={Feedback:feedback,Projects:projects},props=new Map(),cache=new Map();
+  const faults={auditAppend:false};
   let opens=0,locked=0,released=0,sequence=0,saves=0;
-  const ss={getSheetByName:n=>sheets[n]||null,insertSheet:n=>(sheets[n]=makeSheet())};
+  const ss={getSheetByName:n=>sheets[n]||null,insertSheet:n=>{
+    const sh=makeSheet();
+    if(n==='Admin Action Log'){
+      const original=sh.appendRow.bind(sh);
+      sh.appendRow=row=>{
+        if(faults.auditAppend && row[0]!=='Date')throw Error('Simulated audit append outage');
+        original(row);
+      };
+    }
+    return (sheets[n]=sh);
+  }};
   const ctx={
     Date,JSON,Math,
     SpreadsheetApp:{openById:()=>{opens++;return ss},flush(){}},
@@ -50,7 +61,7 @@ function setup(){
     submissionId:'123e4567-e89b-42d3-a456-'+String(200000000000 + ++saves),
     deviceToken:device || 'aaaa1111-aaaa-4bbb-8ccc-123456789012',visitorPass:code||'',...extra
   });
-  return {ctx,save,sheets,feedback,props,cache,get opens(){return opens},get locked(){return locked},get released(){return released}};
+  return {ctx,save,sheets,feedback,props,cache,faults,get opens(){return opens},get locked(){return locked},get released(){return released}};
 }
 test('admin operations reject invalid keys before spreadsheet access',()=>{
  const a=setup();
