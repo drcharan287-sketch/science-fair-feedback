@@ -3,7 +3,8 @@
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 
-const site='https://drcharan287-sketch.github.io/science-fair-feedback/';
+const site=process.env.VOICEVOTE_SITE_BASE ||
+  'https://drcharan287-sketch.github.io/science-fair-feedback/';
 const fixtures={
   DEMO:{success:true,mode:'DEMO',totalProjects:407},
   LIVE:{success:true,mode:'LIVE',totalProjects:407,acceptedVotes:15,ratedProjects:8,
@@ -66,7 +67,8 @@ try{
     assert.match(await page.locator('#modeTitle').innerText(),/DEMO/);
     assert.match(await page.locator('#modeDetails').innerText(),/fictional/i);
     assert.ok((await page.locator('#leaderboardCards .rank-card').count())>0);
-    assert.match(await page.locator('#feedbackIntro').innerText(),/Fictional/i);
+    assert.match(await page.locator('#feedbackIntro').innerText(),/automatically/i);
+    assert.equal(await page.locator('#feedbackCards .quote-card').count(),3);
     await page.locator('#brightToggle').click();
     assert.equal(await page.evaluate(()=>document.body.classList.contains('bright')),true);
     await page.locator('#autoplayToggle').click();
@@ -79,17 +81,22 @@ try{
     assert.equal(await page.locator('#leaderboardCards .rank-card').count(),0,
       'LIVE cannot reveal grade standings');
     assert.equal(await page.locator('#totalVotes').innerText(),'15');
-    assert.equal(await page.locator('#feedbackCards .quote-card').count(),0);
+    assert.equal(await page.locator('#feedbackCards .quote-card').count(),3);
+    assert.match(await page.locator('#feedbackCards').innerText(),/multilingual|translated/i);
 
     await load('PUBLISHED');
     assert.match(await page.locator('#modeTitle').innerText(),/PUBLISHED/);
     assert.equal(await page.locator('#leaderboardCards .rank-card').count(),2);
-    assert.equal(await page.locator('#feedbackCards .quote-card').count(),1);
+    assert.equal(await page.locator('#feedbackCards .quote-card').count(),3);
     assert.equal(await page.locator('#feedbackCards img').count(),0,
-      'Approved quote must still render as plain text, never HTML');
+      'Public display never renders submitted free-text feedback as HTML');
+    assert.equal((await page.locator('#feedbackCards').innerText()).includes('<img src=x'),false,
+      'Even an injected backend highlight must never be rendered publicly');
     await page.locator('#gradeFilter').selectOption('9');
     assert.equal(await page.locator('#leaderboardCards .rank-card').count(),1);
     assert.match(await page.locator('#leaderboardCards').innerText(),/Synthetic Rain Harvest/);
+    assert.equal(await page.locator('a[href*="practice.html"]').count(),0,
+      'No public invitation to practice on Results');
     assert.deepEqual(pageErrors,[],size.name+': script exception');
     assert.equal(sentPost,0,'No voting requests allowed from Results');
     assert.equal(realBackendReads,0,'No real external backend/API requests allowed');

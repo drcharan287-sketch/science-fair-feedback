@@ -22,6 +22,13 @@ function doGet(e) {
     catch (_) { payload = {success:false,mode:'DEMO',message:'Results temporarily unavailable.'}; }
     return jsonpResponse_(payload,params.callback);
   }
+  if (params.action === 'presenterVerify') {
+    // Opaque, short-lived ticket verification only. No admin key, vote,
+    // person, feedback, or private dashboard data is ever returned.
+    return jsonpResponse_({
+      success: publicVerifyPresenterSession_(params.ticket)
+    }, params.callback);
+  }
   if (params.action === 'catalog') {
     let result;
     try {

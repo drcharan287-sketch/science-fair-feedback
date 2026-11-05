@@ -34,7 +34,13 @@ jobs:
           node --check scripts/verify-recovery-readiness.mjs
           node --check scripts/verify-results-ui.mjs
           node --check results.js
-          node --check practice-vote.js
-          node --check scripts/verify-practice-vote.mjs
+          node --check scripts/verify-owner-demo.mjs
           node --check scripts/smoke-public-results.mjs
           node -e "const p=require('./projects.json'); if(!p.success || !Array.isArray(p.projects) || !p.projects.length) process.exit(1)"
+      - name: Verify staged Voting owner demo and Results in isolated Chromium before deployment
+        run: |
+          npm install --no-save playwright-core
+          python3 -m http.server 8787 --bind 127.0.0.1 >/tmp/voicevote-staging-http.log 2>&1 &
+          export VOICEVOTE_SITE_BASE=http://127.0.0.1:8787/
+          node scripts/verify-owner-demo.mjs
+          node scripts/verify-results-ui.mjs

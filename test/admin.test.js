@@ -14,6 +14,7 @@ const PROJECTS = [
 function setup(projectRows=PROJECTS, aliasRows=[]) {
   let sheetOpens = 0;
   const props = new Map();
+  const ticketCache = new Map();
   const sheets = {};
   const faults = { auditAppend:false, auditFinalize:false, auditFlush:false,
     failOnFlush:0, feedbackWrite:false, propertyWrite:false };
@@ -100,6 +101,11 @@ function setup(projectRows=PROJECTS, aliasRows=[]) {
       computeDigest:(_,v)=>Array.from(createHash('sha256').update(String(v)).digest()),
       getUuid:()=> 'fake-audit-id-' + ++uuidCounter},
     LanguageApp:{translate:t=>t},
+    CacheService:{getScriptCache:()=>({
+      get:k=>ticketCache.get(k)||null,
+      put:(k,v)=>ticketCache.set(k,v),
+      remove:k=>ticketCache.delete(k)
+    })},
   };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('apps-script/Code.gs','utf8'),context);
@@ -113,7 +119,7 @@ function setup(projectRows=PROJECTS, aliasRows=[]) {
   );
   assert.notEqual(testSource,adminSource,'Must swap production hash for local fake key');
   vm.runInContext(testSource,context);
-  return {context,props,sheets,feedbackRows,faults,opens:()=>sheetOpens};
+  return {context,props,sheets,feedbackRows,faults,ticketCache,opens:()=>sheetOpens};
 }
 
 test('anonymous and incorrect admin credentials cannot read private results or moderate voters',()=>{
@@ -474,27 +480,18 @@ test('PUBLISHED results use existing weighted scores and grade-local rankings, n
   assert.equal(JSON.stringify(data).includes('Interesting use of AI'),false);
 });
 
-test('public Feedback Wall only returns individually approved, attributable-to-organizer curated rows',()=>{
+test('public results contain no individual feedback or manual approval list in any mode',()=>{
   const a=setup();
-  a.props.set('VOICEVOTE_PUBLIC_RESULTS_MODE','LIVE');
-  const rows=[
-    ['APPROVED',JSON.stringify(['6','Heidelberg','XenoChat']),
-      'A prepared anonymous compliment','An English translation','te-IN','Organizer 1'],
-    ['PENDING',JSON.stringify(['9','Keats','VoiceVote']),'Sensitive raw comment','','en-IN','Organizer 1'],
-    ['APPROVED',JSON.stringify(['9','Keats','VoiceVote']),'Another comment','','en-IN',''],
-    ['APPROVED','unknown-id','Do not display me','','en-IN','Organizer 1']
-  ];
-  a.sheets['Public Highlights']={
-    getLastRow:()=>rows.length+1,
-    getRange:()=>({getValues:()=>rows})
-  };
-  const payload=a.context.publicSummary_();
-  assert.equal(payload.highlights.length,1);
-  assert.equal(payload.highlights[0].quote,'A prepared anonymous compliment');
-  assert.ok(!JSON.stringify(payload).includes('Sensitive raw comment'));
-  assert.ok(!JSON.stringify(payload).includes('Do not display me'));
-  a.props.set('VOICEVOTE_PUBLIC_RESULTS_MODE','DEMO');
-  assert.equal('highlights' in a.context.publicSummary_(),false);
+  for(const mode of ['DEMO','LIVE','PUBLISHED']){
+    a.props.set('VOICEVOTE_PUBLIC_RESULTS_MODE',mode);
+    const out=a.context.publicSummary_();
+    const raw=JSON.stringify(out);
+    assert.equal('highlights' in out,false);
+    assert.equal('reviews' in out,false);
+    assert.ok(!raw.includes('Interesting use of AI'));
+    assert.ok(!raw.includes('ఈ ప్రాజెక్టు'));
+    assert.ok(!raw.includes('APPROVED'));
+  }
 });
 
 test('public results publication changes require a real admin key and leave an audit trail',()=>{
@@ -545,4 +542,34 @@ test('public results cache stays mode-scoped and is cleared on authorized public
   assert.equal(restored.mode,'DEMO');
   assert.equal('acceptedVotes' in restored,false);
   assert.equal('rankings' in restored,false);
+});
+
+test('only authenticated owner can issue a temporary, no-write demonstration ticket',()=>{
+  const a=setup();
+  assert.throws(()=>a.context.adminCreatePresenterSession('wrong'),/denied/);
+  assert.equal(a.ticketCache.size,0);
+  assert.equal(a.context.publicVerifyPresenterSession_('bad'),false);
+  assert.equal(a.context.doGet({parameter:{action:'presenterVerify',ticket:'bad',callback:'safeCallback'}})
+    .text.includes('"success":false'),true);
+  let nonce=0;
+  a.context.Utilities.getUuid=()=>{
+    nonce++;
+    return nonce===1?'123e4567-e89b-42d3-a456-426614174001':
+      '123e4567-e89b-42d3-a456-426614174002';
+  };
+  const session=a.context.adminCreatePresenterSession(DEMO_KEY);
+  assert.match(session.token,/^[a-f0-9]{64}$/);
+  assert.equal(session.expiresInSeconds,7200);
+  assert.equal(a.ticketCache.size,1);
+  const verified=a.context.doGet({parameter:{
+    action:'presenterVerify',ticket:session.token,callback:'safeCallback'}});
+  assert.match(verified.text,/^safeCallback\(/);
+  assert.match(verified.text,/"success":true/);
+  assert.equal(a.feedbackRows.length,3,'Issuing a demo ticket must not write a vote');
+  assert.equal(a.sheets['Admin Action Log'],undefined,'No Sheet changes needed for read-only presenter launch');
+  a.ticketCache.clear();
+  const expired=a.context.doGet({parameter:{
+    action:'presenterVerify',ticket:session.token,callback:'safeCallback'}});
+  assert.match(expired.text,/"success":false/);
+  assert.equal(a.context.publicVerifyPresenterSession_(session.token.replace(/.$/,'0')),false);
 });

@@ -242,6 +242,17 @@
         <p id="publicDisplayMessage" class="help" role="status"></p>
       </details>
 
+      <details class="panel" id="presenterPanel" style="margin-top:18px">
+        <summary style="cursor:pointer;font-weight:800;font-size:17px">Owner Demonstration · same Voting interface, no saved votes</summary>
+        <p class="help">Use the existing VoiceVote Voting page on your own presentation device. The owner link lets you rehearse repeatedly, even if that browser previously voted. It never writes feedback, unlocks real voting, or changes rankings.</p>
+        <div class="actions">
+          <button type="button" id="createPresenterLink">Create temporary owner demo link</button>
+          <a id="ownerPresenterLink" href="#" target="_blank" rel="noopener noreferrer" hidden
+             style="padding:11px 15px;color:#b6ecfb">Open owner demonstration ↗</a>
+        </div>
+        <p id="presenterMessage" class="help" role="status">Only an authenticated organizer can create this temporary link. It expires within two hours; keep it on the presentation device and don't share it with parents.</p>
+      </details>
+
       <footer style="padding:25px 0;color:#aabfd1;font-size:12px">
         VoiceVote · Browser speech recognition and multilingual machine translation.
         Ratings are audience feedback, not final jury awards.
@@ -305,6 +316,10 @@
         'passesUsed','passesRevoked','passesInfo','passModeLabel',
         'passModeHelp','passCopyStatus','auditAlert','publicDisplayStatus',
         'publicDisplayMessage'].forEach(id => text($(id),'')); 
+      const ownerLink=$('ownerPresenterLink');
+      ownerLink.hidden=true;ownerLink.href='';
+      $('presenterPanel').open=false;
+      text($('presenterMessage'),'Sign in to create a temporary owner demo link.'); 
       $('publicDisplayMode').value='DEMO';
       $('publicDisplayReason').value='';
       $('publicDisplaySettings').open=false;
@@ -567,6 +582,28 @@
     $('activatePasses').addEventListener('click',()=>changePassMode(true));
     $('preparePasses').addEventListener('click',()=>changePassMode(false));
     $('refreshPasses').addEventListener('click',refreshPasses);
+    $('createPresenterLink').addEventListener('click',()=>{
+      $('createPresenterLink').disabled=true;
+      $('ownerPresenterLink').hidden=true;
+      $('ownerPresenterLink').href='';
+      text($('presenterMessage'),'Creating a temporary no-save presenter session…');
+      call('adminCreatePresenterSession',[key],result=>{
+        $('createPresenterLink').disabled=false;
+        if(!/^[a-f0-9]{64}$/.test(String(result&&result.token||''))) {
+          text($('presenterMessage'),'Could not create a valid owner session. Try again.');
+          return;
+        }
+        // Fragment ticket is not transmitted to the GitHub Pages server.
+        $('ownerPresenterLink').href=
+          'https://drcharan287-sketch.github.io/science-fair-feedback/#presenter='+
+            encodeURIComponent(result.token);
+        $('ownerPresenterLink').hidden=false;
+        text($('presenterMessage'),'Owner demo ready for this device. Expires within two hours. Click the link to open the SAME Voting UI, without saving any votes.');
+      },err=>{
+        $('createPresenterLink').disabled=false;
+        text($('presenterMessage'),'Could not create owner demo: '+(err.message||String(err)));
+      });
+    });
     $('savePublicDisplayMode').addEventListener('click',()=>{
       const requested=$('publicDisplayMode').value;
       const why=$('publicDisplayReason').value.trim();

@@ -4,11 +4,12 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 
-function app(fetchProjects, search = '', stored = new Map()) {
+function app(fetchProjects, search = '', stored = new Map(), hash = '') {
   class Element {
     constructor() { this.options = []; this.value = ''; this.disabled = false; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.children = []; this.style = {}; this.hidden = false; this.classList = { toggle() {}, remove() {} }; }
     focus() { this.focused = true; }
     blur() { this.focused = false; }
+    scrollIntoView() { this.scrolled = true; }
     click() { this.dispatchEvent({type:'click'}); }
     querySelector(name) { return name === 'button' ? (this.children.find(x => x.type === 'button') || null) : null; }
     querySelectorAll(name) { return name === 'button' ? this.children.filter(x => x.type === 'button') : []; }
@@ -21,7 +22,9 @@ function app(fetchProjects, search = '', stored = new Map()) {
     dispatchEvent(event) { for (const fn of this.listeners[event.type] || []) fn.call(this, event); }
     remove() { this.removed = true; }
   }
-  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn', 'stopBtn', 'projectSearch', 'projectSearchResults', 'projectSearchStatus', 'projectSearchSelected', 'visitorPass', 'newVisitorBtn', 'visitorPassFeature', 'networkStatus'].map(id => [id, new Element()]));
+  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn', 'stopBtn', 'projectSearch', 'projectSearchResults', 'projectSearchStatus', 'projectSearchSelected', 'visitorPass', 'newVisitorBtn', 'visitorPassFeature', 'networkStatus', 'presenterBanner', 'presenterReceipt',
+    'presenterReceiptProject', 'presenterReceiptStars', 'presenterReceiptFeedback',
+    'presenterTryAgain'].map(id => [id, new Element()]));
   elements.language.value = 'hi-IN';
   elements.submitBtn.disabled = true;
   const stars = Array.from({ length: 5 }, (_, i) => { const e = new Element(); e.dataset.value = String(i + 1); return e; });
@@ -42,7 +45,7 @@ function app(fetchProjects, search = '', stored = new Map()) {
     localStorage: { getItem: key => stored.get(key) || null, setItem: (key,val) => {stored.set(key, String(val));}, removeItem: key => stored.delete(key) } };
   context.window = context;
   if (fetchProjects) context.fetch = fetchProjects;
-  context.location = { search, reload() { context.__reloaded = true; } };
+  context.location = { search, hash, reload() { context.__reloaded = true; } };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('voicevote-catalog.js', 'utf8'), context);
   const html = fs.readFileSync('index.html', 'utf8');
@@ -664,4 +667,73 @@ test('older visitor form may omit project ID; server resolves it from active ros
   };
   assert.match(b.context.doPost({parameter:fields}).html,/Thank you! Feedback saved/);
   assert.equal(b.writes[1][12],'LEG-6-HEIDELBERG-XENOCHAT');
+});
+
+
+test('owner ticket does not bypass voting until backend verifies it', async()=>{
+  const stored=new Map([
+    ['voicevote_voted_v1','1'],
+    ['voicevote_pending_v1','1'],
+    ['voicevote_device_token_v1','123e4567-e89b-42d3-a456-426614174000']
+  ]);
+  const ticket='a'.repeat(64);
+  const a=app(null,'?vote=retry',stored,'#presenter='+ticket);
+  // Receipt query parameters are powerless in an owner presenter session.
+  assert.equal(stored.get('voicevote_pending_v1'),'1');
+  assert.equal(a.elements.submitBtn.disabled,true);
+  respond(a,{success:true,projects:[
+    {grade:'9',section:'Keats',project:'VoiceVote',id:'LEG-9-KEATS-VOICEVOTE'}
+  ]});
+  await tick();
+  assert.equal(a.elements.submitBtn.disabled,true,'Catalog alone cannot unlock demo');
+  assert.equal(a.forms.length,0);
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,0,'An unverified owner ticket must not create a POST');
+  a.context.voiceVotePresenterVerify({success:true});
+  assert.equal(a.elements.presenterBanner.hidden,false);
+  assert.match(a.elements.presenterBanner.textContent,/OWNER DEMONSTRATION/);
+  assert.equal(a.elements.studentClass.disabled,false,'Verified demo can use existing Voting UI');
+
+  a.elements.studentClass.value='9';
+  a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value='Keats';
+  a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value='VoiceVote';
+  a.elements.feedback.value='Speech-to-text demonstration';
+  a.stars[4].dispatchEvent(new a.context.Event('click'));
+  a.context.submitFeedback();
+  assert.equal(a.elements.presenterReceipt.hidden,false);
+  assert.equal(a.elements.presenterReceiptStars.textContent,'★★★★★');
+  assert.match(a.elements.presenterReceiptFeedback.textContent,/Speech-to-text/);
+  assert.equal(a.forms.length,0,'Demo cannot use Google save form');
+  a.elements.presenterTryAgain.dispatchEvent(new a.context.Event('click'));
+  assert.equal(a.elements.presenterReceipt.hidden,true);
+  assert.equal(a.elements.feedback.value,'');
+  assert.equal(a.elements.submitBtn.disabled,false,'Demo can rehearse again');
+  a.elements.feedback.value='Second rehearsal';
+  a.stars[2].dispatchEvent(new a.context.Event('click'));
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,0);
+  assert.equal(a.elements.presenterReceiptStars.textContent,'★★★☆☆');
+  assert.equal(stored.get('voicevote_voted_v1'),'1');
+  assert.equal(stored.get('voicevote_pending_v1'),'1');
+  assert.equal(stored.get('voicevote_device_token_v1'),'123e4567-e89b-42d3-a456-426614174000');
+});
+
+test('a denied or malformed presenter ticket cannot unlock real Voting',async()=>{
+  const locked=new Map([['voicevote_voted_v1','1']]);
+  const a=app(null,'',locked,'#presenter='+'a'.repeat(64));
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  a.context.voiceVotePresenterVerify({success:false});
+  assert.equal(a.elements.submitBtn.disabled,true);
+  assert.equal(a.elements.studentClass.disabled,true);
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,0);
+  const malformed=app(null,'',new Map(),'#presenter=not-a-valid-ticket');
+  respond(malformed,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  assert.equal(malformed.elements.submitBtn.disabled,true);
+  malformed.context.submitFeedback();
+  assert.equal(malformed.forms.length,0);
 });

@@ -54,16 +54,3 @@ html:fullscreen .stat-card{padding:15px 18px}
 html:fullscreen .stat-value{font-size:clamp(2rem,3vw,3rem);margin-top:6px}
 html:fullscreen .main-grid{margin-top:17px}
 @media(max-width:760px){html:fullscreen .hero{display:block;min-height:auto;padding:35px 0 20px}}
-
-
-/* Dedicated rehearsal entry on the Results display (visible in Demo,
-   Live and Published, always clearly no-vote). */
-.practice-entry{display:flex;align-items:center;gap:16px;padding:17px 21px;margin:-5px 0 24px;background:linear-gradient(105deg,#16405c,#183c63);border:1px solid rgba(115,224,241,.44);border-radius:17px}
-.practice-entry-symbol{display:grid;place-items:center;flex:none;width:46px;height:46px;border-radius:14px;background:#78eafa1b;font-size:1.35rem}
-.practice-entry>div{flex:1;min-width:0}.practice-entry strong{font-size:.95rem;color:#e9faff}.practice-entry p{font-size:.82rem;margin:5px 0 0;color:#b9d8ed;line-height:1.5}
-.practice-entry a{flex:none;white-space:nowrap;color:#052c3f;text-decoration:none;background:#9aeefa;border:1px solid #b7faff;border-radius:12px;padding:11px 17px;min-height:46px;font-size:.82rem;font-weight:900}
-.practice-entry a:focus-visible{outline:3px solid #a3f9ff;outline-offset:4px}
-body.bright .practice-entry{background:#dcf2fb;border-color:#a5d0e6}
-body.bright .practice-entry strong{color:#16415b}
-body.bright .practice-entry p{color:#315976}
-@media(max-width:760px){.practice-entry{flex-direction:column;align-items:stretch;padding:17px}.practice-entry-symbol{display:none}.practice-entry a{text-align:center}}

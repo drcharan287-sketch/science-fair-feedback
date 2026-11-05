@@ -4,9 +4,9 @@
 
 VoiceVote is a multilingual, AI-assisted science fair feedback experience: **407 active exhibits as of 5 November 2026**, with a larger roster expected. Parents use **one shared event QR** to open the redesigned phone-first Voting form. A separate responsive Results screen lets students demonstrate anonymous participation and multilingual insights on the Senses classroom smart board, without exposing unpublished rankings or private reviews.
 
-**Live pages:** [Parent Voting UI](https://drcharan287-sketch.github.io/science-fair-feedback/) · [Audience Results & Demo](https://drcharan287-sketch.github.io/science-fair-feedback/results.html) · [Safe Practice Voting (unlimited, no save)](https://drcharan287-sketch.github.io/science-fair-feedback/practice.html)
+**Live pages:** [Parent Voting UI](https://drcharan287-sketch.github.io/science-fair-feedback/) · [Audience Results & Demo](https://drcharan287-sketch.github.io/science-fair-feedback/results.html)
 
-**Previously voted in a browser?** That browser remains locked for real voting even when Results is in DEMO mode. Use the standalone [Practice Voting page](https://drcharan287-sketch.github.io/science-fair-feedback/practice.html) for unlimited student rehearsals with the current project catalog, browser speech-to-text, editable transcript, stars and a **SAMPLE ONLY — NOT SAVED** receipt. It does **not** send feedback, run translation, change rankings or reset browser vote protection. See [Practice Voting guide](docs/PRACTICE_VOTING.md).
+**Owner demonstration:** Use the authenticated Admin Console → **Owner Demonstration** to generate a temporary two-hour link that opens the SAME Voting page in no-write demo mode. It can rehearse repeatedly even on a browser that previously voted. No public Practice app, feedback submission, translation request, vote-lock reset or ranking change occurs. Parents never see a Practice invitation. See [Audience and owner operations guide](docs/AUDIENCE_RESULTS_EXPERIENCE.md).
 
 **How to operate the audience screen safely:** [Audience Results guide](docs/AUDIENCE_RESULTS_EXPERIENCE.md). **Default = DEMO** (fictional sample display, no real rankings), with real Live totals and Published grade rankings available only after an authenticated, audited organizer decision.
 
@@ -16,7 +16,7 @@ VoiceVote is a multilingual, AI-assisted science fair feedback experience: **407
 - **Catalog:** `Projects` tab in Google Sheets; `projects.json` is an automatically synchronized, public, read-only snapshot with a live JSONP fallback.
 - **Feedback:** Top-level HTTPS form `POST` to the existing Google Apps Script `/exec` deployment. The Google-hosted receipt confirms saves. GET saving is deliberately disabled.
 - **Storage:** `Feedback` tab uses eight visible columns: Date, Project, Class, Section, Original Feedback, Rating, Language, English Translation. Columns **I/J** are hidden audit fields: Submission ID and SHA-256 device token digest.
-- **Admin:** The spreadsheet contains a private `Admin Rankings` tab and a `Feedback Viewer` tab. Ranking uses vote counts, average stars, and a Bayesian-style score with a prior of five 3.5-star votes. Feedback text stays out of the ranking table and appears in the viewer only when an admin selects a project. Private results use the signed-in Admin Console and Google Sheet permissions. The separate **read-only** public Results API returns only mode-approved aggregate fields, and optional individually approved curated quotes; it never returns raw private Feedback records.
+- **Admin:** The spreadsheet contains a private `Admin Rankings` tab and a `Feedback Viewer` tab. Ranking uses vote counts, average stars, and a Bayesian-style score with a prior of five 3.5-star votes. Feedback text stays out of the ranking table and appears in the viewer only when an admin selects a project. Private results use the signed-in Admin Console and Google Sheet permissions. The separate **read-only** public Results API returns only mode-approved aggregate fields, and no individual visitor comments; it never returns raw private Feedback records.
 
 ## One vote per browser (phased release)
 
