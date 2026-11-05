@@ -172,9 +172,13 @@ function adminIssueVisitorPasses(key, amount, reason) {
       rows.push([serial, hash, 'AVAILABLE', new Date(), '', '', '', '', why,
         code.slice(-4), '']);
     }
-    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, VV_PASS_HEADERS.length)
-      .setValues(rows);
-    adminLog_(ss, 'ISSUE_VISITOR_PASSES', '', 'Issued ' + count + ' passes: ' + why);
+    adminAuditedChange_(ss, 'ISSUE_VISITOR_PASSES', '',
+      'Issued ' + count + ' passes: ' + why,
+      'LAST SERIAL ' + serialStart, 'LAST SERIAL ' + (serialStart + count),
+      function() {
+        sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, VV_PASS_HEADERS.length)
+          .setValues(rows);
+      });
     return { issued: count, codes: codes, warning:
       'Print or copy now. Plaintext visitor codes cannot be retrieved again.' };
   });
@@ -241,14 +245,20 @@ function adminReissueVisitorPass(key, serialNumber, reason) {
       throw new Error('Random pass collision; retry.');
     }
     // Revoke BEFORE creating the replacement, never temporarily allow both.
+    // Partial failure leaves an unresolved journal and blocks further admin
+    // changes until an organizer reconciles the ledger with this intent.
     const oldRow = index + 2;
-    sheet.getRange(oldRow, 3).setValue('REVOKED');
-    sheet.getRange(oldRow, 8).setValue(newSerial);
-    sheet.getRange(sheet.getLastRow() + 1, 1, 1, VV_PASS_HEADERS.length)
-      .setValues([[newSerial, hash, 'AVAILABLE', new Date(), '', '',
-        serial, '', why, code.slice(-4), '']]);
-    adminLog_(ss, 'REISSUE_VISITOR_PASS', serial,
-      'Replaced with serial ' + newSerial + ': ' + why);
+    adminAuditedChange_(ss, 'REISSUE_VISITOR_PASS', serial,
+      'Replaced with serial ' + newSerial + ': ' + why,
+      'SERIAL ' + serial + ' AVAILABLE',
+      'SERIAL ' + serial + ' REVOKED; NEW ' + newSerial + ' AVAILABLE',
+      function() {
+        sheet.getRange(oldRow, 3).setValue('REVOKED');
+        sheet.getRange(oldRow, 8).setValue(newSerial);
+        sheet.getRange(sheet.getLastRow() + 1, 1, 1, VV_PASS_HEADERS.length)
+          .setValues([[newSerial, hash, 'AVAILABLE', new Date(), '', '',
+            serial, '', why, code.slice(-4), '']]);
+      });
     return {serial: newSerial, replaces: serial, code: code,
       warning: 'Copy or print this replacement code now; it cannot be recovered.'};
   });
@@ -268,10 +278,15 @@ function adminSetVisitorPassRequired(key, required, reason) {
         throw new Error('Generate and distribute visitor passes before requiring them.');
       }
     }
-    PropertiesService.getScriptProperties()
-      .setProperty(VV_PASS_MODE_PROPERTY, required ? '1' : '0');
-    adminLog_(ss, required ? 'REQUIRE_VISITOR_PASSES' : 'PREPARATION_PASS_MODE',
-      '', why);
+    const properties = PropertiesService.getScriptProperties();
+    const previous = properties.getProperty(VV_PASS_MODE_PROPERTY) === '1';
+    if (previous === required) return { mode: required ? 'required' : 'preparation' };
+    adminAuditedChange_(ss,
+      required ? 'REQUIRE_VISITOR_PASSES' : 'PREPARATION_PASS_MODE', '', why,
+      previous ? 'REQUIRED' : 'PREPARATION',
+      required ? 'REQUIRED' : 'PREPARATION', function() {
+        properties.setProperty(VV_PASS_MODE_PROPERTY, required ? '1' : '0');
+      });
     return { mode: required ? 'required' : 'preparation' };
   });
 }

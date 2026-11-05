@@ -26,11 +26,22 @@ function setup(){
   const feedback=makeSheet([['Date','Project','Class','Section','Original Feedback','Rating','Language','English Translation','Submission ID','Device hash','Vote status','Visitor pass serial']]);
   const projects={getDataRange:()=>({getDisplayValues:()=>[['Class/Grade','Section','Project Name','Active'],['6','Heidelberg','XenoChat','TRUE']]})};
   const sheets={Feedback:feedback,Projects:projects},props=new Map(),cache=new Map();
+  const faults={auditAppend:false};
   let opens=0,locked=0,released=0,sequence=0,saves=0;
-  const ss={getSheetByName:n=>sheets[n]||null,insertSheet:n=>(sheets[n]=makeSheet())};
+  const ss={getSheetByName:n=>sheets[n]||null,insertSheet:n=>{
+    const sh=makeSheet();
+    if(n==='Admin Action Log'){
+      const original=sh.appendRow.bind(sh);
+      sh.appendRow=row=>{
+        if(faults.auditAppend && row[0]!=='Date')throw Error('Simulated audit append outage');
+        original(row);
+      };
+    }
+    return (sheets[n]=sh);
+  }};
   const ctx={
     Date,JSON,Math,
-    SpreadsheetApp:{openById:()=>{opens++;return ss}},
+    SpreadsheetApp:{openById:()=>{opens++;return ss},flush(){}},
     PropertiesService:{getScriptProperties:()=>({getProperty:k=>props.get(k)||null,setProperty:(k,v)=>props.set(k,String(v))})},
     CacheService:{getScriptCache:()=>({get:k=>cache.get(k)||null,put:(k,v)=>cache.set(k,String(v))})},
     LockService:{getScriptLock:()=>({waitLock:()=>{locked++},releaseLock:()=>{released++}})},
@@ -50,7 +61,7 @@ function setup(){
     submissionId:'123e4567-e89b-42d3-a456-'+String(200000000000 + ++saves),
     deviceToken:device || 'aaaa1111-aaaa-4bbb-8ccc-123456789012',visitorPass:code||'',...extra
   });
-  return {ctx,save,sheets,feedback,props,cache,get opens(){return opens},get locked(){return locked},get released(){return released}};
+  return {ctx,save,sheets,feedback,props,cache,faults,get opens(){return opens},get locked(){return locked},get released(){return released}};
 }
 test('admin operations reject invalid keys before spreadsheet access',()=>{
  const a=setup();
@@ -150,4 +161,52 @@ test('admin controls are present but do not embed private codes',()=>{
    assert.ok(h.includes('id="'+id+'"'));
  }
  assert.match(h,/adminSetVisitorPassRequired/);
+});
+
+
+test('a failed audit write does not issue deferred visitor codes',()=>{
+ const a=setup();
+ a.faults.auditAppend=true;
+ assert.throws(()=>a.ctx.adminIssueVisitorPasses(KEY,2,'In-memory rehearsal of code issuance'),
+   /Simulated audit append outage/);
+ assert.equal(a.sheets['Visitor Passes'].getLastRow(),1,
+   'Only ledger headers should exist; no visitor code is issued');
+ assert.equal(a.sheets['Admin Action Log'].getLastRow(),1);
+ assert.equal(a.ctx.visitorPassMode_(),'preparation');
+});
+
+test('journal preflight protects reissue and activation when audit append fails',()=>{
+ const a=setup(),b=a.ctx.adminIssueVisitorPasses(KEY,1,'Initial dry-run batch');
+ assert.equal(b.issued,1);
+ a.faults.auditAppend=true;
+ assert.throws(()=>a.ctx.adminReissueVisitorPass(KEY,1,'Lost pass dry-run replacement'),
+   /Simulated audit append outage/);
+ assert.equal(a.sheets['Visitor Passes'].rows[1][2],'AVAILABLE');
+ assert.equal(a.sheets['Visitor Passes'].rows.length,2);
+ assert.throws(()=>a.ctx.adminSetVisitorPassRequired(KEY,true,'Simulated management decision'),
+   /Simulated audit append outage/);
+ assert.equal(a.ctx.visitorPassMode_(),'preparation');
+});
+
+test('partial pass reissue leaves a PENDING journal that blocks later changes',()=>{
+ const a=setup();
+ a.ctx.adminIssueVisitorPasses(KEY,1,'Original in-memory test pass');
+ const sheet=a.sheets['Visitor Passes'];
+ const orig=sheet.getRange.bind(sheet);
+ sheet.getRange=(row,col,h,w)=>{
+   const range=orig(row,col,h,w);
+   if(row===3 && col===1)range.setValues=()=>{
+     throw Error('Simulated replacement ledger insert failed');
+   };
+   return range;
+ };
+ assert.throws(()=>a.ctx.adminReissueVisitorPass(KEY,1,'Partial in-memory reissue failure'),
+   /needs reconciliation/);
+ assert.equal(sheet.rows[1][2],'REVOKED');
+ const journal=a.sheets['Admin Action Log'];
+ assert.equal(journal.rows.at(-1)[5],'PENDING');
+ assert.equal(journal.rows.at(-1)[1],'REISSUE_VISITOR_PASS');
+ assert.throws(()=>a.ctx.adminIssueVisitorPasses(KEY,1,
+   'Attempt to issue despite pending audit'),/Unresolved PENDING admin audit/);
+ assert.equal(a.ctx.visitorPassMode_(),'preparation');
 });

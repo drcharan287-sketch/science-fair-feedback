@@ -103,6 +103,7 @@
         <button id="passesTab" class="tab" type="button">Visitor passes</button>
       </nav>
       <p id="adminStatus" role="status" class="help" aria-live="polite"></p>
+      <p id="auditAlert" class="notice" role="alert" hidden></p>
 
       <section id="rankingsPanel" class="panel">
         <div class="section-heading">
@@ -275,7 +276,8 @@
         'legacyCount','excludedCount','rankingCount','reviewsTitle',
         'reviewsStatus','adminStatus','votingState','passesAvailable',
         'passesUsed','passesRevoked','passesInfo','passModeLabel',
-        'passModeHelp','passCopyStatus'].forEach(id => text($(id),''));
+        'passModeHelp','passCopyStatus','auditAlert'].forEach(id => text($(id),''));
+      $('auditAlert').hidden = true;
       $('issuedPassOutput').value = '';
       $('issuedPassPanel').hidden = true;
       $('rankSearch').value = '';
@@ -319,6 +321,12 @@
       text($('protectedCount'),data.protectedVotes);
       text($('legacyCount'),data.legacyVotes);
       text($('excludedCount'),data.excludedVotes);
+      const pendingAuditCount = Number(data.auditPendingActions) || 0;
+      $('auditAlert').hidden = pendingAuditCount === 0;
+      text($('auditAlert'),pendingAuditCount
+        ? 'AUDIT ATTENTION: ' + pendingAuditCount +
+          ' unresolved administrator action(s). New admin changes are blocked. Ask the owner to reconcile the Admin Action Log before retrying.'
+        : '');
       text($('votingState'),data.votingOpen
         ? 'Voting is OPEN — new feedback may be accepted.'
         : 'Voting is PAUSED — new submissions are rejected by the server.');
