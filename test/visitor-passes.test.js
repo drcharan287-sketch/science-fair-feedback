@@ -206,7 +206,7 @@ test('partial pass reissue leaves a PENDING journal that blocks later changes',(
  const journal=a.sheets['Admin Action Log'];
  assert.equal(journal.rows.at(-1)[5],'PENDING');
  assert.equal(journal.rows.at(-1)[1],'REISSUE_VISITOR_PASS');
- assert.throws(()=>a.ctx.adminSetVisitorPassRequired(KEY,true,
-   'Attempt despite pending state'),/Unresolved PENDING admin audit/);
+ assert.throws(()=>a.ctx.adminIssueVisitorPasses(KEY,1,
+   'Attempt to issue despite pending audit'),/Unresolved PENDING admin audit/);
  assert.equal(a.ctx.visitorPassMode_(),'preparation');
 });
