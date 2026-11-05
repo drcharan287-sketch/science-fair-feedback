@@ -64,14 +64,18 @@ function doPost(e) {
 function voiceVoteReceipt_(result) {
   const success = result && result.success === true;
   const alreadyVoted = result && result.alreadyVoted === true;
+  const passDenied = result && result.passError === true;
   const title = success ? 'Thank you! Feedback saved.'
-    : alreadyVoted ? 'This browser has already voted.' : 'Feedback not confirmed';
+    : alreadyVoted ? 'This browser has already voted.'
+    : passDenied ? 'Visitor pass not accepted' : 'Feedback not confirmed';
   const explanation = success
     ? (result.duplicate ? 'Your feedback was previously saved; no duplicate was added.' :
         'Your feedback was saved successfully in VoiceVote.')
     : alreadyVoted
       ? 'Only one project rating and feedback is allowed per browser for this science fair. No additional feedback was recorded.'
-      : 'The save could not be confirmed. Do not resubmit immediately; ask the science fair organizer to check the Feedback sheet.';
+      : passDenied
+        ? 'An unused visitor voting pass is required, or the supplied pass cannot be accepted. Check your code with an organizer. No new feedback was recorded.'
+        : 'The save could not be confirmed. Do not resubmit immediately; ask the science fair organizer to check the Feedback sheet.';
   const pageUrl = 'https://drcharan287-sketch.github.io/science-fair-feedback/' +
     (success || alreadyVoted ? '?vote=success' : '?vote=retry');
   const html = '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
@@ -123,33 +127,40 @@ function saveFeedback_(params) {
     const deviceHash = bytes.map(function(byte) {
       return ('0' + ((byte + 256) % 256).toString(16)).slice(-2);
     }).join('');
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('Feedback');
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName('Feedback');
     if (!sheet) {
       throw new Error('Create a sheet tab named "Feedback".');
     }
     const lock = LockService.getScriptLock();
     lock.waitLock(15000);
     try {
-      // Protect against both a repeated submission and a different project
-      // submission from the same browser. Always check under the script lock.
-      // I/J are hidden administration columns: Submission ID and device hash.
-      // Unlike ScriptProperties, this scales beyond its total-storage quota.
+      // The submission ID is the cross-network retry identity, even when an
+      // earlier save succeeded but the browser never displayed its receipt.
       const existing = sheet.getLastRow();
+      let previousTokens = [];
       if (existing > 1) {
-        const known = sheet.getRange(2, 9, existing - 1, 2).getValues();
-        for (let i = 0; i < known.length; i++) {
-          if (String(known[i][0]) === submissionId) {
+        previousTokens = sheet.getRange(2, 9, existing - 1, 2).getValues();
+        for (let i = 0; i < previousTokens.length; i++) {
+          if (String(previousTokens[i][0]) === submissionId) {
             return { success: true, duplicate: true, message: 'This feedback was already saved.' };
-          }
-          if (String(known[i][1]) === deviceHash) {
-            return { success: false, alreadyVoted: true, message: 'This browser has already voted.' };
           }
         }
       }
-      // Previous version used ScriptProperties for same-ID retries. Retain
-      // backward compatibility without adding new properties for each voter.
       if (PropertiesService.getScriptProperties().getProperty('vv:' + submissionId)) {
         return { success: true, duplicate: true, message: 'This feedback was already saved.' };
+      }
+      // In preparation mode, a visitor may use the existing browser-token
+      // flow without a pass. A supplied pass, even before mandatory activation,
+      // is always checked and redeemed exactly once.
+      const passEntry = visitorPassValidateForVote_(ss, params.visitorPass, deviceHash, sheet);
+      if (passEntry.legacy) {
+        for (let i = 0; i < previousTokens.length; i++) {
+          if (String(previousTokens[i][1]) === deviceHash) {
+            return { success: false, alreadyVoted: true,
+              message: 'This browser has already voted.' };
+          }
+        }
       }
       // A server-side pause wins even if a visitor is using an older page.
       // Check after duplicate-ID handling, so a retry of an earlier success
@@ -160,7 +171,8 @@ function saveFeedback_(params) {
       }
       const headers = [
         'Date', 'Project', 'Class', 'Section', 'Original Feedback',
-        'Rating', 'Language', 'English Translation', 'Submission ID', 'Device hash'
+        'Rating', 'Language', 'English Translation', 'Submission ID',
+        'Device hash', 'Vote status', 'Visitor pass serial'
       ];
       if (sheet.getLastRow() === 0) sheet.appendRow(headers);
       const languages = {
@@ -181,14 +193,22 @@ function saveFeedback_(params) {
         new Date(), safeSheetText_(project), safeSheetText_(studentClass),
         safeSheetText_(section), safeSheetText_(feedback), rating,
         safeSheetText_(language), safeSheetText_(translation),
-        submissionId, deviceHash
+        submissionId, deviceHash, '', passEntry.legacy ? '' : passEntry.serial
       ]);
+      // If ledger finalization fails after append, Feedback!L still proves
+      // this serial was used; a second attempt is blocked under the same lock.
+      visitorPassFinalize_(passEntry, sheet.getLastRow(), submissionId);
     } finally {
       lock.releaseLock();
     }
     result = { success: true, message: 'Feedback saved successfully!' };
   } catch (error) {
-    result = { success: false, message: error.message };
+    const message = String(error && error.message || 'Feedback not confirmed.');
+    result = {
+      success: false,
+      message: message,
+      passError: /visitor pass|pass attempts/i.test(message)
+    };
   }
   return result;
 }
