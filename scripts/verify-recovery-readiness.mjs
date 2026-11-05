@@ -148,7 +148,16 @@ try {
     // The context-wide route still blocks EVERY POST in both tabs.
     const recoveryPage = await context.newPage();
     recoveryPage.on('pageerror', error => errors.push(error.message));
-    await loadPage(recoveryPage);
+    const reopened = await recoveryPage.goto(site + '?recoveryLocked=' + Date.now(),
+      { waitUntil: 'domcontentloaded', timeout: 25000 });
+    assert.ok(reopened?.ok(), 'Read-only recovery tab should load the public page');
+    // The catalog selector is EXPECTED to remain disabled while pending.
+    // Waiting for an enabled selector would incorrectly fail a valid lockout.
+    await recoveryPage.waitForFunction(() =>
+      localStorage.getItem('voicevote_pending_v1') === '1' &&
+      document.getElementById('submitBtn')?.disabled === true &&
+      document.getElementById('voteGuardStatus')?.hidden === false,
+      null, { timeout: 12000 });
     let lock = await inspectLock(recoveryPage, 'interrupted + new load');
     assert.equal(lock.pending, '1');
     assert.equal(lock.voted, null);
