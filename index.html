@@ -347,13 +347,7 @@ button:disabled, textarea:disabled, input:disabled {
     <button type="button" id="newVisitorBtn" hidden disabled>Start a different visitor with their unused pass</button>
   </section>
   <p id="voteGuardStatus" class="vote-lock" role="status" aria-live="polite" hidden></p>
-  <aside id="practiceCallout" class="practice-callout" hidden>
-    <div>
-      <strong>Already tested VoiceVote?</strong>
-      <p>Use our safe rehearsal page for unlimited demonstrations. It never submits a real vote or changes results.</p>
-    </div>
-    <a href="./practice.html">Try Practice Voting ↗</a>
-  </aside>
+  <p id="presenterBanner" class="vote-lock" role="status" aria-live="polite" hidden></p>
   <button type="button" id="retryCatalogBtn" hidden>Retry loading projects</button>
   </section>
 
@@ -400,6 +394,15 @@ button:disabled, textarea:disabled, input:disabled {
   <p id="receiptHint" style="margin-top:10px;font-size:12px;color:#cbd5e1;text-align:center;">You'll receive a confirmation from Google. Please do not submit again unless it confirms an error.</p>
   </section>
 
+  <section id="presenterReceipt" class="owner-receipt" role="status" aria-live="polite" hidden>
+    <strong>OWNER DEMONSTRATION · NOTHING SAVED</strong>
+    <h3>VoiceVote demonstration complete!</h3>
+    <p id="presenterReceiptProject"></p>
+    <p id="presenterReceiptStars"></p>
+    <p id="presenterReceiptFeedback"></p>
+    <p class="owner-receipt-note">This is a local example, not a Google confirmation. The rating is not counted, browser voting eligibility is unchanged, and AI translation was not called.</p>
+    <button id="presenterTryAgain" type="button">↻ Demonstrate Again</button>
+  </section>
   <div class="footer">
     <strong>VoiceVote ✦ Made for curious minds</strong>
     <span>Audience appreciation is separate from official science fair judging.</span>
@@ -418,6 +421,12 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxk-Ex6bd0l3V9fiUrPo
 const DEVICE_STORAGE_KEY = "voicevote_device_token_v1";
 const VOTED_STORAGE_KEY = "voicevote_voted_v1";
 const PENDING_STORAGE_KEY = "voicevote_pending_v1";
+// An owner capability is issued ONLY by authenticated Admin Console RPC.
+// URL fragments are not sent to the public GitHub Pages host.
+const presenterTicket = new URLSearchParams(String(window.location?.hash || '').replace(/^#/, '')).get('presenter') || '';
+const presenterRequested = Boolean(presenterTicket);
+let presenterVerified = false;
+let presenterVerificationError = '';
 // Management-dependent feature: leave the backend intact and preparation-only.
 // Turning this on in a future release requires organizer approval and live testing.
 const VISITOR_PASSES_ENABLED = false;
@@ -439,7 +448,11 @@ function hasPendingVote() {
   catch (_) { return false; }
 }
 
-function isVoteLocked() { return hasLocalVote() || hasPendingVote(); }
+function isVoteLocked() {
+  // An owner ticket either verifies and allows LOCAL DEMO ONLY, or stays locked.
+  // Never use a guessed fragment or unverified token to enable real voting.
+  return presenterRequested ? !presenterVerified : hasLocalVote() || hasPendingVote();
+}
 
 function hasWellFormedVisitorPass() {
   const input = document.getElementById('visitorPass');
@@ -475,12 +488,19 @@ function getOrCreateDeviceToken() {
 
 function syncVoteStatus() {
   const notice = document.getElementById("voteGuardStatus");
-  const voted = hasLocalVote();
-  const pending = hasPendingVote();
-  const locked = voted || pending;
-  notice.hidden = !locked;
-  const practiceCallout = document.getElementById('practiceCallout');
-  if (practiceCallout) practiceCallout.hidden = !locked;
+  const voted = !presenterRequested && hasLocalVote();
+  const pending = !presenterRequested && hasPendingVote();
+  const locked = isVoteLocked();
+  notice.hidden = presenterRequested || !locked;
+  const presenterBanner = document.getElementById('presenterBanner');
+  if (presenterBanner) {
+    presenterBanner.hidden = !presenterRequested;
+    presenterBanner.textContent = presenterVerified
+      ? 'OWNER DEMONSTRATION · Rehearse freely. No vote will be saved, no ranking changes, and the existing browser lock is preserved.'
+      : 'Owner demonstration is unavailable: '+(presenterVerificationError || 'Verifying temporary access…')+
+        ' Reopen a new demonstration link from the authenticated Admin Console.';
+  }
+  submitButton.textContent = presenterVerified ? 'Show Demo Confirmation →' : 'Submit Feedback →';
   notice.textContent = voted
     ? "A vote has already been recorded in this browser. Additional feedback is blocked here. Ask an organizer if you need help."
     : pending
@@ -532,6 +552,9 @@ function updateConnectionStatus() {
 }
 
 function readReceiptReturn() {
+  // Presenter URLs never clear/set real voting storage, even if forged query
+  // parameters such as ?vote=success or ?vote=retry accompany the fragment.
+  if (presenterRequested) { syncVoteStatus(); return; }
   const search = new URLSearchParams(window.location?.search || "");
   if (search.get("vote") === "success") {
     try {
@@ -650,8 +673,40 @@ function startCatalog() {
   });
 }
 
+function verifyPresenterTicket() {
+  if (!presenterRequested) return;
+  if (!/^[a-f0-9]{64}$/i.test(presenterTicket)) {
+    presenterVerificationError='Invalid or expired access.';
+    syncVoteStatus();
+    return;
+  }
+  const callback='voiceVotePresenterVerify';
+  const tag=document.createElement('script');
+  let done=false;
+  const finish=function(approved,message) {
+    if(done)return;
+    done=true;
+    presenterVerified=approved===true;
+    presenterVerificationError=presenterVerified?'':(message||'Expired or unverified access.');
+    try { delete window[callback]; } catch (_) { window[callback]=undefined; }
+    if(tag.parentNode) tag.parentNode.removeChild(tag);
+    clearTimeout(timer);
+    syncVoteStatus();
+  };
+  window[callback]=function(result) {
+    finish(Boolean(result && result.success === true),'Expired or invalid access.');
+  };
+  tag.onerror=function(){finish(false,'Could not verify access.');};
+  tag.referrerPolicy='no-referrer';
+  const timer=setTimeout(function(){finish(false,'Verification timed out.');},16000);
+  tag.src=SCRIPT_URL.trim()+'?action=presenterVerify&callback='+callback+
+    '&ticket='+encodeURIComponent(presenterTicket);
+  document.head.appendChild(tag);
+}
+
 // Initialize the catalog first so its filtering runs before label formatting.
 readReceiptReturn();
+verifyPresenterTicket();
 updateConnectionStatus();
 if (typeof window.addEventListener === "function") {
   window.addEventListener("online", updateConnectionStatus);
@@ -772,6 +827,30 @@ function secureSubmissionId() {
     '-' + hex.slice(16, 20) + '-' + hex.slice(20);
 }
 
+function showPresenterReceipt(data) {
+  // The source of these values is the already validated visible form.
+  // Use textContent only; never render visitor-entered text as HTML.
+  document.getElementById('presenterReceiptProject').textContent =
+    'Class '+data.studentClass+' · '+data.section+' · '+data.project;
+  document.getElementById('presenterReceiptStars').textContent =
+    '★'.repeat(data.rating)+'☆'.repeat(5-data.rating);
+  document.getElementById('presenterReceiptFeedback').textContent=data.feedback;
+  document.getElementById('presenterReceipt').hidden=false;
+  statusElement.textContent='Owner demo complete. NOTHING has been submitted or saved.';
+  document.getElementById('presenterReceipt').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+document.getElementById('presenterTryAgain').addEventListener('click',function() {
+  if (!presenterVerified) return;
+  rating=0;
+  document.getElementById('feedback').value='';
+  document.querySelectorAll('.star').forEach(function(star) {
+    star.classList.remove('active');
+    star.setAttribute('aria-pressed','false');
+  });
+  document.getElementById('presenterReceipt').hidden=true;
+  statusElement.textContent='Another owner demonstration is ready. No real vote or browser lock was changed.';
+  syncVoteStatus();
+});
 function submitFeedback() {
   if (isSubmitting) return;
   if (isRecording) {
@@ -806,6 +885,16 @@ function submitFeedback() {
   }
   if (!data.studentClass || !data.section || !data.project || !data.feedback || !data.rating) {
     statusElement.textContent = 'Please choose a class, section and project, enter feedback, and select a star rating.';
+    return;
+  }
+  // Authenticated owner presenter uses THIS SAME FORM and UI, but the
+  // confirmation is entirely local: no Google request, browser token or lock.
+  if (presenterRequested) {
+    if (!presenterVerified) {
+      statusElement.textContent='Owner demonstration access has not been verified.';
+      return;
+    }
+    showPresenterReceipt(data);
     return;
   }
   // Avoid an avoidable failed navigation when the browser knows it is offline.
