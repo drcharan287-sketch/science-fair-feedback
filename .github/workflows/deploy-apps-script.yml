@@ -115,6 +115,13 @@ jobs:
           }
           fs.writeFileSync('.voicevote-live/AdminApi.js', adminSource);
           fs.writeFileSync('.voicevote-live/Admin.html', adminPage);
+          const passSource = fs.readFileSync('apps-script/VisitorPasses.gs', 'utf8');
+          if (!/function visitorPassValidateForVote_\(/.test(passSource) ||
+              !/function adminIssueVisitorPasses\(/.test(passSource) ||
+              !/function adminReissueVisitorPass\(/.test(passSource)) {
+            throw new Error('Visitor pass validation and admin issuance modules are missing');
+          }
+          fs.writeFileSync('.voicevote-live/VisitorPasses.js', passSource);
           NODE
       - name: Push source and update existing deployment
         if: github.event_name == 'push' || inputs.mode == 'deploy'

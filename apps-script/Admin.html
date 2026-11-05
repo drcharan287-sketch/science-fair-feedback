@@ -100,6 +100,7 @@
       <nav class="tabs" aria-label="Admin views">
         <button id="rankingsTab" class="tab active" type="button">Project rankings</button>
         <button id="votersTab" class="tab" type="button">Voter controls</button>
+        <button id="passesTab" class="tab" type="button">Visitor passes</button>
       </nav>
       <p id="adminStatus" role="status" class="help" aria-live="polite"></p>
 
@@ -139,7 +140,7 @@
         </div>
         <div class="danger-zone">
           <strong>Voting integrity limitations</strong>
-          <p class="help" style="margin:8px 0 0">One submission is enforced per anonymous browser token. This does not uniquely identify a person or physical device. Clearing storage or using another browser can bypass the token restriction.</p>
+          <p class="help" style="margin:8px 0 0">In preparation mode, a browser token limits legacy votes and can be bypassed by clearing storage. When single-use passes are required, the server rejects code reuse across browsers. Each visitor should have one unique pass.</p>
         </div>
         <p class="help"><span id="protectedCount">0</span> protected-token votes · <span id="legacyCount">0</span> older unidentifiable votes · <span id="excludedCount">0</span> excluded from rankings</p>
         <h3>Recent voter activity</h3>
@@ -148,6 +149,69 @@
           <tbody id="voterRows"></tbody></table>
         </div>
         <p class="help">“Exclude” removes a vote from this dashboard's rankings but does not unlock the visitor's browser. A controlled re-vote process requires separate organizer-issued reset codes.</p>
+      </section>
+
+      <section id="passesPanel" class="panel" hidden>
+        <div class="section-heading">
+          <div>
+            <h2>Single-use visitor voting passes</h2>
+            <p class="help">One common event QR. A unique pass can only be redeemed once, even from another browser or after storage is cleared.</p>
+          </div>
+          <span class="badge" id="passModeLabel">Loading mode…</span>
+        </div>
+        <div class="notice" id="passModeHelp">
+          Preparation mode: existing browser-token voting is permitted. Generate and distribute codes before activating mandatory passes.
+        </div>
+        <div class="metrics" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+          <div class="metric"><strong id="passesAvailable">—</strong><span>Available</span></div>
+          <div class="metric"><strong id="passesUsed">—</strong><span>Redeemed</span></div>
+          <div class="metric"><strong id="passesRevoked">—</strong><span>Revoked</span></div>
+        </div>
+        <div class="actions">
+          <button type="button" id="activatePasses" class="warn-btn">Require passes for all new votes</button>
+          <button type="button" id="preparePasses" class="muted-btn">Return to preparation mode</button>
+          <button type="button" id="refreshPasses" class="muted-btn">Refresh pass status</button>
+        </div>
+        <div class="danger-zone">
+          <strong>Before you activate mandatory passes</strong>
+          <p class="help" style="margin:8px 0 0">Print and distribute the codes first, test the public form, and confirm organizers are ready. Activation affects every visitor immediately. Preparation mode preserves the working legacy submission flow.</p>
+        </div>
+
+        <h3>Generate visitor passes</h3>
+        <div class="controls">
+          <div><label for="passBatchSize">Passes in this batch (1–100)</label>
+            <input id="passBatchSize" type="number" min="1" max="100" value="20"></div>
+          <div><label for="passBatchReason">Reason / batch label</label>
+            <input id="passBatchReason" value="Science fair visitor admission"></div>
+        </div>
+        <div class="actions"><button type="button" id="issuePasses">Generate new passes</button></div>
+        <p class="help">Codes are randomly generated and shown only once. Google Sheets stores their hashes, not the plaintext. Copy or print the generated list before closing it. Never include codes in public screenshots.</p>
+        <div class="drawer" id="issuedPassPanel" hidden>
+          <h3>Newly issued passes — copy now</h3>
+          <textarea id="issuedPassOutput" readonly rows="9" style="width:100%;border-radius:10px;background:#0d2542;color:white;border:1px solid var(--line);padding:12px"></textarea>
+          <div class="actions">
+            <button id="copyIssuedPasses" type="button" class="muted-btn">Copy pass list</button>
+            <button id="clearIssuedPasses" type="button" class="warn-btn">Hide codes</button>
+          </div>
+          <p id="passCopyStatus" class="help" role="status"></p>
+        </div>
+
+        <h3 style="margin-top:28px">Reissue a lost or damaged UNUSED pass</h3>
+        <p class="help">Enter the printed serial number. The old pass is revoked before a replacement is generated. A redeemed pass cannot be reissued to obtain another vote.</p>
+        <div class="controls">
+          <div><label for="reissueSerial">Old pass serial</label>
+            <input id="reissueSerial" type="number" min="1" placeholder="e.g. 27"></div>
+          <div><label for="reissueReason">Reason (minimum 8 characters)</label>
+            <input id="reissueReason" placeholder="Printed pass was lost before use"></div>
+        </div>
+        <div class="actions"><button type="button" id="reissuePass">Revoke old pass and issue replacement</button></div>
+
+        <h3 style="margin-top:28px">Recent pass activity</h3>
+        <div class="table-wrap">
+          <table><thead><tr><th>Serial</th><th>Code ending</th><th>Status</th><th>Replaces</th><th>Replaced by</th></tr></thead>
+          <tbody id="passesRows"></tbody></table>
+        </div>
+        <p class="help" id="passesInfo">Recent passes shown without full access codes or hashes.</p>
       </section>
 
       <footer style="padding:25px 0;color:#aabfd1;font-size:12px">
@@ -273,9 +337,12 @@
     function changeTab(tab) {
       $('rankingsPanel').hidden = tab!=='rankings';
       $('votersPanel').hidden = tab!=='voters';
+      $('passesPanel').hidden = tab!=='passes';
       $('rankingsTab').classList.toggle('active',tab==='rankings');
       $('votersTab').classList.toggle('active',tab==='voters');
+      $('passesTab').classList.toggle('active',tab==='passes');
       if(tab==='voters') refreshVoters();
+      if(tab==='passes') refreshPasses();
     }
     function refreshVoters() {
       text($('adminStatus'),'Loading recent voter activity…');
@@ -314,6 +381,102 @@
         refresh();
       });
     }
+    function refreshPasses() {
+      text($('adminStatus'),'Loading private pass status…');
+      call('adminGetVisitorPasses',[key,100],data=>{
+        text($('passModeLabel'),data.mode==='required' ? 'Required for new votes' : 'Preparation mode');
+        text($('passModeHelp'),data.mode==='required'
+          ? 'PASS-REQUIRED MODE ACTIVE: only a valid unused pass can submit feedback. Different visitors can use the same shared phone with separate passes.'
+          : 'Preparation mode: existing browser-token voting remains available. Pass codes entered during preparation are already redeemed once.');
+        $('activatePasses').disabled=data.mode==='required';
+        $('preparePasses').disabled=data.mode!=='required';
+        text($('passesAvailable'),data.counts.AVAILABLE);
+        text($('passesUsed'),data.counts.USED);
+        text($('passesRevoked'),data.counts.REVOKED);
+        $('passesRows').replaceChildren();
+        data.records.forEach(p=>{
+          const tr=node('tr');
+          [p.serial,'••••'+p.suffix,p.status,p.replaces||'—',p.replacedBy||'—']
+            .forEach(v=>tr.appendChild(node('td','',v)));
+          $('passesRows').appendChild(tr);
+        });
+        text($('passesInfo'),data.total+' passes registered; showing latest '+data.records.length+
+          '. Plaintext codes are not recoverable from the server.');
+        text($('adminStatus'),'Visitor pass status refreshed.');
+      });
+    }
+    function showIssuedPassCodes(codes) {
+      $('issuedPassPanel').hidden=false;
+      $('issuedPassOutput').value=codes.map(x=>'Serial '+x.serial+'  |  '+x.code).join('\n');
+      text($('passCopyStatus'),'Save or print these codes securely now. They cannot be retrieved later.');
+    }
+    function changePassMode(required) {
+      const action=required?'REQUIRE a single-use pass for EVERY new vote':'DISABLE mandatory pass verification';
+      if(!confirm(action+'? This affects all new submissions immediately.')) return;
+      const why=prompt('Reason for changing voting-pass mode (minimum 8 characters):','');
+      if(why===null)return;
+      text($('adminStatus'),'Saving pass requirement…');
+      call('adminSetVisitorPassRequired',[key,required,why],()=>refreshPasses());
+    }
+    $('issuePasses').addEventListener('click',()=>{
+      const count=Number($('passBatchSize').value);
+      const why=$('passBatchReason').value.trim();
+      if(!Number.isInteger(count)||count<1||count>100||why.length<8) {
+        text($('adminStatus'),'Choose 1–100 passes and a batch reason of at least eight characters.');
+        return;
+      }
+      if(!confirm('Create '+count+' unique visitor passes? Codes will be visible only once.'))return;
+      $('issuePasses').disabled=true;
+      call('adminIssueVisitorPasses',[key,count,why],data=>{
+        $('issuePasses').disabled=false;
+        showIssuedPassCodes(data.codes);
+        refreshPasses();
+      },err=>{
+        $('issuePasses').disabled=false;
+        showError(err);
+      });
+    });
+    $('reissuePass').addEventListener('click',()=>{
+      const serial=Number($('reissueSerial').value);
+      const why=$('reissueReason').value.trim();
+      if(!Number.isInteger(serial)||serial<1||why.length<8) {
+        text($('adminStatus'),'Provide the old serial and a reason of at least eight characters.');
+        return;
+      }
+      if(!confirm('Revoke UNUSED serial '+serial+' and issue one replacement?'))return;
+      $('reissuePass').disabled=true;
+      call('adminReissueVisitorPass',[key,serial,why],data=>{
+        $('reissuePass').disabled=false;
+        showIssuedPassCodes([{serial:data.serial,code:data.code}]);
+        $('reissueSerial').value='';$('reissueReason').value='';
+        refreshPasses();
+      },err=>{
+        $('reissuePass').disabled=false;
+        showError(err);
+      });
+    });
+    $('copyIssuedPasses').addEventListener('click',()=>{
+      const input=$('issuedPassOutput');
+      input.select();
+      if(navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(()=>{
+          text($('passCopyStatus'),'Codes copied. Keep them private.');
+        },()=>{
+          text($('passCopyStatus'),'Select and copy the highlighted codes manually.');
+        });
+      } else {
+        text($('passCopyStatus'),'Select and copy the highlighted codes manually.');
+      }
+    });
+    $('clearIssuedPasses').addEventListener('click',()=>{
+      $('issuedPassOutput').value='';
+      $('issuedPassPanel').hidden=true;
+      text($('passCopyStatus'),'');
+    });
+    $('activatePasses').addEventListener('click',()=>changePassMode(true));
+    $('preparePasses').addEventListener('click',()=>changePassMode(false));
+    $('refreshPasses').addEventListener('click',refreshPasses);
+
     $('loginForm').addEventListener('submit',event=>{
       event.preventDefault();
       const candidate=$('adminKey').value.trim();
@@ -334,6 +497,8 @@
     });
     $('logoutBtn').addEventListener('click',()=>{
       key='';overview=null;voters=[];noReviews();
+      $('issuedPassOutput').value='';
+      $('issuedPassPanel').hidden=true;
       $('adminPanel').hidden=true;$('loginPanel').hidden=false;
       $('adminKey').value='';$('adminKey').focus();
     });
@@ -342,6 +507,7 @@
     $('classFilter').addEventListener('change',renderRankings);
     $('rankingsTab').addEventListener('click',()=>changeTab('rankings'));
     $('votersTab').addEventListener('click',()=>changeTab('voters'));
+    $('passesTab').addEventListener('click',()=>changeTab('passes'));
     $('closeReviews').addEventListener('click',noReviews);
     $('moreReviews').addEventListener('click',fetchReviews);
     $('reloadVoters').addEventListener('click',refreshVoters);
