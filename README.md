@@ -1,27 +1,29 @@
-# VoiceVote — science fair feedback
+# VoiceVote — Science Fair Feedback
 
-A static feedback page with a Google Apps Script web app and Google Sheets catalog.
+VoiceVote is a multilingual, speech-to-text science fair feedback app for a school event with roughly 300 projects. Visitors use **one shared event QR code** to open the GitHub Pages form, choose a class/section/project, rate it, and submit translated feedback to Google Sheets.
 
-## Configuration and backend contract
+## Live architecture
 
-Set `SCRIPT_URL` in `index.html` to the deployed Google Apps Script **web app** URL, ending in exactly one `/exec`. The page and `voicevote-catalog.js` must be hosted together. The web app must be deployed with access appropriate for all visitors and must be able to read the intended spreadsheet's Projects sheet and write its Feedback sheet. After changing Apps Script code or permissions, update the web app deployment as appropriate. The sanitized `apps-script/Code.gs` is based on the source supplied for Feedback 360; its spreadsheet ID is a placeholder. It is a version-controlled reference, not proof of what is currently deployed. Confirm the deployed version and configuration before use.
+- **Frontend:** `index.html` and `voicevote-catalog.js` on GitHub Pages.
+- **Catalog:** `Projects` tab in Google Sheets; `projects.json` is an automatically synchronized, public, read-only snapshot with a live JSONP fallback.
+- **Feedback:** Top-level HTTPS form `POST` to the existing Google Apps Script `/exec` deployment. The Google-hosted receipt confirms saves. GET saving is deliberately disabled.
+- **Storage:** `Feedback` tab uses eight visible columns: Date, Project, Class, Section, Original Feedback, Rating, Language, English Translation. Columns **I/J** are hidden audit fields: Submission ID and SHA-256 device token digest.
+- **Admin:** The spreadsheet contains a private `Admin Rankings` tab and a `Feedback Viewer` tab. Ranking uses vote counts, average stars, and a Bayesian-style score with a prior of five 3.5-star votes. Feedback text stays out of the ranking table and appears in the viewer only when an admin selects a project. Access is controlled by Google Sheet sharing permissions; there is **no public feedback API**.
 
-The supplied backend and frontend use JSONP (a JavaScript callback), not ordinary JSON or a POST endpoint:
+## One vote per browser (phased release)
 
-- `action=catalog&callback=...` returns a callback containing `{success: true, projects: [{grade, section, project}, ...]}`. The backend uses display values, skips incomplete and duplicate rows, and excludes Active values `false`, `no`, `0`, `inactive`, and `n` (case-insensitive); blank and other values are included. Grade, section and project can be strings or numbers and must be nonempty. The selectors use these values as supplied (apart from trimming whitespace).
-- `action=save` receives `studentClass`, `section`, `project`, `feedback`, `language`, `rating` and `callback` as query parameters and must invoke the callback with `{success: true}` only after saving, or `{success: false, message: "..."}` on failure.
+The frontend stores an anonymous, random browser token in `localStorage` and includes it in the POST body. The backend SHA-256-hashes it; under a script lock, it checks **all project submissions** against the stored hashes and rejects subsequent submissions from the same token. A repeated submission ID is idempotent. The backend also verifies the selected project exists in the active roster. Returning from a successful receipt marks the browser as already voted.
 
-If the catalog reports an error, check the URL, web app access, deployed code, spreadsheet access, Projects sheet and response format. An empty catalog means no active rows were returned. A script that loads without invoking the callback may indicate an authentication page, incompatible deployment or unsupported JSONP action. The frontend cannot distinguish all of these cases.
+This is **not** an unbreakable one-person-or-one-physical-device guarantee: clearing site storage, using a private window, switching browsers, or using another device can create a new token. Shared browsers allow only one visitor to vote. We deliberately do **not** fingerprint users, collect hardware IDs, IP addresses or email addresses. For stronger voting integrity, introduce organizer-issued single-use attendee codes (no extra QR per project required). See `docs/VOTE_GUARD_SECURITY.md`.
 
-Saving uses a GET request and JSONP because that is the existing frontend contract. Feedback appears in the request URL and may be recorded in browser or server logs; JSONP also executes code from the configured endpoint. Use a trusted endpoint and consider a backend redesign if those properties are unsuitable. A missing save confirmation does not prove that saving failed: check the Feedback sheet before retrying to avoid a duplicate. Verify the deployed backend contract and perform a real submission only with authorization, preferably against a separate test spreadsheet/deployment.
+## Release safety
 
-## Tests
+**Staged rollout is required.** Publish the frontend token changes first, verify the live browser POST includes `deviceToken`, and only then deploy backend validation. Deploying the token-required backend before the new frontend would reject submissions from visitors with cached older pages. Existing script and GitHub Pages deployments are preserved through GitHub Actions.
 
-Run `node --test` with a recent Node.js version. Tests simulate the browser and Google services; they do not contact Google or modify Sheets. Contract tests execute the versioned Apps Script handlers and their JSONP responses in the frontend, covering filtering, errors, save fields, Feedback columns, translation invocation, formula escaping, and preserving feedback until the backend confirms a save. They do not verify the live deployment, microphone permissions, or speech recognition in a real browser.
+Run `node --test` to execute in-memory frontend/backend contract tests. These tests do not contact Google or write feedback. The live browser dry run intercepts every POST rather than writing to the production sheet. An explicitly approved real save-and-read test is still useful after the final rollout.
 
-## Manual authorization and live verification
+Read `DEPLOYMENT_AUTOMATION.md` for deployment configuration and `docs/VOTE_GUARD_SECURITY.md` for limitations and admin operations.
 
-- The Apps Script owner must authorize the project for the spreadsheet and other services requested by Google (including translation when used), and ensure it points to the intended spreadsheet. Check the existing Feedback columns and Projects headers before any write.
-- Confirm the web app deployment runs the intended source/version, executes as the intended identity, and grants the intended visitors access. Changes to Apps Script source or deployment require separate approval; the sanitized placeholder is not a working spreadsheet ID.
-- After approval, use a separate test spreadsheet and deployment to check catalog loading from the hosted page, permissions, JSONP redirects and errors, one authorized save and translation, and the resulting Feedback row. Do not infer a successful save from a missing callback; inspect the sheet before retrying.
-- Test microphone permissions and each desired speech-recognition language on supported real browsers/devices. Google services, Apps Script quotas, deployment settings, and browser speech recognition are not exercised by the local tests.
+## Deferred enhancements
+
+Project-specific QR codes and stall numbers are postponed until stall allocations are confirmed. Priorities after voter protection are a searchable project picker, mobile-first UI and accessibility improvements, moderation workflow, and judging analytics. Public leaderboard publication should remain opt-in until the event organizer approves it.
