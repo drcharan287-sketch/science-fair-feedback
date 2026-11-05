@@ -327,12 +327,15 @@ button:disabled, textarea:disabled, input:disabled {
     <option value="">Select class and section first</option>
   </select>
   <p id="catalogStatus" role="status" aria-live="polite">Loading available projects…</p>
-  <p class="vote-info">During preparation, legacy votes remain limited to one per browser. Once organizer-issued passes are activated, each attendee may vote once using their own unique pass—even on a shared phone.</p>
-  <label for="visitorPass">Visitor Voting Pass</label>
-  <input id="visitorPass" type="text" inputmode="text" spellcheck="false" autocomplete="off" autocapitalize="characters" maxlength="48" placeholder="VV-XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX" aria-describedby="visitorPassHelp">
-  <p id="visitorPassHelp" class="visitor-pass-help">Enter the unique code provided by an organizer. Passes are optional during preparation but required once organizers activate code-based voting. A pass works only once across all browsers.</p>
+  <p class="vote-info">One feedback submission is allowed per browser for this science fair. Please review your feedback carefully before submitting.</p>
+  <!-- Visitor passes are intentionally deferred. Keep this UI for a later organizer-approved rollout. -->
+  <section id="visitorPassFeature" hidden aria-hidden="true">
+    <label for="visitorPass">Visitor Voting Pass</label>
+    <input id="visitorPass" type="text" inputmode="text" spellcheck="false" autocomplete="off" autocapitalize="characters" maxlength="48" placeholder="VV-XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX" aria-describedby="visitorPassHelp">
+    <p id="visitorPassHelp" class="visitor-pass-help">Enter the unique code provided by an organizer.</p>
+    <button type="button" id="newVisitorBtn" hidden disabled>Start a different visitor with their unused pass</button>
+  </section>
   <p id="voteGuardStatus" class="vote-lock" role="status" aria-live="polite" hidden></p>
-  <button type="button" id="newVisitorBtn" hidden disabled>Start a different visitor with their unused pass</button>
   <button type="button" id="retryCatalogBtn" hidden>Retry loading projects</button>
 
   <label for="language">Feedback Language</label>
@@ -369,7 +372,7 @@ button:disabled, textarea:disabled, input:disabled {
   </button>
 
   <div id="status" role="status" aria-live="polite"></div>
-  <p id="receiptHint" style="margin-top:10px;font-size:12px;color:#cbd5e1;text-align:center;">Google will display a confirmation receipt. A redeemed visitor pass cannot be reused, even if browser data is erased.</p>
+  <p id="receiptHint" style="margin-top:10px;font-size:12px;color:#cbd5e1;text-align:center;">Google will display a confirmation receipt. Do not submit again unless Google reports an error.</p>
 
   <div class="footer">
     VoiceVote • Smart Science Fair Feedback System
@@ -388,6 +391,9 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxk-Ex6bd0l3V9fiUrPo
 const DEVICE_STORAGE_KEY = "voicevote_device_token_v1";
 const VOTED_STORAGE_KEY = "voicevote_voted_v1";
 const PENDING_STORAGE_KEY = "voicevote_pending_v1";
+// Management-dependent feature: leave the backend intact and preparation-only.
+// Turning this on in a future release requires organizer approval and live testing.
+const VISITOR_PASSES_ENABLED = false;
 
 // Keep voice state available when the initial receipt lockout is rendered.
 let rating = 0;
@@ -447,16 +453,16 @@ function syncVoteStatus() {
   const locked = voted || pending;
   notice.hidden = !locked;
   notice.textContent = voted
-    ? "A vote has already been recorded in this browser. For a DIFFERENT attendee, enter their unused visitor pass and select Start a different visitor. Reusing a previously redeemed pass will be rejected."
+    ? "A vote has already been recorded in this browser. Additional feedback is blocked here. Ask an organizer if you need help."
     : pending
       ? "A feedback submission was started in this browser. Voting is paused until you return from its Google receipt. If Google reported a failure, use the receipt's Return link."
       : "";
   const passInput = document.getElementById('visitorPass');
   const newVisitor = document.getElementById('newVisitorBtn');
-  if (passInput) passInput.disabled = pending;
+  if (passInput) passInput.disabled = pending || !VISITOR_PASSES_ENABLED;
   if (newVisitor) {
-    newVisitor.hidden = !voted;
-    newVisitor.disabled = !voted || pending || !hasWellFormedVisitorPass();
+    newVisitor.hidden = !VISITOR_PASSES_ENABLED || !voted;
+    newVisitor.disabled = !VISITOR_PASSES_ENABLED || !voted || pending || !hasWellFormedVisitorPass();
   }
 
   // Visually and functionally lock the entire form, not only Submit.
@@ -508,9 +514,15 @@ const catalogStatus = document.getElementById("catalogStatus");
 const retryCatalogBtn = document.getElementById("retryCatalogBtn");
 const visitorPassInput = document.getElementById("visitorPass");
 const newVisitorBtn = document.getElementById("newVisitorBtn");
+const visitorPassFeature = document.getElementById("visitorPassFeature");
+if (visitorPassFeature) {
+  visitorPassFeature.hidden = !VISITOR_PASSES_ENABLED;
+  visitorPassFeature.setAttribute("aria-hidden", String(!VISITOR_PASSES_ENABLED));
+}
 
 visitorPassInput.addEventListener("input", syncVoteStatus);
 newVisitorBtn.addEventListener("click", function() {
+  if (!VISITOR_PASSES_ENABLED) return;
   if (!hasLocalVote() || hasPendingVote() || !hasWellFormedVisitorPass()) {
     statusElement.textContent = "Enter a different visitor's unused voting pass to continue.";
     return;
@@ -718,7 +730,7 @@ function submitFeedback() {
     syncVoteStatus();
     return;
   }
-  const passValue = String(visitorPassInput.value || '').trim();
+  const passValue = VISITOR_PASSES_ENABLED ? String(visitorPassInput.value || '').trim() : '';
   if (passValue && !hasWellFormedVisitorPass()) {
     statusElement.textContent = "Check your voting pass format or ask an organizer for a replacement.";
     return;
