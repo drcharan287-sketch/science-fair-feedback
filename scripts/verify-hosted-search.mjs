@@ -52,7 +52,7 @@ try {
   await page.goto(site+'?vote=success',{waitUntil:'domcontentloaded',timeout:30000});
   await page.waitForFunction(() => {
     const status = document.getElementById('voteGuardStatus');
-    return status && !status.hidden && status.textContent.includes('already submitted');
+    return status && !status.hidden && /already submitted|already been recorded/i.test(status.textContent);
   },null,{timeout:15000});
   for(const selector of ['#submitBtn','#studentClass','#section','#project',
     '#projectSearch','#feedback','#language','#startBtn','#stopBtn','.star[data-value="5"]']) {
