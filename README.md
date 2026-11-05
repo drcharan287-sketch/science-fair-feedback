@@ -4,7 +4,9 @@
 
 VoiceVote is a multilingual, AI-assisted science fair feedback experience: **407 active exhibits as of 5 November 2026**, with a larger roster expected. Parents use **one shared event QR** to open the redesigned phone-first Voting form. A separate responsive Results screen lets students demonstrate anonymous participation and multilingual insights on the Senses classroom smart board, without exposing unpublished rankings or private reviews.
 
-**Live pages:** [Parent Voting UI](https://drcharan287-sketch.github.io/science-fair-feedback/) · [Audience Results & Demo](https://drcharan287-sketch.github.io/science-fair-feedback/results.html)
+**Live pages:** [Parent Voting UI](https://drcharan287-sketch.github.io/science-fair-feedback/) · [Audience Results & Demo](https://drcharan287-sketch.github.io/science-fair-feedback/results.html) · [Safe Practice Voting (unlimited, no save)](https://drcharan287-sketch.github.io/science-fair-feedback/practice.html)
+
+**Previously voted in a browser?** That browser remains locked for real voting even when Results is in DEMO mode. Use the standalone [Practice Voting page](https://drcharan287-sketch.github.io/science-fair-feedback/practice.html) for unlimited student rehearsals with the current project catalog, browser speech-to-text, editable transcript, stars and a **SAMPLE ONLY — NOT SAVED** receipt. It does **not** send feedback, run translation, change rankings or reset browser vote protection. See [Practice Voting guide](docs/PRACTICE_VOTING.md).
 
 **How to operate the audience screen safely:** [Audience Results guide](docs/AUDIENCE_RESULTS_EXPERIENCE.md). **Default = DEMO** (fictional sample display, no real rankings), with real Live totals and Published grade rankings available only after an authenticated, audited organizer decision.
 
