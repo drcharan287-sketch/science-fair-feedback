@@ -4,6 +4,7 @@
  * Avoids asking visitors' browsers to follow Google JSONP redirects.
  */
 import { readFile, writeFile } from 'node:fs/promises';
+import { validateProjectEntries } from './catalog-integrity.mjs';
 
 const html = await readFile('index.html', 'utf8');
 const match = html.match(/\bconst\s+SCRIPT_URL\s*=\s*["'](https:\/\/script\.google\.com\/macros\/s\/[a-zA-Z0-9_-]+\/exec)["']/);
@@ -27,26 +28,9 @@ if (!payload || payload.success !== true || !Array.isArray(payload.projects)) {
   throw new Error('Catalog rejected read-only request: ' + String(payload?.message || 'unexpected response'));
 }
 
-const seen = new Set();
-const projects = payload.projects.map((item) => {
-  if (!item || !['grade','section','project'].every(k => (typeof item[k] === 'number' || typeof item[k] === 'string') && String(item[k]).trim())) {
-    throw new Error('Catalog includes an incomplete row; refusing to replace the previous snapshot.');
-  }
-  const p = { grade: String(item.grade).trim(), section: String(item.section).trim(), project: String(item.project).trim() };
-  if (Object.values(p).some(v => v.length > 250)) throw new Error('Catalog field too long');
-  return p;
-}).filter(p => {
-  const key = JSON.stringify(p);
-  if (seen.has(key)) return false;
-  seen.add(key);
-  return true;
-}).sort((a,b) =>
-  a.grade.localeCompare(b.grade,undefined,{numeric:true}) ||
-  a.section.localeCompare(b.section,undefined,{numeric:true}) ||
-  a.project.localeCompare(b.project,undefined,{numeric:true})
-);
-if (!projects.length) throw new Error('No active projects returned; existing snapshot retained.');
-if (projects.length > 10000) throw new Error('Unexpectedly large project catalog; existing snapshot retained.');
+// Any ambiguous identity or non-submittable field rejects this sync. The last
+// valid projects.json remains untouched until organizers fix the Sheet data.
+const projects = validateProjectEntries(payload.projects);
 const next = JSON.stringify({success:true,projects}, null, 2) + '\n';
 await writeFile('projects.json', next, 'utf8');
 console.log('Read-only catalog sync validated ' + projects.length + ' active projects.');

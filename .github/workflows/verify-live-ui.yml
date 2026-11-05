@@ -35,6 +35,8 @@ jobs:
         run: npm install --no-save playwright-core
       - name: Verify hosted project catalog and selection in Chromium
         run: node scripts/verify-hosted-ui.mjs
+      - name: Verify hosted quick search, lockout and deferred passes without voting
+        run: node scripts/verify-hosted-search.mjs
       - name: Intercept feedback POST locally instead of contacting Google
         run: node scripts/verify-post-form-dry-run.mjs
       - name: Simulate English Telugu Hindi recognition and phone layouts, without saving

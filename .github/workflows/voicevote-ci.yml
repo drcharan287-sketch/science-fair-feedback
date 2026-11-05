@@ -25,6 +25,7 @@ jobs:
           node --test
           node --check scripts/smoke-catalog.mjs
           node --check scripts/sync-projects.mjs
+          node --check scripts/catalog-integrity.mjs
           node --check scripts/verify-post-probe.mjs
           node --check scripts/verify-hosted-search.mjs
           node --check scripts/verify-speech-readiness.mjs
