@@ -1,6 +1,9 @@
 name: Verify published VoiceVote search and voting lock
 
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/verify-pages-release.yml']
   workflow_run:
     workflows: ["pages build and deployment"]
     types: [completed]
@@ -11,7 +14,7 @@ permissions:
 
 jobs:
   published-ui:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
