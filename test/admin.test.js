@@ -339,3 +339,25 @@ test('target flush failure leaves durable PENDING instead of an inaccurate APPLI
   assert.throws(()=>a.context.adminSetVotingOpen(DEMO_KEY,false,
     'Unsafe additional change blocked'),/Unresolved PENDING admin audit/);
 });
+
+
+test('explicit owner reconciliation can unblock future changes without erasing intent',()=>{
+  const a=setup();
+  a.faults.auditFlush=true;
+  assert.throws(()=>a.context.adminSetVotingOpen(DEMO_KEY,false,
+    'Simulate intent-flush uncertainty'),/audit flush failure/);
+  a.faults.auditFlush=false;
+  const journal=a.sheets['Admin Action Log'];
+  assert.equal(journal.rows[1][5],'PENDING');
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).auditPendingActions,1);
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).votingOpen,true);
+  // Simulates the OWNER checking that no property change occurred, recording
+  // evidence separately and explicitly marking the original intent NOT_APPLIED.
+  journal.rows[1][5]='NOT_APPLIED';
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).auditPendingActions,0);
+  a.context.adminSetVotingOpen(DEMO_KEY,false,'New authorized pause after investigation');
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).votingOpen,false);
+  assert.equal(journal.rows.length,3,'Original intent is retained, not removed');
+  assert.equal(journal.rows[1][5],'NOT_APPLIED');
+  assert.equal(journal.rows[2][5],'APPLIED');
+});
