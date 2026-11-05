@@ -350,6 +350,7 @@ function backend(rows) {
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('apps-script/Code.gs', 'utf8'), context);
   vm.runInContext(fs.readFileSync('apps-script/VisitorPasses.gs', 'utf8'), context);
+  vm.runInContext(fs.readFileSync('apps-script/PublicResults.gs', 'utf8'), context);
   return { context, writes, wasReleased: () => released };
 }
 function serve(a, b) {
