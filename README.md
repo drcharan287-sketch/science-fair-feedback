@@ -2,15 +2,19 @@
 
 **Living project handover and validation tracker:** [PROJECT_STATUS.md](PROJECT_STATUS.md). Read this first when resuming in a new ChatGPT thread.
 
-VoiceVote is a multilingual, speech-to-text science fair feedback app for a school event with roughly 300 projects. Visitors use **one shared event QR code** to open the GitHub Pages form, choose a class/section/project, rate it, and submit translated feedback to Google Sheets.
+VoiceVote is a multilingual, AI-assisted science fair feedback experience: **407 active exhibits as of 5 November 2026**, with a larger roster expected. Parents use **one shared event QR** to open the redesigned phone-first Voting form. A separate responsive Results screen lets students demonstrate anonymous participation and multilingual insights on the Senses classroom smart board, without exposing unpublished rankings or private reviews.
+
+**Live pages:** [Parent Voting UI](https://drcharan287-sketch.github.io/science-fair-feedback/) · [Audience Results & Demo](https://drcharan287-sketch.github.io/science-fair-feedback/results.html)
+
+**How to operate the audience screen safely:** [Audience Results guide](docs/AUDIENCE_RESULTS_EXPERIENCE.md). **Default = DEMO** (fictional sample display, no real rankings), with real Live totals and Published grade rankings available only after an authenticated, audited organizer decision.
 
 ## Live architecture
 
-- **Frontend:** `index.html` and `voicevote-catalog.js` on GitHub Pages.
+- **Frontend:** `index.html`, `voicevote-theme.css`, `voicevote-catalog.js` for parent Voting; `results.html`, `results.css`, `results.js` for smart-board and mobile Results on GitHub Pages.
 - **Catalog:** `Projects` tab in Google Sheets; `projects.json` is an automatically synchronized, public, read-only snapshot with a live JSONP fallback.
 - **Feedback:** Top-level HTTPS form `POST` to the existing Google Apps Script `/exec` deployment. The Google-hosted receipt confirms saves. GET saving is deliberately disabled.
 - **Storage:** `Feedback` tab uses eight visible columns: Date, Project, Class, Section, Original Feedback, Rating, Language, English Translation. Columns **I/J** are hidden audit fields: Submission ID and SHA-256 device token digest.
-- **Admin:** The spreadsheet contains a private `Admin Rankings` tab and a `Feedback Viewer` tab. Ranking uses vote counts, average stars, and a Bayesian-style score with a prior of five 3.5-star votes. Feedback text stays out of the ranking table and appears in the viewer only when an admin selects a project. Access is controlled by Google Sheet sharing permissions; there is **no public feedback API**.
+- **Admin:** The spreadsheet contains a private `Admin Rankings` tab and a `Feedback Viewer` tab. Ranking uses vote counts, average stars, and a Bayesian-style score with a prior of five 3.5-star votes. Feedback text stays out of the ranking table and appears in the viewer only when an admin selects a project. Private results use the signed-in Admin Console and Google Sheet permissions. The separate **read-only** public Results API returns only mode-approved aggregate fields, and optional individually approved curated quotes; it never returns raw private Feedback records.
 
 ## One vote per browser (phased release)
 
