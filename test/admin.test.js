@@ -162,3 +162,44 @@ test('admin frontend never embeds private feedback nor the admin key',()=>{
   assert.doesNotMatch(html,/\bAIza[a-zA-Z0-9_-]+/);
   assert.ok(!html.includes('textContent = r.original + "<"'),'Review text must be rendered safely');
 });
+
+
+test('rankings use the documented weighted score, with no review text in overview',()=>{
+  const a=setup();
+  const ranked=a.context.adminGetOverview(DEMO_KEY);
+  const first=ranked.projects.find(p=>p.project==='XenoChat');
+  const second=ranked.projects.find(p=>p.project==='VoiceVote');
+  assert.equal(first.votes,1);
+  assert.equal(first.average,5);
+  assert.equal(first.weighted,3.75,'One five-star rating and the five-vote prior');
+  assert.equal(second.weighted,3.583);
+  assert.equal(ranked.projects[0].project,'XenoChat');
+  assert.equal(JSON.stringify(ranked).includes('Interesting use of AI'),false);
+  const activity=a.context.adminGetVoterActivity(DEMO_KEY);
+  assert.ok(activity.every(row=>
+    !('original' in row) && !('translation' in row) &&
+    !('deviceHash' in row) && !('submissionId' in row)));
+});
+
+test('on-demand private reviews are project-bound, paginated and require a key',()=>{
+  const a=setup();
+  const key=JSON.stringify(['6','Heidelberg','XenoChat']);
+  for(let i=0;i<35;i++){
+    a.feedbackRows.push([
+      new Date('2026-11-05T00:00:00Z'),'XenoChat','6','Heidelberg',
+      'Synthetic private review '+i,5,'en-IN','Synthetic translated text '+i,
+      'test-id-'+i,'', ''
+    ]);
+  }
+  const first=a.context.adminGetReviews(DEMO_KEY,key,0);
+  const second=a.context.adminGetReviews(DEMO_KEY,key,30);
+  assert.equal(first.total,36);
+  assert.equal(first.reviews.length,30);
+  assert.equal(second.total,36);
+  assert.equal(second.reviews.length,6);
+  assert.notEqual(first.reviews[0].original,second.reviews[0].original);
+  assert.throws(()=>a.context.adminGetReviews('invalid',key,30),/denied/);
+  assert.throws(()=>a.context.adminGetReviews(DEMO_KEY,'["999","none","unknown"]',0),/Unknown project/);
+  assert.equal(a.sheets['Admin Action Log'],undefined,'Read-only reviews cannot create an audit sheet');
+  assert.equal(a.feedbackRows.length,38,'Read-only request never removes an existing row');
+});
