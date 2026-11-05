@@ -77,7 +77,7 @@ label {
   margin: 20px 0 9px;
 }
 
-select, textarea, input[type="search"] {
+select, textarea, input[type="search"], input[type="text"] {
   width: 100%;
   padding: 14px;
   border-radius: 12px;
@@ -88,7 +88,7 @@ select, textarea, input[type="search"] {
   outline: none;
 }
 
-select:focus, textarea:focus, input[type="search"]:focus {
+select:focus, textarea:focus, input[type="search"]:focus, input[type="text"]:focus {
   border-color: #67e8f9;
 }
 
@@ -226,6 +226,20 @@ button:disabled, textarea:disabled, input:disabled {
   margin-top: 8px;
 }
 
+.visitor-pass-help {
+  color: #cbd5e1;
+  font-size: 13px;
+  margin-top: 8px;
+  line-height: 1.6;
+}
+#newVisitorBtn {
+  display: block;
+  margin-top: 12px;
+  background: #0d829d;
+  border: 1px solid #67e8f999;
+  color: #fff;
+  width: 100%;
+}
 .vote-info {
   margin: 14px 0 4px;
   color: #cbd5e1;
@@ -309,8 +323,12 @@ button:disabled, textarea:disabled, input:disabled {
     <option value="">Select class and section first</option>
   </select>
   <p id="catalogStatus" role="status" aria-live="polite">Loading available projects…</p>
-  <p class="vote-info">One submission per browser profile during this science fair. A shared browser cannot be reused for another visitor.</p>
+  <p class="vote-info">During preparation, legacy votes remain limited to one per browser. Once organizer-issued passes are activated, each attendee may vote once using their own unique pass—even on a shared phone.</p>
+  <label for="visitorPass">Visitor Voting Pass</label>
+  <input id="visitorPass" type="text" inputmode="text" spellcheck="false" autocomplete="off" autocapitalize="characters" maxlength="48" placeholder="VV-XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX" aria-describedby="visitorPassHelp">
+  <p id="visitorPassHelp" class="visitor-pass-help">Enter the unique code provided by an organizer. Passes are optional during preparation but required once organizers activate code-based voting. A pass works only once across all browsers.</p>
   <p id="voteGuardStatus" class="vote-lock" role="status" aria-live="polite" hidden></p>
+  <button type="button" id="newVisitorBtn" hidden disabled>Start a different visitor with their unused pass</button>
   <button type="button" id="retryCatalogBtn" hidden>Retry loading projects</button>
 
   <label for="language">Feedback Language</label>
@@ -346,7 +364,7 @@ button:disabled, textarea:disabled, input:disabled {
   </button>
 
   <div id="status" role="status" aria-live="polite"></div>
-  <p id="receiptHint" style="margin-top:10px;font-size:12px;color:#cbd5e1;text-align:center;">Google will display a confirmation receipt. If it confirms success, this browser cannot submit another vote.</p>
+  <p id="receiptHint" style="margin-top:10px;font-size:12px;color:#cbd5e1;text-align:center;">Google will display a confirmation receipt. A redeemed visitor pass cannot be reused, even if browser data is erased.</p>
 
   <div class="footer">
     VoiceVote • Smart Science Fair Feedback System
@@ -377,6 +395,12 @@ function hasPendingVote() {
 }
 
 function isVoteLocked() { return hasLocalVote() || hasPendingVote(); }
+
+function hasWellFormedVisitorPass() {
+  const input = document.getElementById('visitorPass');
+  const compact = String(input?.value || '').trim().toUpperCase().replace(/[\s-]/g,'');
+  return /^VV[0-9A-F]{32}$/.test(compact);
+}
 
 function setPendingVote(pending) {
   const storage = window.localStorage;
@@ -411,10 +435,17 @@ function syncVoteStatus() {
   const locked = voted || pending;
   notice.hidden = !locked;
   notice.textContent = voted
-    ? "This browser has already submitted feedback for the event. Another vote is not allowed."
+    ? "A vote has already been recorded in this browser. For a DIFFERENT attendee, enter their unused visitor pass and select Start a different visitor. Reusing a previously redeemed pass will be rejected."
     : pending
-      ? "A feedback submission was started in this browser. To prevent accidental duplicate votes, voting is paused until you return from its Google receipt. If Google reported a failure, use the receipt's Return link."
+      ? "A feedback submission was started in this browser. Voting is paused until you return from its Google receipt. If Google reported a failure, use the receipt's Return link."
       : "";
+  const passInput = document.getElementById('visitorPass');
+  const newVisitor = document.getElementById('newVisitorBtn');
+  if (passInput) passInput.disabled = pending;
+  if (newVisitor) {
+    newVisitor.hidden = !voted;
+    newVisitor.disabled = !voted || pending || !hasWellFormedVisitorPass();
+  }
 
   // Visually and functionally lock the entire form, not only Submit.
   // The original pre-token feedback rows cannot be linked to any browser.
@@ -458,6 +489,34 @@ const submitButton = document.getElementById("submitBtn");
 const statusElement = document.getElementById("status");
 const catalogStatus = document.getElementById("catalogStatus");
 const retryCatalogBtn = document.getElementById("retryCatalogBtn");
+const visitorPassInput = document.getElementById("visitorPass");
+const newVisitorBtn = document.getElementById("newVisitorBtn");
+
+visitorPassInput.addEventListener("input", syncVoteStatus);
+newVisitorBtn.addEventListener("click", function() {
+  if (!hasLocalVote() || hasPendingVote() || !hasWellFormedVisitorPass()) {
+    statusElement.textContent = "Enter a different visitor's unused voting pass to continue.";
+    return;
+  }
+  try {
+    // The code, not the shared device token, identifies a participant in
+    // pass-based voting. Only the server decides whether that code is unused.
+    window.localStorage?.removeItem(VOTED_STORAGE_KEY);
+    window.localStorage?.removeItem(PENDING_STORAGE_KEY);
+  } catch (_) {
+    statusElement.textContent = "Browser storage could not be updated. Ask an organizer.";
+    return;
+  }
+  isSubmitting = false;
+  rating = 0;
+  document.getElementById("feedback").value = "";
+  document.querySelectorAll(".star").forEach(function(star) {
+    star.classList.remove("active");
+    star.setAttribute("aria-pressed","false");
+  });
+  syncVoteStatus();
+  statusElement.textContent = "New visitor session ready. Submit using this person's unique unused pass.";
+});
 retryCatalogBtn.addEventListener("click", function() { window.location.reload(); });
 
 function hasValidWebAppUrl() {
@@ -613,7 +672,13 @@ function submitFeedback() {
     syncVoteStatus();
     return;
   }
+  const passValue = String(visitorPassInput.value || '').trim();
+  if (passValue && !hasWellFormedVisitorPass()) {
+    statusElement.textContent = "Check your voting pass format or ask an organizer for a replacement.";
+    return;
+  }
   const data = {
+    visitorPass: passValue,
     studentClass: classSelect.value,
     section: sectionSelect.value,
     project: projectSelect.value,
