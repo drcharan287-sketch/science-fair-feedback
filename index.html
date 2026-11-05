@@ -279,16 +279,25 @@ button:disabled, textarea:disabled, input:disabled {
   .star { min-width: 44px; min-height: 44px; }
 }
 </style>
+<link rel="stylesheet" href="voicevote-theme.css">
 </head>
 
 <body>
 
 <div class="container">
+  <nav class="vote-topnav" aria-label="VoiceVote navigation">
+    <a class="votenav-brand" href="./"><span aria-hidden="true">◈</span> Voice<span>Vote</span></a>
+    <a class="votenav-results" href="./results.html">Explore the experience <span aria-hidden="true">↗</span></a>
+  </nav>
 
   <div class="header">
-    <div class="logo">VoiceVote</div>
+    <div class="vote-eyebrow"><span class="vote-pulse"></span> THE SCIENCE FAIR · FAMILY FEEDBACK</div>
+    <div class="logo">Every idea deserves <span>a voice.</span></div>
     <h2>AI-Powered Science Fair Feedback</h2>
-    <p>Speak in your language • Speech-to-text • English translation</p>
+    <p>Discover an exhibit. Speak in your language. Celebrate their creativity.</p>
+    <div class="vote-capabilities" aria-label="VoiceVote capabilities">
+      <span>🎙 Speak or type</span><span>文 5 languages</span><span>★ Appreciate ideas</span>
+    </div>
     <details class="ai-explainer">
       <summary>How does VoiceVote use AI?</summary>
       <ol>
@@ -299,7 +308,9 @@ button:disabled, textarea:disabled, input:disabled {
     </details>
   </div>
 
-  <label for="projectSearch">Quick Find a Project</label>
+  <section class="step-section step-choose" aria-labelledby="chooseHeading">
+    <div class="step-topline"><span class="step-num">01</span><div><span class="step-caption">FIND YOUR EXHIBIT</span><h3 id="chooseHeading">Which project inspired you?</h3></div></div>
+    <label for="projectSearch">Quick Find a Project</label>
   <div class="search-box">
     <input type="search" id="projectSearch" placeholder="Search projects by name…" autocomplete="off" aria-controls="projectSearchResults" aria-expanded="false" aria-describedby="projectSearchStatus" disabled>
     <div id="projectSearchResults" class="search-results" role="group" aria-label="Matching science fair projects" hidden></div>
@@ -337,8 +348,11 @@ button:disabled, textarea:disabled, input:disabled {
   </section>
   <p id="voteGuardStatus" class="vote-lock" role="status" aria-live="polite" hidden></p>
   <button type="button" id="retryCatalogBtn" hidden>Retry loading projects</button>
+  </section>
 
-  <label for="language">Feedback Language</label>
+  <section class="step-section step-speak" aria-labelledby="speakHeading">
+    <div class="step-topline"><span class="step-num">02</span><div><span class="step-caption">SHARE YOUR THOUGHTS</span><h3 id="speakHeading">Tell us what you loved.</h3></div></div>
+    <label for="language">Feedback Language</label>
   <select id="language">
     <option value="en-IN">English</option>
     <option value="te-IN">Telugu</option>
@@ -357,8 +371,11 @@ button:disabled, textarea:disabled, input:disabled {
 
   <label for="feedback">Your Feedback</label>
   <textarea id="feedback" maxlength="2000" placeholder="Speak or type your feedback here..."></textarea>
+  </section>
 
-  <label>Rate the Project</label>
+  <section class="step-section step-rate" aria-labelledby="rateHeading">
+    <div class="step-topline"><span class="step-num">03</span><div><span class="step-caption">GIVE AN APPRECIATION</span><h3 id="rateHeading">How many stars?</h3></div></div>
+    <label>Rate the Project</label>
   <div class="stars" id="stars" role="group" aria-label="Rate this project from one to five stars">
     <button type="button" class="star" data-value="1" aria-label="1 star" aria-pressed="false">★</button>
     <button type="button" class="star" data-value="2" aria-label="2 stars" aria-pressed="false">★</button>
@@ -373,10 +390,12 @@ button:disabled, textarea:disabled, input:disabled {
 
   <p id="networkStatus" class="search-help" role="status" aria-live="polite" hidden></p>
   <div id="status" role="status" aria-live="polite"></div>
-  <p id="receiptHint" style="margin-top:10px;font-size:12px;color:#cbd5e1;text-align:center;">Google will display a confirmation receipt. Do not submit again unless Google reports an error.</p>
+  <p id="receiptHint" style="margin-top:10px;font-size:12px;color:#cbd5e1;text-align:center;">You'll receive a confirmation from Google. Please do not submit again unless it confirms an error.</p>
+  </section>
 
   <div class="footer">
-    VoiceVote • Smart Science Fair Feedback System
+    <strong>VoiceVote ✦ Made for curious minds</strong>
+    <span>Audience appreciation is separate from official science fair judging.</span>
   </div>
 
 </div>

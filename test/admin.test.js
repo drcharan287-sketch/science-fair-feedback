@@ -104,6 +104,7 @@ function setup(projectRows=PROJECTS, aliasRows=[]) {
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('apps-script/Code.gs','utf8'),context);
   vm.runInContext(fs.readFileSync('apps-script/VisitorPasses.gs','utf8'),context);
+  vm.runInContext(fs.readFileSync('apps-script/PublicResults.gs','utf8'),context);
   const adminSource=fs.readFileSync('apps-script/AdminApi.gs','utf8');
   assert.match(adminSource,/VOICEVOTE_ADMIN_KEY_SHA256/);
   const testSource=adminSource.replace(
@@ -421,4 +422,98 @@ test('conflicting old-title alias fails closed rather than moving a vote',()=>{
      '9','Keats','VoiceVote','2026-11-05','','Bad alias','']
   ]);
   assert.throws(()=>a.context.adminGetOverview(DEMO_KEY),/Conflicting project rename alias/);
+});
+
+
+test('public Results default DEMO does not read private Feedback or expose rankings',()=>{
+  const a=setup();
+  a.sheets.Feedback.getRange=()=>{throw Error('Private Feedback must NOT be read in DEMO');};
+  const d=a.context.publicSummary_();
+  assert.equal(d.success,true);
+  assert.equal(d.mode,'DEMO');
+  assert.equal(d.totalProjects,2);
+  assert.equal('rankings' in d,false);
+  assert.equal('acceptedVotes' in d,false);
+  assert.equal('highlights' in d,false);
+  const out=a.context.doGet({parameter:{action:'publicResults',callback:'safeDemoCallback',mode:'PUBLISHED'}});
+  assert.match(out.text,/^safeDemoCallback\(/);
+  assert.match(out.text,/"mode":"DEMO"/);
+  assert.doesNotMatch(out.text,/XenoChat.*Interesting use of AI/);
+});
+
+test('anonymous LIVE results reveal aggregates but no per-project standings or private reviews',()=>{
+  const a=setup();
+  a.props.set('VOICEVOTE_PUBLIC_RESULTS_MODE','LIVE');
+  const data=a.context.publicSummary_();
+  assert.equal(data.mode,'LIVE');
+  assert.equal(data.acceptedVotes,2);
+  assert.equal(data.ratedProjects,2);
+  assert.equal(data.languages.reduce((n,p)=>n+p.count,0),2);
+  assert.equal('rankings' in data,false);
+  const serialized=JSON.stringify(data);
+  for(const secret of ['Interesting use of AI','ఈ ప్రాజెక్టు','ab'.repeat(32),'rowProof','deviceToken','submissionId','original','translation']){
+    assert.ok(!serialized.includes(secret),secret+' must never appear in public totals');
+  }
+  assert.equal(a.feedbackRows.length,3,'Reading results may not append feedback');
+});
+
+test('PUBLISHED results use existing weighted scores and grade-local rankings, not original text',()=>{
+  const a=setup();
+  a.props.set('VOICEVOTE_PUBLIC_RESULTS_MODE','PUBLISHED');
+  const data=a.context.publicSummary_();
+  const privateData=a.context.adminGetOverview(DEMO_KEY);
+  assert.equal(data.mode,'PUBLISHED');
+  assert.equal(data.rankings.length,2);
+  assert.equal(data.rankings.every(p=>p.rank===1),true,'Each grade has its own rank 1');
+  for(const publicProject of data.rankings){
+    const privateProject=privateData.projects.find(p=>p.id===publicProject.id);
+    assert.ok(privateProject);
+    assert.equal(publicProject.weighted,privateProject.weighted);
+    assert.equal(publicProject.votes,privateProject.votes);
+  }
+  assert.equal(JSON.stringify(data).includes('Interesting use of AI'),false);
+});
+
+test('public Feedback Wall only returns individually approved, attributable-to-organizer curated rows',()=>{
+  const a=setup();
+  a.props.set('VOICEVOTE_PUBLIC_RESULTS_MODE','LIVE');
+  const rows=[
+    ['APPROVED',JSON.stringify(['6','Heidelberg','XenoChat']),
+      'A prepared anonymous compliment','An English translation','te-IN','Organizer 1'],
+    ['PENDING',JSON.stringify(['9','Keats','VoiceVote']),'Sensitive raw comment','','en-IN','Organizer 1'],
+    ['APPROVED',JSON.stringify(['9','Keats','VoiceVote']),'Another comment','','en-IN',''],
+    ['APPROVED','unknown-id','Do not display me','','en-IN','Organizer 1']
+  ];
+  a.sheets['Public Highlights']={
+    getLastRow:()=>rows.length+1,
+    getRange:()=>({getValues:()=>rows})
+  };
+  const payload=a.context.publicSummary_();
+  assert.equal(payload.highlights.length,1);
+  assert.equal(payload.highlights[0].quote,'A prepared anonymous compliment');
+  assert.ok(!JSON.stringify(payload).includes('Sensitive raw comment'));
+  assert.ok(!JSON.stringify(payload).includes('Do not display me'));
+  a.props.set('VOICEVOTE_PUBLIC_RESULTS_MODE','DEMO');
+  assert.equal('highlights' in a.context.publicSummary_(),false);
+});
+
+test('public results publication changes require a real admin key and leave an audit trail',()=>{
+  const a=setup();
+  assert.throws(()=>a.context.adminSetPublicResultsMode('bad','PUBLISHED','Organizer permission'),/denied/);
+  assert.equal(a.props.has('VOICEVOTE_PUBLIC_RESULTS_MODE'),false);
+  assert.throws(()=>a.context.adminSetPublicResultsMode(DEMO_KEY,'PUBLISHED','short'),/reason/i);
+  assert.throws(()=>a.context.adminSetPublicResultsMode(DEMO_KEY,'EVERYTHING','Specific organizer decision'),/Invalid public results mode/);
+  const updated=a.context.adminSetPublicResultsMode(DEMO_KEY,'LIVE','Display aggregate participation only');
+  assert.equal(updated.mode,'LIVE');assert.equal(updated.changed,true);
+  assert.equal(a.props.get('VOICEVOTE_PUBLIC_RESULTS_MODE'),'LIVE');
+  const history=a.sheets['Admin Action Log'].rows;
+  assert.equal(history[1][1],'PUBLIC_RESULTS_LIVE');
+  assert.equal(history[1][5],'APPLIED');
+  assert.equal(history[1][7],'DEMO');assert.equal(history[1][8],'LIVE');
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).publicResultsMode,'LIVE');
+  const repeat=a.context.adminSetPublicResultsMode(DEMO_KEY,'LIVE','Already approved display state');
+  assert.equal(repeat.changed,false);assert.equal(history.length,2);
+  a.context.adminSetPublicResultsMode(DEMO_KEY,'DEMO','Return the public display to samples');
+  assert.equal(a.context.publicSummary_().mode,'DEMO');
+  assert.equal(history[2][1],'PUBLIC_RESULTS_DEMO');
 });

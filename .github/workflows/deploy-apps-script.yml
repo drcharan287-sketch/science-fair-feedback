@@ -122,6 +122,13 @@ jobs:
             throw new Error('Visitor pass validation and admin issuance modules are missing');
           }
           fs.writeFileSync('.voicevote-live/VisitorPasses.js', passSource);
+          const publicResultsSource = fs.readFileSync('apps-script/PublicResults.gs','utf8');
+          if (!/function publicSummary_\(/.test(publicResultsSource) ||
+              !/function adminSetPublicResultsMode\(/.test(publicResultsSource) ||
+              !/function publicApprovedHighlights_\(/.test(publicResultsSource)) {
+            throw new Error('Safe public results module missing; refusing deployment');
+          }
+          fs.writeFileSync('.voicevote-live/PublicResults.js', publicResultsSource);
           NODE
       - name: Push source and update existing deployment
         if: github.event_name == 'push' || inputs.mode == 'deploy'

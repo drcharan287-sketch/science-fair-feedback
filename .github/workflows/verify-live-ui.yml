@@ -8,6 +8,10 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'results.html'
+      - 'results.css'
+      - 'results.js'
+      - 'voicevote-theme.css'
       - 'voicevote-catalog.js'
       - 'projects.json'
       - 'scripts/verify-*.mjs'
@@ -43,3 +47,5 @@ jobs:
         run: node scripts/verify-speech-readiness.mjs
       - name: Verify offline catalog, Back/Refresh and interrupted receipt recovery without saving
         run: node scripts/verify-recovery-readiness.mjs
+      - name: Verify smart-board and phone Results modes with all backend calls intercepted
+        run: node scripts/verify-results-ui.mjs

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06162e">
+<meta name="description" content="VoiceVote: AI-powered science fair audience insights, demonstration and approved results.">
+<title>VoiceVote • Science Fair Experience</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="results.css">
+<script src="results.js" defer></script>
+</head>
+<body>
+<div class="ambient ambient-one" aria-hidden="true"></div><div class="ambient ambient-two" aria-hidden="true"></div>
+<div class="page-shell" id="pageShell">
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="VoiceVote voting page">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 44 44" fill="none"><path d="M9 24c5-2 5-13 10-13s5 22 10 22 5-13 8-13" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="8" cy="24" r="3" fill="currentColor"/></svg></span>
+      <span>Voice<span class="brand-accent">Vote</span><small>SCIENCE FAIR EXPERIENCE</small></span>
+    </a>
+    <nav class="main-nav" aria-label="VoiceVote navigation">
+      <a href="./" class="nav-link">Give feedback</a>
+      <a href="./results.html" aria-current="page" class="nav-link active">Explore insights</a>
+    </nav>
+    <div class="top-actions">
+      <button id="brightToggle" class="icon-btn" type="button" aria-label="Switch to bright-room display" title="Bright room / dark room">◐ <span>Brightness</span></button>
+      <button id="screenToggle" class="icon-btn" type="button" title="Enter or exit fullscreen">⛶ <span>Full screen</span></button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="heroTitle">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> BUILT BY STUDENTS · POWERED BY CURIOSITY</p>
+        <h1 id="heroTitle">Every great idea <em>deserves a voice.</em></h1>
+        <p class="hero-description">Explore the ideas, voices and discoveries from our science fair. See how multilingual feedback becomes meaningful audience insights.</p>
+        <div class="hero-tags" aria-label="Capabilities"><span>🎙 Speech recognition</span><span>文 AI translation</span><span>✦ Audience insights</span></div>
+        <div class="hero-ctas">
+          <a class="primary-btn" href="./">Share your feedback <span aria-hidden="true">↗</span></a>
+          <a class="secondary-btn" href="#leaderboard">Explore the display <span aria-hidden="true">↓</span></a>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="halo halo-outer"></div><div class="halo halo-inner"></div>
+        <div class="orb"><span class="orb-lines">)))</span><strong>V<span>V</span></strong><small>IDEAS · VOICES · IMPACT</small></div>
+        <div class="floating-card floating-left"><span>✦</span> IDEAS</div>
+        <div class="floating-card floating-right">AI <span>↗</span></div>
+        <div class="orb-floor"></div>
+      </div>
+    </section>
+
+    <section class="status-banner" role="status" aria-live="polite">
+      <span class="status-symbol" id="modeSymbol">✦</span>
+      <div><strong id="modeTitle">DEMONSTRATION MODE</strong><p id="modeDetails">You are viewing sample data, not actual votes or winners.</p></div>
+      <span id="lastUpdated" class="last-updated">Sample experience</span>
+    </section>
+
+    <section class="stat-grid" aria-label="Science fair insights">
+      <article class="stat-card stat-cyan">
+        <div class="stat-top"><span>EXHIBITS IN THE FAIR</span><span class="stat-icon">⬡</span></div>
+        <strong id="totalProjects" class="stat-value">—</strong><p>Creative projects and discoveries</p>
+      </article>
+      <article class="stat-card stat-violet">
+        <div class="stat-top"><span>AUDIENCE RESPONSES</span><span class="stat-icon">♫</span></div>
+        <strong id="totalVotes" class="stat-value">—</strong><p id="voteMetricHint">Illustrative demo activity</p>
+      </article>
+      <article class="stat-card stat-gold">
+        <div class="stat-top"><span>EXHIBITS APPRECIATED</span><span class="stat-icon">✷</span></div>
+        <strong id="ratedProjects" class="stat-value">—</strong><p>Projects receiving a rating</p>
+      </article>
+      <article class="stat-card stat-green">
+        <div class="stat-top"><span>LANGUAGES HEARD</span><span class="stat-icon">文</span></div>
+        <strong id="languageCount" class="stat-value">—</strong><p>Every language has a voice</p>
+      </article>
+    </section>
+
+    <section class="main-grid" id="leaderboard">
+      <div class="feature-panel rankings-panel">
+        <div class="section-heading">
+          <div><p class="kicker">THE SPOTLIGHT</p><h2 id="rankingsHeading">Ideas worth celebrating<span class="title-dot">.</span></h2><p id="rankingsSubheading">Illustrative project cards, not actual rankings.</p></div>
+          <div class="select-shell"><label for="gradeFilter">Grade</label><select id="gradeFilter" aria-label="Filter projects by grade"><option value="all">All grades</option></select></div>
+        </div>
+        <div id="leaderboardCards" class="leaderboard-cards" aria-live="polite"></div>
+        <p class="ranking-footnote" id="rankingNote">Sample scores are fictional. Audience ratings are different from official judging awards.</p>
+      </div>
+      <aside class="feature-panel insights-panel">
+        <div class="section-heading"><div><p class="kicker">MULTILINGUAL MOMENTS</p><h2>Every language counts<span class="title-dot">.</span></h2><p>Celebrating feedback in the languages families speak.</p></div></div>
+        <div id="languageBars" class="language-bars" aria-label="Feedback languages"></div>
+        <div class="translation-story">
+          <span class="story-icon">✳</span>
+          <div><strong>One idea. Many languages.</strong><p>Speech becomes editable text, and multilingual feedback can be translated into English. Numerical scores are calculated, not generated by AI.</p></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="feedback-section" id="feedbackWall">
+      <div class="section-heading">
+        <div><p class="kicker">VOICES OF THE FAIR</p><h2>Words that inspire<span class="title-dot">.</span></h2><p id="feedbackIntro">Sample feedback for demonstration. Real visitor comments are never automatically public.</p></div>
+        <span class="safe-pill">● Curated &amp; privacy-first</span>
+      </div>
+      <div id="feedbackCards" class="feedback-cards"></div>
+    </section>
+
+    <section class="story-strip" aria-label="How VoiceVote works">
+      <div class="story-title"><span>THE VOICEVOTE JOURNEY</span><strong>From a thought to an insight.</strong></div>
+      <div class="story-steps"><span><b>01</b> Speak or type</span><i aria-hidden="true">→</i><span><b>02</b> AI transcription &amp; translation</span><i aria-hidden="true">→</i><span><b>03</b> Audience insights</span></div>
+    </section>
+  </main>
+  <footer class="page-footer">
+    <span>VoiceVote <b>✦</b> AI-Powered Science Fair Feedback</span>
+    <span>Audience appreciation is not the official jury result.</span>
+  </footer>
+</div>
+<div class="presenter-bar" id="presenterBar" aria-label="Presentation controls">
+  <span><span class="pulse-dot"></span> <strong>SMART BOARD MODE</strong></span>
+  <button id="autoplayToggle" type="button" aria-pressed="false">▶ Auto-rotate grades</button>
+  <button id="resetView" type="button">↺ Reset</button>
+</div>
+</body>
+</html>
