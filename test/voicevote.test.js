@@ -21,7 +21,7 @@ function app(fetchProjects, search = '', stored = new Map()) {
     dispatchEvent(event) { for (const fn of this.listeners[event.type] || []) fn.call(this, event); }
     remove() { this.removed = true; }
   }
-  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn', 'stopBtn', 'projectSearch', 'projectSearchResults', 'projectSearchStatus', 'projectSearchSelected', 'visitorPass', 'newVisitorBtn', 'visitorPassFeature'].map(id => [id, new Element()]));
+  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn', 'stopBtn', 'projectSearch', 'projectSearchResults', 'projectSearchStatus', 'projectSearchSelected', 'visitorPass', 'newVisitorBtn', 'visitorPassFeature', 'networkStatus'].map(id => [id, new Element()]));
   elements.language.value = 'hi-IN';
   elements.submitBtn.disabled = true;
   const stars = Array.from({ length: 5 }, (_, i) => { const e = new Element(); e.dataset.value = String(i + 1); return e; });
@@ -33,7 +33,11 @@ function app(fetchProjects, search = '', stored = new Map()) {
     createElement: () => new Element(), head: { appendChild: tag => scripts.push(tag) },
     body: { appendChild: node => forms.push(node) }
   };
+  const windowListeners = {};
   const context = { document, console: { error() {} }, URLSearchParams, Option: function(text, value) { this.textContent = text; this.value = value; }, Event: function(type) { this.type = type; }, setTimeout, clearTimeout,
+    navigator: { onLine: true },
+    addEventListener: (name, fn) => { (windowListeners[name] ||= []).push(fn); },
+    dispatchWindowEvent: name => (windowListeners[name] || []).forEach(fn => fn()),
     crypto: { randomUUID: () => '123e4567-e89b-42d3-a456-426614174000', getRandomValues: a => a.fill(7) },
     localStorage: { getItem: key => stored.get(key) || null, setItem: (key,val) => {stored.set(key, String(val));}, removeItem: key => stored.delete(key) } };
   context.window = context;
@@ -551,4 +555,68 @@ test('unsupported speech recognition offers manual entry without blocking voting
   assert.equal(a.elements.feedback.disabled,false);
   assert.equal(a.elements.submitBtn.disabled,false);
   assert.match(fs.readFileSync('index.html','utf8'),/textarea id="feedback" maxlength="2000"/);
+});
+
+
+test('known-offline submission remains editable and does not create a pending vote', async () => {
+  const a=app();
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  a.elements.studentClass.value='9'; a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value='Keats'; a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value='VoiceVote';
+  a.elements.feedback.value='The model worked';
+  a.stars[3].dispatchEvent(new a.context.Event('click'));
+  a.context.navigator.onLine=false;
+  a.context.dispatchWindowEvent('offline');
+  assert.equal(a.elements.networkStatus.hidden,false);
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,0,'Offline browser must not initiate a POST');
+  assert.equal(a.stored.has('voicevote_pending_v1'),false,'Do not lock on a known offline state');
+  assert.equal(a.elements.feedback.disabled,false,'Keep typed input editable');
+  assert.match(a.elements.status.textContent,/Nothing was sent to Google/);
+  a.context.navigator.onLine=true;
+  a.context.dispatchWindowEvent('online');
+  assert.equal(a.elements.networkStatus.hidden,true);
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,1,'Online manual submit still uses the original POST path');
+  assert.equal(a.stored.get('voicevote_pending_v1'),'1');
+});
+
+test('a pending unknown-result submission remains locked on pageshow/Back and displays organizer guidance', async () => {
+  const stored=new Map([['voicevote_pending_v1','1']]);
+  const a=app(null,'',stored);
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  let message=a.elements.voteGuardStatus.textContent;
+  assert.match(message,/may already be saved/);
+  assert.match(message,/ask an organizer to check/);
+  a.context.dispatchWindowEvent('pageshow');
+  assert.equal(a.elements.submitBtn.disabled,true);
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,0,'Reload and Back must not re-submit unknown outcomes');
+  assert.equal(stored.get('voicevote_pending_v1'),'1','Never auto-unlock uncertain submissions');
+});
+
+test('synchronous browser navigation failure resets only pending state and keeps feedback', async () => {
+  const a=app();
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  a.elements.studentClass.value='9'; a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value='Keats'; a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value='VoiceVote';
+  a.elements.feedback.value='Unsaved editing test';
+  a.stars[3].dispatchEvent(new a.context.Event('click'));
+  const create=a.context.document.createElement;
+  a.context.document.createElement=function(tag){
+    const element=create(tag);
+    if(tag==='form') element.submit=()=>{ throw new Error('Mock local submit failed'); };
+    return element;
+  };
+  a.context.submitFeedback();
+  assert.equal(a.stored.has('voicevote_pending_v1'),false);
+  assert.equal(a.stored.has('voicevote_voted_v1'),false);
+  assert.equal(a.elements.feedback.value,'Unsaved editing test');
+  assert.equal(a.elements.submitBtn.disabled,false);
+  assert.match(a.elements.status.textContent,/Mock local submit failed/);
 });
