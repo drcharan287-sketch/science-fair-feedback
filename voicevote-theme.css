@@ -42,3 +42,15 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;op
 @media(max-width:365px){.votenav-results{font-size:.68rem;padding:7px 9px}.step-caption{font-size:.59rem}.step-topline h3{font-size:1.13rem}.step-section button.star{min-width:37px}.step-section .buttons{flex-direction:column}}
 @media(hover:none){button:hover{transform:none!important}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
+
+
+/* Previously voted browsers keep their real one-vote lock, but can rehearse
+   on the separate no-write Practice page. */
+.practice-callout{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:14px;padding:16px 18px;background:linear-gradient(115deg,#204d67,#163b5b);border:1px solid #8beafa76;border-radius:16px}
+.practice-callout strong{display:block;color:#b8f7ff;font-size:.96rem}
+.practice-callout p{margin:6px 0 0;color:#dcecf9;font-size:.82rem;line-height:1.55}
+.practice-callout a{flex:none;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap;padding:12px 15px;border-radius:12px;min-height:48px;background:#9cecf9;color:#062b3e;font-size:.85rem;font-weight:900}
+.practice-callout a:hover{background:#cdf9ff}
+.practice-callout a:focus-visible{outline:3px solid #fff;outline-offset:4px}
+.practice-callout[hidden]{display:none!important}
+@media(max-width:600px){.practice-callout{flex-direction:column;align-items:stretch}.practice-callout a{width:100%}}
