@@ -116,6 +116,7 @@ function adminGetOverview(key) {
     excludedVotes: excluded,
     protectedVotes: protectedCount,
     legacyVotes: votes.length - protectedCount,
+    auditPendingActions: adminAuditPending_(ss).length,
     votingOpen: PropertiesService.getScriptProperties()
       .getProperty(VOICEVOTE_VOTING_DISABLED_KEY) !== '1',
     languages: Object.keys(langCounts).sort().map(function(k) {
@@ -161,14 +162,76 @@ function adminGetVoterActivity(key) {
   });
 }
 
-function adminLog_(ss, kind, row, details) {
+/**
+ * A Sheets spreadsheet and Script Properties do not share a transaction.
+ *
+ * Write an auditable intent BEFORE any organizer mutation, flush it, perform
+ * the mutation, then mark the intent APPLIED and flush. If a write fails or
+ * its outcome is uncertain the journal stays PENDING and all further admin
+ * mutations are blocked for manual reconciliation. A PENDING row is NOT proof
+ * that its intended change happened. Existing 5-column audit history is kept.
+ *
+ * Called only while the existing ScriptLock is held, after key validation.
+ */
+const VOICEVOTE_AUDIT_HEADERS = [
+  'Date', 'Action', 'Feedback row', 'Reason / details', 'Actor',
+  'State', 'Event ID', 'Before', 'After'
+];
+function adminAuditSheet_(ss) {
   let sheet = ss.getSheetByName(VOICEVOTE_ADMIN_AUDIT_SHEET);
   if (!sheet) {
     sheet = ss.insertSheet(VOICEVOTE_ADMIN_AUDIT_SHEET);
-    sheet.appendRow(['Date', 'Action', 'Feedback row', 'Reason / details', 'Actor']);
+    sheet.appendRow(VOICEVOTE_AUDIT_HEADERS);
+  } else {
+    // The previous implementation used A:E. Extend, never replace, its rows.
+    const extra = sheet.getRange(1, 6, 1, 4).getValues()[0];
+    if (extra.every(function(v) { return !String(v || '').trim(); })) {
+      sheet.getRange(1, 6, 1, 4)
+        .setValues([VOICEVOTE_AUDIT_HEADERS.slice(5)]);
+    } else if (extra.map(String).join('|') !==
+               VOICEVOTE_AUDIT_HEADERS.slice(5).join('|')) {
+      throw new Error('Audit journal header is unexpected; admin changes are blocked.');
+    }
   }
-  sheet.appendRow([new Date(), kind, row || '', safeSheetText_(details), 'Admin credential']);
+  return sheet;
 }
+function adminAuditPending_(ss) {
+  const sheet = ss.getSheetByName(VOICEVOTE_ADMIN_AUDIT_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  const states = sheet.getRange(2, 6, sheet.getLastRow() - 1, 2).getValues();
+  // Legacy rows have no event ID and are not mistaken for interrupted intents.
+  return states.map(function(row, i) {
+    return { row: i + 2, state: String(row[0] || ''), id: String(row[1] || '') };
+  }).filter(function(entry) { return entry.id && entry.state !== 'APPLIED'; });
+}
+function adminAuditBegin_(ss, kind, row, details, before, after) {
+  if (adminAuditPending_(ss).length) {
+    throw new Error('Unresolved PENDING admin audit action. No changes were made. ' +
+      'An organizer must reconcile Admin Action Log before further admin changes.');
+  }
+  const sheet = adminAuditSheet_(ss);
+  const id = Utilities.getUuid();
+  sheet.appendRow([new Date(), kind, row || '', safeSheetText_(details),
+    'Admin credential', 'PENDING', id, safeSheetText_(before), safeSheetText_(after)]);
+  // Flush BEFORE changing protected state to eliminate ordinary log-write gaps.
+  SpreadsheetApp.flush();
+  return { sheet: sheet, row: sheet.getLastRow(), id: id };
+}
+function adminAuditedChange_(ss, kind, row, details, before, after, change) {
+  const audit = adminAuditBegin_(ss, kind, row, details, before, after);
+  try {
+    change();
+    audit.sheet.getRange(audit.row, 6).setValue('APPLIED');
+    SpreadsheetApp.flush();
+  } catch (error) {
+    // The operation may have succeeded partially; do NOT automatically retry,
+    // roll back, or claim it failed. The prior PENDING journal is evidence.
+    throw new Error('Admin change result needs reconciliation (audit ' + audit.id +
+      '). Check Admin Action Log and the affected record before retrying. ' +
+      String(error && error.message || error));
+  }
+}
+
 
 /**
  * Admin moderation: excludes/restores a vote from rankings without erasing it.
@@ -195,8 +258,11 @@ function adminSetVoteStatus(key, rowNumber, rowProof, newStatus, reason) {
       throw new Error('Feedback changed since it was loaded. Refresh voter activity.');
     }
     if (vote.status === status) return { status: status, changed: false };
-    sheet.getRange(index, 11).setValue(status === 'VALID' ? '' : 'VOID');
-    adminLog_(ss, status === 'VOID' ? 'EXCLUDE_VOTE' : 'RESTORE_VOTE', index, why);
+    adminAuditedChange_(ss,
+      status === 'VOID' ? 'EXCLUDE_VOTE' : 'RESTORE_VOTE', index, why,
+      vote.status, status, function() {
+        sheet.getRange(index, 11).setValue(status === 'VALID' ? '' : 'VOID');
+      });
     return { status: status, changed: true };
   } finally { lock.releaseLock(); }
 }
@@ -212,9 +278,13 @@ function adminSetVotingOpen(key, open, reason) {
   lock.waitLock(15000);
   try {
     const ss = adminSheet_();
-    PropertiesService.getScriptProperties()
-      .setProperty(VOICEVOTE_VOTING_DISABLED_KEY, open ? '0' : '1');
-    adminLog_(ss, open ? 'RESUME_VOTING' : 'PAUSE_VOTING', '', why);
-    return { votingOpen: open };
+    const properties = PropertiesService.getScriptProperties();
+    const previouslyOpen = properties.getProperty(VOICEVOTE_VOTING_DISABLED_KEY) !== '1';
+    if (previouslyOpen === open) return { votingOpen: open, changed: false };
+    adminAuditedChange_(ss, open ? 'RESUME_VOTING' : 'PAUSE_VOTING', '', why,
+      previouslyOpen ? 'OPEN' : 'PAUSED', open ? 'OPEN' : 'PAUSED', function() {
+        properties.setProperty(VOICEVOTE_VOTING_DISABLED_KEY, open ? '0' : '1');
+      });
+    return { votingOpen: open, changed: true };
   } finally { lock.releaseLock(); }
 }
