@@ -58,6 +58,13 @@ try {
     '#projectSearch','#feedback','#language','#startBtn','#stopBtn','.star[data-value="5"]']) {
     assert.equal(await page.locator(selector).isDisabled(), true, selector+' must remain locked');
   }
+  // Another attendee may use the SAME device when they supply a different pass.
+  await page.locator('#visitorPass').fill('VV-123E4567-E89B42D3-A4564266-14174000');
+  assert.equal(await page.locator('#newVisitorBtn').isDisabled(),false);
+  await page.locator('#newVisitorBtn').click();
+  assert.equal(await page.locator('#submitBtn').isDisabled(),false);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('voicevote_voted_v1')),null);
+  assert.equal(await page.locator('#visitorPass').inputValue(),'VV-123E4567-E89B42D3-A4564266-14174000');
   if (errors.length) throw new Error('Browser exceptions: '+errors.join('; '));
   console.log('Live hosted search and full voting lockout PASSED. No feedback requests were made.');
 } finally {
