@@ -124,6 +124,7 @@ test('browser sends one secure POST form with all feedback fields, not a JSONP G
     studentClass: '6',
     section: 'A',
     project: 'Robot',
+    projectId: '',
     language: 'hi-IN',
     feedback: 'Great & clever',
     rating: '4'
