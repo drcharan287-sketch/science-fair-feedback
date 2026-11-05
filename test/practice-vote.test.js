@@ -41,8 +41,8 @@ test('A locked real browser offers Practice Voting without disabling vote guards
 });
 
 test('No demo practice operation can claim to translate feedback or change public rankings',()=>{
-  assert.match(script,/Translation happens on real submission/);
-  assert.match(script,/not transmitted/);
+  assert.match(practice,/Translation happens on real submission/);
+  assert.match(practice,/not transmitted/);
   assert.doesNotMatch(practice,/Practice vote counted|AI translated successfully/i);
   assert.match(practice,/Nothing you submit here is sent to Google Sheets or added to rankings/);
 });
