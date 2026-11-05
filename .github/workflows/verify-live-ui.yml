@@ -8,6 +8,9 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'practice.html'
+      - 'practice-vote.css'
+      - 'practice-vote.js'
       - 'results.html'
       - 'results.css'
       - 'results.js'
