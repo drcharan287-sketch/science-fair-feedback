@@ -207,7 +207,7 @@ function saveFeedback_(params) {
     result = {
       success: false,
       message: message,
-      passError: /visitor pass|pass attempts/i.test(message)
+      passError: /\bpass\b/i.test(message)
     };
   }
   return result;
