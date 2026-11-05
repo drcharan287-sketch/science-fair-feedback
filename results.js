@@ -14,15 +14,6 @@
     {id:'demo-05',grade:'9',section:'Sample Section E',project:'Future Mobility Project',votes:104,weighted:4.86,rank:1},
     {id:'demo-06',grade:'9',section:'Sample Section F',project:'AI for a Better Tomorrow',votes:96,weighted:4.69,rank:2}
   ]);
-  const DEMO_QUOTES = Object.freeze([
-    {quote:'A wonderful way to make science feel exciting and easy to understand!',project:'Sample science exhibit',grade:'6',language:'en-IN'},
-    {quote:'ఈ ఆలోచన చాలా సృజనాత్మకంగా ఉంది!',translation:'This idea is very creative!',project:'Sample green-energy exhibit',grade:'9',language:'te-IN'},
-    {quote:'बच्चों ने बहुत सुंदर तरीके से समझाया।',translation:'The children explained it beautifully.',project:'Sample nature exhibit',grade:'3',language:'hi-IN'}
-  ]);
-  const DEMO_LANGUAGES = Object.freeze([
-    {code:'en-IN',count:610},{code:'te-IN',count:340},{code:'hi-IN',count:190},
-    {code:'ta-IN',count:88},{code:'kn-IN',count:52}
-  ]);
   let mode='DEMO', current=null, selectedGrade='all', intervalId=null;
   let requestInFlight=false, sequence=0, lastCatalogCount=null;
   const gradesFrom = list => [...new Set(list.map(p => String(p.grade)))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
@@ -36,8 +27,8 @@
   const fmt = x => Number.isFinite(Number(x)) ? new Intl.NumberFormat('en-IN').format(Number(x)) : '—';
   const escapeLess = value => Math.max(0,Math.min(100,Number(value)||0));
   function samplePayload() {
-    return {mode:'DEMO',totalProjects:lastCatalogCount,acceptedVotes:1280,ratedProjects:146,
-      languages:DEMO_LANGUAGES,rankings:DEMO_RANKINGS,highlights:DEMO_QUOTES};
+    return {mode:'DEMO',totalProjects:lastCatalogCount,acceptedVotes:null,ratedProjects:null,
+      languages:[],rankings:DEMO_RANKINGS};
   }
   function sourceData() {
     return mode==='DEMO' ? samplePayload() : current || {mode:'DEMO'};
@@ -56,7 +47,7 @@
     put('totalProjects',fmt(data.totalProjects ?? lastCatalogCount));
     put('totalVotes',fmt(data.acceptedVotes));put('ratedProjects',fmt(data.ratedProjects));
     put('languageCount',fmt((data.languages||[]).filter(x=>x.count>0).length));
-    put('voteMetricHint',demo?'Fictional illustration · not real votes':'Valid anonymous ratings');
+    put('voteMetricHint',demo?'Real vote totals are not published in preview':'Valid anonymous ratings');
     put('rankingsHeading',demo?'Ideas worth celebrating.':live?'Discoveries in motion.':'Audience favourites by grade.');
     put('rankingsSubheading',demo?'Illustrative project cards, not actual rankings.':
       live?'Project rankings remain private until the organizers approve publication.':
@@ -64,8 +55,7 @@
     put('rankingNote',demo?'ALL SCORES AND REVIEWS SHOWN HERE ARE FICTIONAL. No winners are being announced.':
       live?'No leading projects are displayed during the fair. Audience activity is not a competition result.':
         'Audience appreciation is not an official jury award. Scores account for rating and number of votes.');
-    put('feedbackIntro',demo?'Fictional examples to demonstrate AI-assisted multilingual feedback.':
-      'Only separately reviewed and explicitly approved anonymous excerpts appear here.');
+    put('feedbackIntro','Feedback is recorded and translated automatically during a real submission; no student approval queue is needed.');
   }
   function renderGradeFilter(data) {
     const select=$('gradeFilter');
@@ -116,26 +106,9 @@
       track.appendChild(inner);row.append(meta,track);host.appendChild(row);
     });
   }
-  function renderQuotes(data) {
-    const host=$('feedbackCards');host.replaceChildren();
-    const list=(data.highlights||[]).slice(0,6);
-    if(!list.length) {
-      host.appendChild(make('p','empty-collection','Public comments remain private until individual excerpts have been reviewed and approved by organizers.'));
-      return;
-    }
-    list.forEach(item=>{
-      const card=make('article','quote-card');
-      card.appendChild(make('span','quote-glyph','“'));
-      card.appendChild(make('blockquote','',item.quote));
-      if(item.translation && item.translation!==item.quote)card.appendChild(make('p','translated','English translation: '+item.translation));
-      card.appendChild(make('small','', (mode==='DEMO'?'FICTIONAL SAMPLE · ':'')+
-        'Grade '+item.grade+' · '+(LANGUAGES[item.language]||'Feedback')));
-      host.appendChild(card);
-    });
-  }
   function render() {
     const data=sourceData();
-    renderMode(data);renderGradeFilter(data);renderRankings(data);renderLanguages(data);renderQuotes(data);
+    renderMode(data);renderGradeFilter(data);renderRankings(data);renderLanguages(data);
   }
   function apply(payload) {
     if(!payload||payload.success!==true||!['DEMO','LIVE','PUBLISHED'].includes(payload.mode)){
