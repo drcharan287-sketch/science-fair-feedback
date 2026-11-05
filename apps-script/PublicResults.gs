@@ -20,8 +20,31 @@ function publicFiniteNumber_(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
 }
+function publicResultsCache_() {
+  try {
+    return typeof CacheService === 'undefined' ? null : CacheService.getScriptCache();
+  } catch (_) { return null; }
+}
+function publicResultsCacheKey_(mode) {
+  return 'voicevote-public-v2-'+mode;
+}
+function publicResultsSaveCache_(cache, mode, result) {
+  if (!cache) return;
+  try {
+    // An organizer mode change is always rechecked before reading this cache.
+    // The result contains only approved public fields for that mode.
+    cache.put(publicResultsCacheKey_(mode),JSON.stringify(result),45);
+  } catch (_) { /* Uncached read-only fallback is always safe. */ }
+}
 function publicSummary_() {
   const mode = publicResultsMode_();
+  const cache = publicResultsCache_();
+  if (cache) {
+    try {
+      const cached = cache.get(publicResultsCacheKey_(mode));
+      if (cached) return JSON.parse(cached);
+    } catch (_) { /* Cache is an optimization, not an authorization control. */ }
+  }
   const catalog = readProjectCatalog_();
   const payload = {
     success: true, mode: mode, totalProjects: catalog.length,
@@ -30,7 +53,10 @@ function publicSummary_() {
         'Audience choice rankings are published by an organizer.'
   };
   // A public request to preview or force a mode is never honored.
-  if (mode === 'DEMO') return payload;
+  if (mode === 'DEMO') {
+    publicResultsSaveCache_(cache,mode,payload);
+    return payload;
+  }
 
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const votes = adminRawVotes_(ss); // Only internal; NEVER serialize raw vote records.
@@ -88,6 +114,7 @@ function publicSummary_() {
       p.rank = byGrade[p.grade];
     });
   }
+  publicResultsSaveCache_(cache,mode,payload);
   return payload;
 }
 
@@ -141,6 +168,14 @@ function adminSetPublicResultsMode(key, requested, reason) {
       PropertiesService.getScriptProperties()
         .setProperty(VOICEVOTE_PUBLIC_RESULTS_MODE_KEY,mode);
     });
+    // Best effort: refresh public-mode caches after a verified organizer change.
+    const cache = publicResultsCache_();
+    if (cache) {
+      try {
+        cache.remove(publicResultsCacheKey_(current));
+        cache.remove(publicResultsCacheKey_(mode));
+      } catch (_) {}
+    }
     return {mode:mode,changed:true};
   } finally {
     lock.releaseLock();
