@@ -35,6 +35,87 @@
       .map(function (option) { return option.value.trim(); })
       .filter(Boolean);
     let catalog = [];
+    const search = config.searchSelector ? document.querySelector(config.searchSelector) : null;
+    const searchResults = config.searchResultsSelector ? document.querySelector(config.searchResultsSelector) : null;
+    const searchStatus = config.searchStatusSelector ? document.querySelector(config.searchStatusSelector) : null;
+    const searchSelected = config.searchSelectedSelector ? document.querySelector(config.searchSelectedSelector) : null;
+    const maxMatches = 12;
+
+    function isBlocked() {
+      return typeof config.isVoteLocked === 'function' && config.isVoteLocked();
+    }
+
+    function normalizeTerm(value) {
+      return String(value || '').normalize('NFKD').replace(/\p{M}/gu, '').toLocaleLowerCase().trim();
+    }
+
+    function hideSearchResults() {
+      if (!searchResults) return;
+      searchResults.hidden = true;
+      if (search) search.setAttribute('aria-expanded', 'false');
+    }
+
+    function chooseQuickProject(entry) {
+      if (isBlocked()) return;
+      // Reuse the dependent dropdown handlers and the exact catalog values.
+      // This safely supports duplicate names across different classes.
+      grade.value = entry.grade;
+      grade.dispatchEvent(new Event('change', { bubbles: true }));
+      section.value = entry.section;
+      section.dispatchEvent(new Event('change', { bubbles: true }));
+      project.value = entry.project;
+      project.dispatchEvent(new Event('change', { bubbles: true }));
+      if (search) search.value = entry.project;
+      if (searchSelected) searchSelected.textContent =
+        'Selected: ' + entry.project + ' — Class ' + entry.grade + ', ' + entry.section;
+      if (searchStatus) searchStatus.textContent =
+        'Project selected. Add your feedback and star rating below.';
+      hideSearchResults();
+      project.focus();
+    }
+
+    function renderQuickSearch() {
+      if (!search || !searchResults) return;
+      searchResults.replaceChildren();
+      hideSearchResults();
+      if (isBlocked()) return;
+      const query = normalizeTerm(search.value);
+      if (query.length < 2) {
+        if (searchStatus) searchStatus.textContent =
+          'Type at least 2 characters to find a project across all classes and sections.';
+        return;
+      }
+      const terms = query.split(/\s+/).filter(Boolean);
+      const matches = catalog.filter(function(entry) {
+        const haystack = normalizeTerm(entry.project + ' ' + entry.grade + ' ' + entry.section);
+        return terms.every(function(term) { return haystack.includes(term); });
+      }).sort(function(a, b) {
+        const aStart = normalizeTerm(a.project).startsWith(query) ? 0 : 1;
+        const bStart = normalizeTerm(b.project).startsWith(query) ? 0 : 1;
+        return aStart - bStart
+          || a.project.localeCompare(b.project, undefined, { sensitivity: 'base', numeric: true })
+          || a.grade.localeCompare(b.grade, undefined, { numeric: true })
+          || a.section.localeCompare(b.section, undefined, { numeric: true });
+      });
+      if (!matches.length) {
+        if (searchStatus) searchStatus.textContent =
+          'No active projects match. Try another name or use class and section.';
+        return;
+      }
+      matches.slice(0, maxMatches).forEach(function(entry) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'search-option';
+        button.textContent = entry.project + ' — Class ' + entry.grade + ' / ' + entry.section;
+        button.addEventListener('click', function() { chooseQuickProject(entry); });
+        searchResults.appendChild(button);
+      });
+      searchResults.hidden = false;
+      search.setAttribute('aria-expanded', 'true');
+      if (searchStatus) searchStatus.textContent =
+        matches.length + ' matching project(s)' +
+        (matches.length > maxMatches ? '; showing first ' + maxMatches + '. Type more to refine.' : '. Select a result.');
+    }
 
     function setStatus(message) {
       if (status) status.textContent = message;
@@ -75,6 +156,11 @@
         ? existingGradeValues : unique(catalog.map(function (entry) { return entry.grade; }));
       resetSelect(grade, 'Select class/grade', grades);
       updateSections();
+      if (search) {
+        search.disabled = isBlocked() || catalog.length === 0;
+        if (searchSelected) searchSelected.textContent = '';
+        renderQuickSearch();
+      }
       if (catalog.length === 0) setStatus('No active projects are listed yet.');
     }
 
@@ -138,6 +224,41 @@
 
     grade.addEventListener('change', updateSections);
     section.addEventListener('change', updateProjects);
+    if (search && searchResults) {
+      search.addEventListener('input', function() {
+        if (searchSelected) searchSelected.textContent = '';
+        renderQuickSearch();
+      });
+      search.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') { hideSearchResults(); return; }
+        if (event.key === 'ArrowDown' && !searchResults.hidden) {
+          const first = searchResults.querySelector('button');
+          if (first) { event.preventDefault(); first.focus(); }
+        }
+        if (event.key === 'Enter' && !searchResults.hidden) {
+          const first = searchResults.querySelector('button');
+          if (first) { event.preventDefault(); first.click(); }
+        }
+      });
+      searchResults.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+          hideSearchResults();
+          search.focus();
+          return;
+        }
+        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+        const buttons = Array.from(searchResults.querySelectorAll('button'));
+        const index = buttons.indexOf(event.target);
+        const next = buttons[index + (event.key === 'ArrowDown' ? 1 : -1)];
+        if (next) { event.preventDefault(); next.focus(); }
+      });
+      grade.addEventListener('change', function() {
+        if (searchSelected) searchSelected.textContent = '';
+      });
+      section.addEventListener('change', function() {
+        if (searchSelected) searchSelected.textContent = '';
+      });
+    }
     grade.disabled = true;
     resetSelect(section, 'Select class/grade first', []);
     resetSelect(project, 'Select class/grade and section first', []);
