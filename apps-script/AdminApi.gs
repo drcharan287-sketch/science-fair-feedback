@@ -46,7 +46,7 @@ function adminRawVotes_(ss) {
   if (!sheet) throw new Error('Feedback sheet is missing.');
   const last = sheet.getLastRow();
   if (last <= 1) return [];
-  return sheet.getRange(2, 1, last - 1, 11).getValues().map(function(row, index) {
+  return sheet.getRange(2, 1, last - 1, 13).getValues().map(function(row, index) {
     const status = String(row[10] || '').trim().toUpperCase();
     const date = row[0];
     const values = [String(date), ...row.slice(1, 8).map(String)];
@@ -55,6 +55,7 @@ function adminRawVotes_(ss) {
       rowProof: adminDigest_(JSON.stringify(values)),
       time: date instanceof Date ? date.toISOString() : String(date || ''),
       project: String(row[1] || ''),
+      projectId: String(row[12] || ''),
       grade: String(row[2] || ''),
       section: String(row[3] || ''),
       original: String(row[4] || ''),
@@ -67,8 +68,48 @@ function adminRawVotes_(ss) {
   });
 }
 
-function adminProjectId_(p) {
+function adminProjectLegacyKey_(p) {
   return JSON.stringify([String(p.grade), String(p.section), String(p.project)]);
+}
+function adminProjectId_(p) {
+  return String(p.projectId || p.id || '') || adminProjectLegacyKey_(p);
+}
+/**
+ * New votes use Feedback!M stable IDs. Previous votes may have no ID.
+ * Resolve older (grade, section, original title) against the active roster
+ * and owner-reviewed Roster Rename Aliases. Never mutate historic reviews.
+ */
+function adminProjectLookup_(ss, projects) {
+  const byLegacy = Object.create(null);
+  projects.forEach(function(p) {
+    byLegacy[adminProjectLegacyKey_(p)] = adminProjectId_(p);
+  });
+  const aliasSheet = ss.getSheetByName('Roster Rename Aliases');
+  if (aliasSheet && aliasSheet.getLastRow() > 1) {
+    const aliases = aliasSheet.getRange(2, 1, aliasSheet.getLastRow() - 1, 11).getValues();
+    const validIds = Object.create(null);
+    projects.forEach(function(p) { validIds[adminProjectId_(p)] = true; });
+    aliases.forEach(function(row) {
+      const id = String(row[0] || '').trim();
+      const oldGrade = String(row[1] || '').trim();
+      const oldSection = String(row[2] || '').trim();
+      const oldTitle = String(row[3] || '').trim();
+      if (!id || !oldGrade || !oldSection || !oldTitle || !validIds[id]) return;
+      const legacy = adminProjectLegacyKey_({
+        grade: oldGrade, section: oldSection, project: oldTitle
+      });
+      // A conflicting alias must fail closed, not credit votes to the
+      // wrong school team. Preserve live exact names over stale aliases.
+      if (byLegacy[legacy] && byLegacy[legacy] !== id) {
+        throw new Error('Conflicting project rename alias. Verify Roster Rename Aliases.');
+      }
+      byLegacy[legacy] = id;
+    });
+  }
+  return function(vote) {
+    const stored = String(vote.projectId || '').trim();
+    return stored || byLegacy[adminProjectLegacyKey_(vote)] || '';
+  };
 }
 
 function adminGetOverview(key) {
@@ -76,6 +117,7 @@ function adminGetOverview(key) {
   const ss = adminSheet_();
   const projects = readProjectCatalog_();
   const votes = adminRawVotes_(ss);
+  const resolveVote = adminProjectLookup_(ss, projects);
   const scores = Object.create(null);
   const langCounts = Object.create(null);
   projects.forEach(function(p) {
@@ -88,7 +130,7 @@ function adminGetOverview(key) {
   votes.forEach(function(v) {
     if (v.protected) protectedCount++;
     if (v.status === 'VOID') { excluded++; return; }
-    const candidate = scores[adminProjectId_(v)];
+    const candidate = scores[resolveVote(v)];
     if (!candidate || v.rating < 1 || v.rating > 5) return;
     candidate.votes++;
     candidate.stars += v.rating;
@@ -129,12 +171,14 @@ function adminGetOverview(key) {
 function adminGetReviews(key, projectId, offset) {
   adminRequireKey_(key);
   const id = String(projectId || '');
-  const known = readProjectCatalog_().some(function(p) { return adminProjectId_(p) === id; });
+  const projects = readProjectCatalog_();
+  const known = projects.some(function(p) { return adminProjectId_(p) === id; });
   if (!known) throw new Error('Unknown project.');
   const page = Math.max(0, Math.min(10000, Math.floor(Number(offset) || 0)));
   const ss = adminSheet_();
+  const resolveVote = adminProjectLookup_(ss, projects);
   const matches = adminRawVotes_(ss).filter(function(v) {
-    return adminProjectId_(v) === id;
+    return resolveVote(v) === id;
   }).reverse();
   return {
     total: matches.length,
