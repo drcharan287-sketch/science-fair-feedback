@@ -11,7 +11,7 @@ const PROJECTS = [
   ['6','Heidelberg','XenoChat','TRUE'],
   ['9','Keats','VoiceVote','TRUE']
 ];
-function setup() {
+function setup(projectRows=PROJECTS, aliasRows=[]) {
   let sheetOpens = 0;
   const props = new Map();
   const sheets = {};
@@ -36,7 +36,13 @@ function setup() {
     appendRow: row => feedbackRows.push([...row])
   };
   sheets.Feedback = feedback;
-  sheets.Projects = {getDataRange:()=>({getDisplayValues:()=>PROJECTS})};
+  sheets.Projects = {getDataRange:()=>({getDisplayValues:()=>projectRows})};
+  if (aliasRows.length) {
+    sheets['Roster Rename Aliases'] = {
+      getLastRow:()=>aliasRows.length+1,
+      getRange:()=>({getValues:()=>aliasRows})
+    };
+  }
   const ss = {
     getSheetByName: name => sheets[name]||null,
     insertSheet: name => {
@@ -360,4 +366,59 @@ test('explicit owner reconciliation can unblock future changes without erasing i
   assert.equal(journal.rows.length,3,'Original intent is retained, not removed');
   assert.equal(journal.rows[1][5],'NOT_APPLIED');
   assert.equal(journal.rows[2][5],'APPLIED');
+});
+
+
+test('renamed project retains legacy feedback ranking via stable ID and reviewed alias',()=>{
+  const newCatalog=[
+    ['Class/Grade','Section','Project Name','Active','Project ID'],
+    ['6','Heidelberg','AI XenoChat','TRUE','LEG-6-HEIDELBERG-XENOCHAT'],
+    ['9','Keats','VoiceVote','TRUE','LEG-9-KEATS-VOICEVOTE']
+  ];
+  const a=setup(newCatalog,[
+    ['LEG-6-HEIDELBERG-XENOCHAT','6','Heidelberg','XenoChat',
+     '6','Heidelberg','AI XenoChat','2026-11-05','VI_HEIDELBERG|1|1',
+     'Organizer-verified rename','School organizer']
+  ]);
+  let data=a.context.adminGetOverview(DEMO_KEY);
+  const renamed=data.projects.find(x=>x.project==='AI XenoChat');
+  assert.equal(renamed.id,'LEG-6-HEIDELBERG-XENOCHAT');
+  assert.equal(renamed.votes,1,'Historic votes follow the same team');
+  assert.equal(renamed.weighted,3.75);
+  assert.equal(a.context.adminGetReviews(DEMO_KEY,renamed.id,0).total,1);
+  assert.equal(a.feedbackRows[1][1],'XenoChat','Historical text remains unchanged');
+  assert.equal(a.feedbackRows.length,3,'Read-only view never appends data');
+  // A new ID-linked feedback row also resolves after renaming.
+  a.feedbackRows.push([
+    new Date('2026-11-05T12:00:00Z'),'AI XenoChat','6','Heidelberg',
+    'Synthetic vote',5,'en-IN','Synthetic vote','test-new-id','', '',
+    '','LEG-6-HEIDELBERG-XENOCHAT'
+  ]);
+  data=a.context.adminGetOverview(DEMO_KEY);
+  assert.equal(data.projects.find(x=>x.project==='AI XenoChat').votes,2);
+  assert.equal(a.context.adminGetReviews(DEMO_KEY,renamed.id,0).total,2);
+});
+
+test('unreviewed old title does not silently join a renamed project',()=>{
+  const a=setup([
+    ['Class/Grade','Section','Project Name','Active','Project ID'],
+    ['6','Heidelberg','New Name','TRUE','LEG-6-HEIDELBERG-XENOCHAT'],
+    ['9','Keats','VoiceVote','TRUE','LEG-9-KEATS-VOICEVOTE']
+  ]);
+  const d=a.context.adminGetOverview(DEMO_KEY);
+  assert.equal(d.projects.find(x=>x.project==='New Name').votes,0);
+  assert.equal(d.acceptedVotes,1);
+  assert.equal(a.feedbackRows[1][1],'XenoChat');
+});
+
+test('conflicting old-title alias fails closed rather than moving a vote',()=>{
+  const a=setup([
+    ['Class/Grade','Section','Project Name','Active','Project ID'],
+    ['6','Heidelberg','XenoChat','TRUE','LEG-6-HEIDELBERG-XENOCHAT'],
+    ['9','Keats','VoiceVote','TRUE','LEG-9-KEATS-VOICEVOTE']
+  ],[
+    ['LEG-9-KEATS-VOICEVOTE','6','Heidelberg','XenoChat',
+     '9','Keats','VoiceVote','2026-11-05','','Bad alias','']
+  ]);
+  assert.throws(()=>a.context.adminGetOverview(DEMO_KEY),/Conflicting project rename alias/);
 });
