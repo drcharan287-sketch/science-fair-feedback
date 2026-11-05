@@ -168,7 +168,7 @@ test('browser reuses an anonymous device token for repeat visits', async () => {
   assert.equal(saved.get('voicevote_voted_v1'),'1');
   assert.equal(returning.elements.submitBtn.disabled,true);
   assert.equal(returning.elements.voteGuardStatus.hidden,false);
-  assert.match(returning.elements.voteGuardStatus.textContent,/already submitted feedback/);
+  assert.match(returning.elements.voteGuardStatus.textContent,/already been recorded in this browser/);
   returning.context.submitFeedback();
   assert.equal(returning.forms.length,0);
 });
@@ -245,7 +245,7 @@ test('after a submission attempt the whole form stays locked when the QR is reop
   respond(returning, {success:true,projects:[{grade:'6',section:'Heidelberg',project:'XenoChat'}]});
   await tick();
   assert.equal(returning.elements.voteGuardStatus.hidden,false);
-  assert.match(returning.elements.voteGuardStatus.textContent,/awaiting confirmation|voting is paused/);
+  assert.match(returning.elements.voteGuardStatus.textContent,/awaiting confirmation|voting is paused/i);
   for (const id of ['submitBtn','studentClass','section','project','language','feedback','startBtn','stopBtn','projectSearch']) {
     assert.equal(returning.elements[id].disabled, true, id + ' must be locked');
   }
