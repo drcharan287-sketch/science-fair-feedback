@@ -46,6 +46,30 @@ body {
   color: #cbd5e1;
   margin-top: 8px;
 }
+.ai-explainer {
+  margin: 16px auto 0;
+  max-width: 610px;
+  padding: 11px 14px;
+  background: #102d49;
+  border: 1px solid #67e8f950;
+  border-radius: 12px;
+  color: #d8edf5;
+  text-align: left;
+}
+.ai-explainer summary {
+  cursor: pointer;
+  color: #67e8f9;
+  font-size: 13px;
+  font-weight: 700;
+}
+.ai-explainer ol {
+  padding-left: 20px;
+  margin: 12px 0 3px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.ai-explainer li { margin: 7px 0; }
+
 
 label {
   display: block;
@@ -247,6 +271,14 @@ button:disabled, textarea:disabled, input:disabled {
     <div class="logo">VoiceVote</div>
     <h2>AI-Powered Science Fair Feedback</h2>
     <p>Speak in your language • Speech-to-text • English translation</p>
+    <details class="ai-explainer">
+      <summary>How does VoiceVote use AI?</summary>
+      <ol>
+        <li><strong>Speech recognition:</strong> Your browser turns spoken words into editable text.</li>
+        <li><strong>Machine translation:</strong> Non-English feedback is translated into English when you submit.</li>
+        <li><strong>Live insights:</strong> Ratings are calculated and ranked for organizers. These numerical rankings are not AI-generated judgments.</li>
+      </ol>
+    </details>
   </div>
 
   <label for="projectSearch">Quick Find a Project</label>
