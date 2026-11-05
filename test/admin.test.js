@@ -59,7 +59,7 @@ function setup() {
   };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('apps-script/Code.gs','utf8'),context);
-  const adminSource=fs.readFileSync('apps-script/Admin.gs','utf8');
+  const adminSource=fs.readFileSync('apps-script/AdminApi.gs','utf8');
   assert.match(adminSource,/VOICEVOTE_ADMIN_KEY_SHA256/);
   const testSource=adminSource.replace(
     /(VOICEVOTE_ADMIN_KEY_SHA256\s*=\s*')[a-f0-9]{64}(')/,

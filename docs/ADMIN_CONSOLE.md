@@ -22,7 +22,7 @@ The existing public web app executes as the owner, so Session.getActiveUser().ge
 Keep the plaintext key private. Anyone with the key has admin permissions, and the audit log cannot distinguish people sharing it. Rotate/redeploy if leaked. For individually authenticated administrators, consider a separate Google-authenticated admin deployment later.
 
 ## Release and tests
-The production workflow overlays Admin.js and Admin.html while preserving the existing web app and public feedback flow. Contract tests cover no-access authorization, private review drilldown, votes, moderation and pause/resume. A read-only Chromium smoke test confirms an invalid key is rejected. It does not submit production feedback or open reviews.
+The production workflow overlays AdminApi.js and Admin.html while preserving the existing web app and public feedback flow. Contract tests cover no-access authorization, private review drilldown, votes, moderation and pause/resume. A read-only Chromium smoke test confirms an invalid key is rejected. It does not submit production feedback or open reviews.
 
 ## Future voter resets
 Excluding a vote from rankings **does not** unlock that visitor's browser. A real re-vote exception needs a one-time, expiring, staff-issued reset code and a logged policy on whether the original vote is counted. Do not provide an unauthenticated public reset button. Browser tokens cannot guarantee one vote per person.
