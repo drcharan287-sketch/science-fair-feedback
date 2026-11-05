@@ -56,6 +56,7 @@ function setup(){
   const admin=fs.readFileSync('apps-script/AdminApi.gs','utf8').replace(/(VOICEVOTE_ADMIN_KEY_SHA256\s*=\s*')[a-f0-9]{64}(')/,(_,a,b)=>a+HASH+b);
   vm.runInContext(admin,ctx);
   vm.runInContext(fs.readFileSync('apps-script/VisitorPasses.gs','utf8'),ctx);
+  vm.runInContext(fs.readFileSync('apps-script/PublicResults.gs','utf8'),ctx);
   const save=(code,device,extra={})=>ctx.saveFeedback_({
     action:'save',studentClass:'6',section:'Heidelberg',project:'XenoChat',feedback:'Wonderful',rating:'5',language:'en-IN',
     submissionId:'123e4567-e89b-42d3-a456-'+String(200000000000 + ++saves),
