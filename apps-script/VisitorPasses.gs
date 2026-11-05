@@ -222,6 +222,16 @@ function adminReissueVisitorPass(key, serialNumber, reason) {
     if (String(rows[index][2]) !== 'AVAILABLE') {
       throw new Error('Only unused, currently available passes can be reissued.');
     }
+    // Handle an interrupted redemption where Feedback was appended but the
+    // Visitor Passes status update failed. That code must remain spent.
+    const feedbackSheet = ss.getSheetByName('Feedback');
+    if (feedbackSheet && feedbackSheet.getLastRow() > 1) {
+      const accepted = feedbackSheet.getRange(
+        2, 12, feedbackSheet.getLastRow() - 1, 1).getValues();
+      if (accepted.some(function(row) { return String(row[0]) === String(serial); })) {
+        throw new Error('The pass has already been used by an accepted feedback row.');
+      }
+    }
     const newSerial = rows.reduce(function(n, r) {
       return Math.max(n, Number(r[0]) || 0);
     }, 0) + 1;
