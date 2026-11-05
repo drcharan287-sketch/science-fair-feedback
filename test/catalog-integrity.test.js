@@ -1,7 +1,7 @@
 // Pure project roster integrity tests. No Google connection, Sheet changes or votes.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateProjectEntries } from '../scripts/catalog-integrity.mjs';
+import { validateProjectEntries, assertCatalogIdentityContinuity } from '../scripts/catalog-integrity.mjs';
 
 test('valid names survive sorting without changing identities used by backend', () => {
   const input = [
@@ -92,4 +92,22 @@ test('duplicate IDs, malformed IDs and IDs shared by different teams are blocked
   assert.throws(()=>validateProjectEntries([
     {grade:'6',section:'A',project:'First team',id:'=formula'}
   ]),/Invalid stable project ID/);
+});
+
+
+test('catalog sync refuses missing or conflicting previously published stable IDs',()=>{
+ const before=[
+  {grade:'6',section:'Heidelberg',project:'XenoChat',id:'LEG-6-HEIDELBERG-XENOCHAT'},
+  {grade:'9',section:'Keats',project:'VoiceVote',id:'LEG-9-KEATS-VOICEVOTE'}
+ ];
+ assert.throws(()=>assertCatalogIdentityContinuity(before,[
+  {grade:'6',section:'Heidelberg',project:'XenoChat'},
+  before[1]
+ ]),/identity regression/);
+ assert.throws(()=>assertCatalogIdentityContinuity(before,[
+  {...before[0],id:'OTHER-ID'},before[1]
+ ]),/identity regression/);
+ assert.doesNotThrow(()=>assertCatalogIdentityContinuity(before,[
+  {...before[0],project:'AI XenoChat'},before[1]
+ ]));
 });
