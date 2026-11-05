@@ -235,3 +235,87 @@ test('on-demand private reviews are project-bound, paginated and require a key',
   assert.equal(a.sheets['Admin Action Log'],undefined,'Read-only reviews cannot create an audit sheet');
   assert.equal(a.feedbackRows.length,38,'Read-only request never removes an existing row');
 });
+
+
+test('audit append failure prevents moderation, preserves vote and creates no secret log',()=>{
+  const a=setup();
+  const vote=a.context.adminGetVoterActivity(DEMO_KEY).find(x=>x.row===2);
+  a.faults.auditAppend=true;
+  assert.throws(()=>a.context.adminSetVoteStatus(DEMO_KEY,2,vote.rowProof,'VOID',
+    'Exclude because this was a duplicate'),/audit append/);
+  assert.equal(a.feedbackRows[1][10],'','Feedback vote must not change when journal append fails');
+  assert.equal(a.feedbackRows[1][4],'ఈ ప్రాజెక్టు చాలా బాగుంది');
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).auditPendingActions,0);
+  assert.equal(a.sheets['Admin Action Log'].rows.length,1,'Header may exist, but no mutation');
+});
+
+test('audit flush failure blocks the protected write and unresolved intent blocks retry',()=>{
+  const a=setup();
+  a.faults.auditFlush=true;
+  assert.throws(()=>a.context.adminSetVotingOpen(DEMO_KEY,false,'Pause for morning break'),
+    /audit flush/);
+  assert.equal(a.props.has('VOICEVOTE_VOTING_DISABLED'),false);
+  assert.equal(a.sheets['Admin Action Log'].rows[1][5],'PENDING');
+  a.faults.auditFlush=false;
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).auditPendingActions,1);
+  assert.throws(()=>a.context.adminSetVotingOpen(DEMO_KEY,false,'Retry same pause event'),
+    /Unresolved PENDING admin audit/);
+  assert.equal(a.props.has('VOICEVOTE_VOTING_DISABLED'),false);
+  assert.equal(a.sheets['Admin Action Log'].rows.length,2,
+    'Unsafe retries must not append another event');
+});
+
+test('audit finalize failure leaves visible PENDING journal and prevents further changes',()=>{
+  const a=setup();
+  const vote=a.context.adminGetVoterActivity(DEMO_KEY).find(x=>x.row===2);
+  a.faults.auditFinalize=true;
+  assert.throws(()=>a.context.adminSetVoteStatus(DEMO_KEY,2,vote.rowProof,'VOID',
+    'Exclude after independent review'),/needs reconciliation/);
+  assert.equal(a.feedbackRows[1][10],'VOID','Write may have succeeded before audit finalization');
+  assert.equal(a.feedbackRows.length,3,'No feedback row may be deleted');
+  const record=a.sheets['Admin Action Log'].rows[1];
+  assert.equal(record[1],'EXCLUDE_VOTE');
+  assert.equal(record[2],2);
+  assert.equal(record[5],'PENDING');
+  assert.equal(record[7],'VALID');
+  assert.equal(record[8],'VOID');
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).auditPendingActions,1);
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).excludedVotes,1);
+  assert.throws(()=>a.context.adminSetVotingOpen(DEMO_KEY,false,'Attempt unrelated pause now'),
+    /Unresolved PENDING admin audit/);
+  assert.equal(a.props.has('VOICEVOTE_VOTING_DISABLED'),false);
+});
+
+test('protected property write failure leaves intent without claiming applied change',()=>{
+  const a=setup();
+  a.faults.propertyWrite=true;
+  assert.throws(()=>a.context.adminSetVotingOpen(DEMO_KEY,false,'Pause before awards start'),
+    /needs reconciliation/);
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).votingOpen,true);
+  const entry=a.sheets['Admin Action Log'].rows[1];
+  assert.equal(entry[1],'PAUSE_VOTING');
+  assert.equal(entry[5],'PENDING');
+  assert.equal(entry[7],'OPEN');
+  assert.equal(entry[8],'PAUSED');
+});
+
+test('successful journal entry marks APPLIED and legacy log rows remain intact',()=>{
+  const a=setup();
+  const vote=a.context.adminGetVoterActivity(DEMO_KEY).find(x=>x.row===2);
+  a.context.adminSetVoteStatus(DEMO_KEY,2,vote.rowProof,'VOID',
+    'Exclusion explicitly authorized');
+  const journal=a.sheets['Admin Action Log'];
+  assert.equal(journal.rows[1][5],'APPLIED');
+  assert.match(journal.rows[1][6],/^fake-audit-id-/);
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).auditPendingActions,0);
+  // Simulate a five-column sheet created by the earlier app release.
+  journal.rows[0]=journal.rows[0].slice(0,5);
+  journal.rows.splice(1,1,[new Date(),'PAUSE_VOTING','','Prior action','Admin credential']);
+  a.context.adminSetVotingOpen(DEMO_KEY,false,'New audited pause action');
+  assert.deepEqual(journal.rows[1].slice(0,5).map(String),
+    journal.rows[1].slice(0,5).map(String));
+  assert.equal(journal.rows[1].length,5,'Legacy record must be unchanged');
+  assert.equal(journal.rows[0][5],'State');
+  assert.equal(journal.rows[2][5],'APPLIED');
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).auditPendingActions,0);
+});
