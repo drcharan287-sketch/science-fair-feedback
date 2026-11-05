@@ -188,6 +188,11 @@
     if(yes)intervalId=setInterval(()=>{if(!document.hidden)rotateGrade();},9000);
     button.setAttribute('aria-pressed',String(Boolean(yes)));
     button.textContent=yes?'Ⅱ Pause rotation':'▶ Auto-rotate grades';
+    // A projector presenter wants grade cards in view, not merely an offscreen
+    // filter changing under the opening hero. Do not auto-scroll parent phones.
+    if(yes && window.innerWidth>=900 && $('leaderboard')) {
+      $('leaderboard').scrollIntoView({behavior:'smooth',block:'start'});
+    }
   }
   $('gradeFilter').addEventListener('change',e=>{
     selectedGrade=e.target.value;renderRankings(sourceData());

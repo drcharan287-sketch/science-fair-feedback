@@ -17,6 +17,8 @@ The new `results.html` is independent from the private Admin Console. It has:
   `Approval Status | Project ID | Quote | English Translation | Language | Approved By`.
   A row is public only if its status is `APPROVED`, the project ID is active, the quote is nonempty and ≤240 characters, and `Approved By` is nonempty. Moderators must remove names, phone numbers and identifying details **before** setting APPROVED. The system does not automatically extract or approve raw visitor remarks.
 
+The backend caches only mode-scoped, privacy-safe display payloads for up to 45 seconds, rechecking the server-owned publication mode on every request. Public viewers poll at most about every 75 seconds while visible; the cache reduces repeated Google Sheets reads when multiple phones or displays are open.
+
 The public Results endpoint is Apps Script `/exec?action=publicResults&callback=...`. It returns *only allowed fields for the server-owned mode*. It accepts no client-provided override of mode. Apps Script `doGet` remains read-only; feedback uses the existing POST form.
 
 ## Publication controls (private)

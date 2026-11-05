@@ -1,0 +1,26 @@
+name: Verify public VoiceVote Results API (read-only)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/smoke-public-results.mjs'
+      - '.github/workflows/verify-public-results.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-results:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out public source
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check real public results mode and privacy without saving
+        run: node scripts/smoke-public-results.mjs

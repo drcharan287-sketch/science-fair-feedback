@@ -38,3 +38,19 @@ body.bright{color-scheme:light;--ink:#092039;--muted:#36506a;--soft:#24435e;--pa
 @media(max-width:760px){.page-shell{width:calc(100% - 30px)}.topbar{min-height:84px;flex-wrap:wrap;padding:15px 0;gap:12px}.brand{font-size:1.35rem}.brand-mark{width:43px;height:43px}.main-nav{order:3;width:100%;justify-content:center}.nav-link{flex:1;text-align:center}.top-actions .icon-btn span{display:none}.top-actions .icon-btn{padding:10px 14px}.hero{display:block;min-height:unset;padding:45px 0 28px}.hero h1{font-size:clamp(2.65rem,9.2vw,4.7rem)}.hero-art{display:none}.hero-description{font-size:1rem}.hero-ctas>*{flex:1}.status-banner{align-items:flex-start}.last-updated{display:none}.stat-grid{gap:11px}.stat-card{padding:17px;border-radius:19px}.stat-value{font-size:clamp(2.4rem,9vw,4rem)}.stat-top{font-size:.62rem}.stat-icon{width:32px;height:32px;font-size:1.3rem}.feature-panel{padding:20px;border-radius:20px}.section-heading{gap:10px;flex-wrap:wrap}.feedback-cards{grid-template-columns:1fr}.quote-card{min-height:205px}.safe-pill{white-space:normal}.page-footer{flex-direction:column;padding-bottom:110px}.presenter-bar>span{display:none}.presenter-bar{width:auto;max-width:calc(100% - 20px);bottom:12px}.story-steps i{display:none}.story-steps{gap:9px}.story-steps span{padding:7px 9px;border:1px solid #ffffff32;border-radius:10px}}
 @media(max-width:420px){.hero-tags span{font-size:.72rem}.hero-ctas{flex-direction:column}.hero h1{font-size:2.55rem}.stat-top span:first-child{max-width:110px}.rank-card{grid-template-columns:44px minmax(0,1fr);gap:10px;padding:13px}.rank-number{width:43px;height:43px;font-size:1.4rem}.rank-score{grid-column:2;text-align:left}.presenter-bar button{font-size:.72rem}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+
+
+/* In full-screen presentation the first grade showcase fits much closer to
+   the board's visible area, including common 1366×768 smart-board settings. */
+html:fullscreen .topbar{min-height:73px}
+html:fullscreen .hero{min-height:245px;padding:16px 0 10px;grid-template-columns:1fr 270px}
+html:fullscreen .hero h1{font-size:clamp(2rem,3.2vw,3.7rem);margin:9px 0}
+html:fullscreen .hero-description{font-size:1rem;line-height:1.4;margin:6px 0}
+html:fullscreen .hero-tags{margin:8px 0}
+html:fullscreen .hero-ctas{margin-top:10px}
+html:fullscreen .hero-art{height:215px}
+html:fullscreen .status-banner{padding:10px 15px;margin:4px 0 14px}
+html:fullscreen .stat-card{padding:15px 18px}
+html:fullscreen .stat-value{font-size:clamp(2rem,3vw,3rem);margin-top:6px}
+html:fullscreen .main-grid{margin-top:17px}
+@media(max-width:760px){html:fullscreen .hero{display:block;min-height:auto;padding:35px 0 20px}}

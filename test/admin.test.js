@@ -517,3 +517,32 @@ test('public results publication changes require a real admin key and leave an a
   assert.equal(a.context.publicSummary_().mode,'DEMO');
   assert.equal(history[2][1],'PUBLIC_RESULTS_DEMO');
 });
+
+
+test('public results cache stays mode-scoped and is cleared on authorized publication changes',()=>{
+  const a=setup();
+  const data=new Map();
+  const touched=[];
+  a.context.CacheService={getScriptCache:()=>({
+    get:key=>data.get(key)||null,
+    put:(key,value,seconds)=>{data.set(key,value);touched.push([key,seconds]);},
+    remove:key=>{data.delete(key);}
+  })};
+  const first=a.context.publicSummary_();
+  assert.equal(first.mode,'DEMO');
+  const initialOpens=a.opens();
+  const again=a.context.publicSummary_();
+  assert.equal(again.mode,'DEMO');
+  assert.equal(a.opens(),initialOpens,'Demo cache avoids redundant catalog sheet reads');
+  assert.equal(touched[0][1],45);
+  a.context.adminSetPublicResultsMode(DEMO_KEY,'LIVE','Publish anonymous engagement only');
+  const live=a.context.publicSummary_();
+  assert.equal(live.mode,'LIVE');
+  assert.equal(live.acceptedVotes,2);
+  assert.equal('rankings' in live,false);
+  a.context.adminSetPublicResultsMode(DEMO_KEY,'DEMO','Revert to synthetic fair presentation');
+  const restored=a.context.publicSummary_();
+  assert.equal(restored.mode,'DEMO');
+  assert.equal('acceptedVotes' in restored,false);
+  assert.equal('rankings' in restored,false);
+});
