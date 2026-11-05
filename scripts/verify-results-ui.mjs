@@ -3,7 +3,8 @@
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 
-const site='https://drcharan287-sketch.github.io/science-fair-feedback/';
+const site=process.env.VOICEVOTE_SITE_BASE ||
+  'https://drcharan287-sketch.github.io/science-fair-feedback/';
 const fixtures={
   DEMO:{success:true,mode:'DEMO',totalProjects:407},
   LIVE:{success:true,mode:'LIVE',totalProjects:407,acceptedVotes:15,ratedProjects:8,
