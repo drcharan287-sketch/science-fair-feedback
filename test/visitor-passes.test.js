@@ -162,3 +162,51 @@ test('admin controls are present but do not embed private codes',()=>{
  }
  assert.match(h,/adminSetVisitorPassRequired/);
 });
+
+
+test('a failed audit write does not issue deferred visitor codes',()=>{
+ const a=setup();
+ a.faults.auditAppend=true;
+ assert.throws(()=>a.ctx.adminIssueVisitorPasses(KEY,2,'In-memory rehearsal of code issuance'),
+   /Simulated audit append outage/);
+ assert.equal(a.sheets['Visitor Passes'].getLastRow(),1,
+   'Only ledger headers should exist; no visitor code is issued');
+ assert.equal(a.sheets['Admin Action Log'].getLastRow(),1);
+ assert.equal(a.ctx.visitorPassMode_(),'preparation');
+});
+
+test('journal preflight protects reissue and activation when audit append fails',()=>{
+ const a=setup(),b=a.ctx.adminIssueVisitorPasses(KEY,1,'Initial dry-run batch');
+ assert.equal(b.issued,1);
+ a.faults.auditAppend=true;
+ assert.throws(()=>a.ctx.adminReissueVisitorPass(KEY,1,'Lost pass dry-run replacement'),
+   /Simulated audit append outage/);
+ assert.equal(a.sheets['Visitor Passes'].rows[1][2],'AVAILABLE');
+ assert.equal(a.sheets['Visitor Passes'].rows.length,2);
+ assert.throws(()=>a.ctx.adminSetVisitorPassRequired(KEY,true,'Simulated management decision'),
+   /Simulated audit append outage/);
+ assert.equal(a.ctx.visitorPassMode_(),'preparation');
+});
+
+test('partial pass reissue leaves a PENDING journal that blocks later changes',()=>{
+ const a=setup();
+ a.ctx.adminIssueVisitorPasses(KEY,1,'Original in-memory test pass');
+ const sheet=a.sheets['Visitor Passes'];
+ const orig=sheet.getRange.bind(sheet);
+ sheet.getRange=(row,col,h,w)=>{
+   const range=orig(row,col,h,w);
+   if(row===3 && col===1)range.setValues=()=>{
+     throw Error('Simulated replacement ledger insert failed');
+   };
+   return range;
+ };
+ assert.throws(()=>a.ctx.adminReissueVisitorPass(KEY,1,'Partial in-memory reissue failure'),
+   /needs reconciliation/);
+ assert.equal(sheet.rows[1][2],'REVOKED');
+ const journal=a.sheets['Admin Action Log'];
+ assert.equal(journal.rows.at(-1)[5],'PENDING');
+ assert.equal(journal.rows.at(-1)[1],'REISSUE_VISITOR_PASS');
+ assert.throws(()=>a.ctx.adminSetVisitorPassRequired(KEY,true,
+   'Attempt despite pending state'),/Unresolved PENDING admin audit/);
+ assert.equal(a.ctx.visitorPassMode_(),'preparation');
+});
