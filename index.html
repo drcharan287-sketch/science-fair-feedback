@@ -371,6 +371,7 @@ button:disabled, textarea:disabled, input:disabled {
     Submit Feedback →
   </button>
 
+  <p id="networkStatus" class="search-help" role="status" aria-live="polite" hidden></p>
   <div id="status" role="status" aria-live="polite"></div>
   <p id="receiptHint" style="margin-top:10px;font-size:12px;color:#cbd5e1;text-align:center;">Google will display a confirmation receipt. Do not submit again unless Google reports an error.</p>
 
@@ -455,7 +456,7 @@ function syncVoteStatus() {
   notice.textContent = voted
     ? "A vote has already been recorded in this browser. Additional feedback is blocked here. Ask an organizer if you need help."
     : pending
-      ? "A feedback submission was started in this browser. Voting is paused until you return from its Google receipt. If Google reported a failure, use the receipt's Return link."
+      ? "Feedback submission is awaiting confirmation. It may already be saved. Do not submit again. If Google showed a failure receipt, use its Return link. If the page failed to load or the receipt was lost, ask an organizer to check the Feedback sheet before trying again."
       : "";
   const passInput = document.getElementById('visitorPass');
   const newVisitor = document.getElementById('newVisitorBtn');
@@ -490,6 +491,18 @@ function syncVoteStatus() {
     document.querySelectorAll(".star").forEach(function(star) { star.disabled = false; });
   }
 }
+// Browser connectivity is a hint, not proof of server reachability.
+// Never silently clear a pending submission when the connection fails.
+function updateConnectionStatus() {
+  const notice = document.getElementById("networkStatus");
+  if (!notice) return;
+  const offline = Boolean(window.navigator && window.navigator.onLine === false);
+  notice.hidden = !offline;
+  notice.textContent = offline
+    ? "You appear to be offline. Reconnect before submitting. Your feedback is still on this page."
+    : "";
+}
+
 function readReceiptReturn() {
   const search = new URLSearchParams(window.location?.search || "");
   if (search.get("vote") === "success") {
@@ -601,7 +614,7 @@ function startCatalog() {
     updateGradeLabels();
     syncVoteStatus();
   }).catch(function(error) {
-    catalogStatus.textContent = "Unable to load projects: " + error.message + " Check your Projects sheet or deployment, then retry.";
+    catalogStatus.textContent = "Unable to load projects: " + error.message + " Check your connection, then retry. If the problem continues, ask an organizer to check the Projects sheet or deployment.";
     retryCatalogBtn.hidden = false;
     console.error("VoiceVote project catalog error:", error);
   });
@@ -609,6 +622,16 @@ function startCatalog() {
 
 // Initialize the catalog first so its filtering runs before label formatting.
 readReceiptReturn();
+updateConnectionStatus();
+if (typeof window.addEventListener === "function") {
+  window.addEventListener("online", updateConnectionStatus);
+  window.addEventListener("offline", updateConnectionStatus);
+  // When navigating back to a cached page, re-evaluate persistent vote state.
+  window.addEventListener("pageshow", function() {
+    updateConnectionStatus();
+    syncVoteStatus();
+  });
+}
 startCatalog();
 classSelect.addEventListener("change", updateSectionLabels);
 
@@ -751,6 +774,13 @@ function submitFeedback() {
   }
   if (!data.studentClass || !data.section || !data.project || !data.feedback || !data.rating) {
     statusElement.textContent = 'Please choose a class, section and project, enter feedback, and select a star rating.';
+    return;
+  }
+  // Avoid an avoidable failed navigation when the browser knows it is offline.
+  // Keep any entered text editable and DO NOT create a pending voting lock.
+  if (window.navigator && window.navigator.onLine === false) {
+    updateConnectionStatus();
+    statusElement.textContent = 'You appear offline. Reconnect before submitting. Nothing was sent to Google.';
     return;
   }
   if (!hasValidWebAppUrl()) {
