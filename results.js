@@ -24,7 +24,8 @@
     if(txt!==undefined)el.textContent=String(txt);
     return el;
   };
-  const fmt = x => Number.isFinite(Number(x)) ? new Intl.NumberFormat('en-IN').format(Number(x)) : '—';
+  const fmt = x => (x === null || x === undefined || x === '') ? '—' :
+    Number.isFinite(Number(x)) ? new Intl.NumberFormat('en-IN').format(Number(x)) : '—';
   const escapeLess = value => Math.max(0,Math.min(100,Number(value)||0));
   function samplePayload() {
     return {mode:'DEMO',totalProjects:lastCatalogCount,acceptedVotes:null,ratedProjects:null,
@@ -46,7 +47,7 @@
     put('lastUpdated',demo?'Sample experience':data.updatedAt?'Updated '+new Date(data.updatedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'Read-only display');
     put('totalProjects',fmt(data.totalProjects ?? lastCatalogCount));
     put('totalVotes',fmt(data.acceptedVotes));put('ratedProjects',fmt(data.ratedProjects));
-    put('languageCount',fmt((data.languages||[]).filter(x=>x.count>0).length));
+    put('languageCount',demo?'—':fmt((data.languages||[]).filter(x=>x.count>0).length));
     put('voteMetricHint',demo?'Real vote totals are not published in preview':'Valid anonymous ratings');
     put('rankingsHeading',demo?'Ideas worth celebrating.':live?'Discoveries in motion.':'Audience favourites by grade.');
     put('rankingsSubheading',demo?'Illustrative project cards, not actual rankings.':
