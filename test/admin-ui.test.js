@@ -10,7 +10,7 @@ function harness() {
   class Element {
     constructor(id='') {
       this.id=id;this.value='';this.textContent='';this.hidden=false;
-      this.disabled=false;this.children=[];this.listeners={};
+      this.disabled=false;this.children=[];this.listeners={};this.open=false;
       this.classList={toggle() {},add() {},remove() {}};
     }
     replaceChildren(...items) {this.children=[...items];}
@@ -20,6 +20,8 @@ function harness() {
     dispatchEvent(event){for(const fn of this.listeners[event.type] || [])fn.call(this,event);}
     click(){if(!this.disabled)this.dispatchEvent({type:'click'});}
     focus(){this.focused=true;}
+    showModal(){this.open=true;}
+    close(){this.open=false;this.dispatchEvent({type:'close'});}
     scrollIntoView(){}
     select(){}
   }
@@ -243,7 +245,15 @@ test('event-day project tab uses authenticated RPCs and preserves immutable IDs 
   assert.match(a.elements.managerImpact.textContent,/4 valid vote/);
   a.elements.managerName.value='VoiceVote AI Project';
   a.elements.managerReason.value='Teacher approved spelling correction';
+  const beforeEdit=a.requests.length;
   a.dispatch('managerSave');
+  assert.equal(a.elements.managerConfirmDialog.open,true);
+  assert.equal(a.elements.managerConfirmTitle.textContent,'Save project corrections');
+  assert.equal(a.elements.managerConfirmProject.textContent,'VoiceVote AI Project');
+  assert.match(a.elements.managerConfirmRisk.textContent,/Permanent project ID stays VVP-NINE/);
+  assert.equal(a.requests.length,beforeEdit,'Opening confirmation must never write');
+  a.dispatch('managerConfirmProceed');
+  assert.equal(a.elements.managerConfirmDialog.open,false);
   const edit=a.requests.at(-1);
   assert.equal(edit.name,'adminChangeProject');
   assert.equal(edit.args[1].action,'EDIT');
@@ -269,7 +279,16 @@ test('event-day Admin can stage add, deactivation and reactivate with no browser
   a.elements.managerSection.value='Keats';
   a.elements.managerName.value='Solar Purifier';
   a.elements.managerReason.value='Approved after morning roll call';
+  const initialCalls=a.requests.length;
   a.dispatch('managerForm','submit');
+  assert.equal(a.elements.managerConfirmDialog.open,true);
+  assert.equal(a.elements.managerConfirmTitle.textContent,'Add new project');
+  assert.equal(a.requests.length,initialCalls);
+  a.dispatch('managerConfirmCancel');
+  assert.equal(a.elements.managerConfirmDialog.open,false);
+  assert.equal(a.requests.length,initialCalls,'Cancel must not invoke Admin mutations');
+  a.dispatch('managerForm','submit');
+  a.dispatch('managerConfirmProceed');
   const add=a.requests.at(-1);
   assert.equal(add.name,'adminChangeProject');
   assert.equal(add.args[1].action,'ADD');
@@ -283,10 +302,31 @@ test('event-day Admin can stage add, deactivation and reactivate with no browser
   a.dispatch('managerProject','change');
   a.elements.managerReason.value='Project temporarily withdrawn by teacher';
   a.dispatch('managerDeactivate');
+  assert.equal(a.elements.managerConfirmDialog.open,true);
+  assert.match(a.elements.managerConfirmRisk.textContent,/hide 2 valid vote/);
+  a.dispatch('managerConfirmProceed');
   const deactivate=a.requests.at(-1);
   assert.equal(deactivate.args[1].action,'DEACTIVATE');
   assert.equal(deactivate.args[1].expectedVersion,'digest');
   assert.equal(deactivate.args[1].confirmAffectedVotes,true);
   assert.equal(a.elements.managerDeactivate.disabled,true);
   assert.ok(!a.requests.some(r=>r.name==='doPost'||r.name==='saveFeedback'));
+});
+
+test('sign-out closes project confirmation without dispatching any pending edit',()=>{
+  const a=harness();a.login(overview());a.dispatch('projectsTab');
+  a.requests.at(-1).success({projects:[{
+    id:'VVP-NINE',grade:'9',section:'Keats',project:'VoiceVote App',
+    active:true,sourceKey:'IX_KEATS|7|1',version:'version-1',votes:0
+  }],total:1,active:1,pendingAuditActions:0});
+  a.elements.managerProject.value='VVP-NINE';a.dispatch('managerProject','change');
+  a.elements.managerReason.value='Teacher approved temporary deactivation';
+  const before=a.requests.length;
+  a.dispatch('managerDeactivate');
+  assert.equal(a.elements.managerConfirmDialog.open,true);
+  a.dispatch('logoutBtn');
+  assert.equal(a.elements.managerConfirmDialog.open,false);
+  a.dispatch('managerConfirmProceed');
+  assert.equal(a.requests.length,before,'Stale confirmation must not mutate after logout');
+  assert.equal(a.elements.managerConfirmProject.textContent,'');
 });
