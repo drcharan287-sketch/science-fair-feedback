@@ -158,6 +158,62 @@
       card.append(number,name,score);host.appendChild(card);
     });
   }
+  function closeReviews(silent){
+    reviewEpoch++;
+    if(reviewCleanup){reviewCleanup();reviewCleanup=null;}
+    reviewBusy=false;reviewProject=null;reviewOffset=0;
+    $('projectFeedbackOverlay').hidden=true;
+    $('projectFeedbackList').replaceChildren();
+    $('projectFeedbackMore').hidden=true;
+    document.body.classList.remove('project-feedback-open');
+    if(!silent&&reviewTrigger&&reviewTrigger.isConnected)reviewTrigger.focus();
+    reviewTrigger=null;
+  }
+  function addReview(r,index){
+    const card=make('article','project-feedback-card');
+    const meta=make('div','project-feedback-meta');
+    const stars=Math.max(1,Math.min(5,Number(r.rating)||1));
+    meta.append(make('span','feedback-stars','★ '+stars+' / 5'));
+    meta.append(make('span','feedback-lang',LANGUAGES[r.language]||'Original language'));
+    meta.append(make('span','', 'Feedback '+(index+1)));
+    card.appendChild(meta);
+    const cols=make('div','project-feedback-columns');
+    const original=make('section','project-feedback-text');
+    original.append(make('strong','','Original feedback'));
+    const content=make('p','',String(r.original||''));content.dir='auto';
+    original.append(content);cols.append(original);
+    const english=make('section','project-feedback-text translated');
+    english.append(make('strong','','English translation'));
+    const translation=String(r.translation||'');
+    const label=r.language==='en-IN'?'Original submitted in English.':
+      (!translation||translation.startsWith('Translation unavailable:')?
+        'Translation unavailable; original text preserved.':translation);
+    english.append(make('p','',label));cols.append(english);
+    card.append(cols);$('projectFeedbackList').append(card);
+  }
+  function openReviews(project,trigger){
+    if(!presenterVerified||!['DEMO','PUBLISHED'].includes(mode))return;
+    closeReviews(true);
+    reviewProject={id:String(project.id),name:String(project.project)};
+    reviewTrigger=trigger;
+    put('projectFeedbackTitle',project.project);
+    put('projectFeedbackContext','Grade '+project.grade+' · '+project.section+' · '+
+      fmt(project.votes)+(mode==='DEMO'?' sample':'')+' ratings');
+    put('projectFeedbackEyebrow',mode==='DEMO'?'DEMO · FICTIONAL FEEDBACK':
+      'PRIVATE LIVE · CAPTURED FEEDBACK');
+    put('projectFeedbackNote',mode==='DEMO'?
+      'Fictional examples to demonstrate the multilingual feedback experience.':
+      'Real comments are shown only on request. Contact details are masked when recognized; use discretion when presenting personal text.');
+    put('projectFeedbackStatus','');
+    $('projectFeedbackOverlay').hidden=false;
+    document.body.classList.add('project-feedback-open');
+    $('projectFeedbackDialog').focus();
+    if(mode==='DEMO'){
+      const examples=DEMO_FEEDBACK[project.id]||[];
+      examples.forEach(addReview);
+      put('projectFeedbackStatus',examples.length+' fictional example(s) · no visitor submissions');
+    }else fetchReviews();
+  }
   function renderLanguages(data) {
     const host=$('languageBars');host.replaceChildren();
     const list=(data.languages||[]).filter(r=>r.count>0).slice(0,5);
