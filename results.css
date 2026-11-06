@@ -147,3 +147,54 @@ html:fullscreen .board-qr-expand{min-height:27px;margin-top:3px;font-size:.63rem
  html:fullscreen .hero{display:block;min-height:auto}
  html:fullscreen .hero-art{height:auto;margin:12px 0}
 }
+
+/* Faculty LIVE is a board-first dashboard: no introductory hero/QR, no
+   educational walkthrough below the charts. The DEMO view remains unchanged. */
+body[data-results-mode="PUBLISHED"] .topbar,
+body[data-results-mode="PUBLISHED"] .hero,
+body[data-results-mode="PUBLISHED"] .feedback-section,
+body[data-results-mode="PUBLISHED"] .story-strip,
+body[data-results-mode="PUBLISHED"] .page-footer {
+  display:none!important;
+}
+body[data-results-mode="PUBLISHED"] .page-shell { padding-top:14px; }
+body[data-results-mode="PUBLISHED"] .status-banner {
+  margin:0 0 22px; padding:16px 22px; min-height:90px;
+}
+.status-banner-text { min-width:0; flex:1; }
+.status-banner-meta {
+  margin-left:auto;display:flex;align-items:flex-end;flex-direction:column;
+  justify-content:center;gap:10px;min-width:0;
+}
+.status-banner-meta .last-updated { display:block; margin-left:0; }
+.live-banner-controls { display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end; }
+.live-banner-controls button {
+  min-height:35px;padding:7px 11px;border:1px solid var(--outline);
+  border-radius:9px;color:var(--ink);font-size:.77rem;font-weight:750;
+  background:rgba(48,100,137,.35);white-space:nowrap;
+}
+.live-banner-controls button:hover { background:rgba(96,221,246,.2); }
+body[data-results-mode="PUBLISHED"] .status-banner #modeTitle {
+  color:#f5fbff;font-size:clamp(1.12rem,1.75vw,1.52rem);
+  letter-spacing:-.02em;text-transform:none;line-height:1.22;
+}
+body[data-results-mode="PUBLISHED"] .status-banner #modeDetails {
+  font-size:clamp(.87rem,1.05vw,1.02rem);
+  color:#b6eaf5;line-height:1.4;margin-top:5px;
+}
+body.bright[data-results-mode="PUBLISHED"] .status-banner #modeTitle { color:#0b344f; }
+body.bright[data-results-mode="PUBLISHED"] .status-banner #modeDetails { color:#2e546c; }
+body.bright .live-banner-controls button {background:#e5f4fd;color:#0b3b57}
+@media(max-width:950px) {
+  body[data-results-mode="PUBLISHED"] .status-banner {flex-wrap:wrap;gap:12px;}
+  body[data-results-mode="PUBLISHED"] .status-banner-meta {
+    flex:1 1 100%;margin-left:0;align-items:flex-start;padding-left:0;
+  }
+  body[data-results-mode="PUBLISHED"] .live-banner-controls {justify-content:flex-start;}
+}
+@media(max-width:760px) {
+  body[data-results-mode="PUBLISHED"] .page-shell{padding-top:8px}
+  body[data-results-mode="PUBLISHED"] .status-banner{padding:15px 16px}
+  body[data-results-mode="PUBLISHED"] .status-banner-meta .last-updated{display:block}
+  .live-banner-controls button{font-size:.73rem;padding:7px 9px}
+}
