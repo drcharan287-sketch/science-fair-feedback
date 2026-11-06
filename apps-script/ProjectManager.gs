@@ -68,7 +68,10 @@ function adminGetManagedProjects(key) {
   adminRequireKey_(key);
   const ss=adminSheet_(),source=voiceVoteManagerRows_(ss);
   return {
-    projects:source.items,
+    projects:source.items.map(function(item){
+      const tally=voiceVoteManagerVotes_(ss,item);
+      return Object.assign({},item,{votes:tally.count,legacyVotes:tally.legacy});
+    }),
     total:source.items.length,
     active:source.items.filter(function(item){return item.active}).length,
     pendingAuditActions:adminAuditPending_(ss).length
