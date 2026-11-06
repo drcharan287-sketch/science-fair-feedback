@@ -49,7 +49,7 @@ try{
     await page.locator('#adminKey').fill('FAKE-ADMIN-KEY-NEVER-USED-IN-PRODUCTION');
     await page.locator('#loginBtn').click();
     await page.locator('#projectsTab').click();
-    await page.locator('#managerProject option').first().waitFor();
+    await page.waitForFunction(()=>document.querySelector('#managerProject')?.options.length===3);
     assert.equal(await page.locator('#projectsPanel').isVisible(),true);
     assert.match(await page.locator('#managerStatus').innerText(),/1 active of 2 project/i);
     await page.locator('#managerGrade').selectOption('9');
