@@ -1,0 +1,45 @@
+name: Final 7 November VoiceVote published acceptance (no-save)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-final-event-acceptance.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-final-event-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pre-event-signoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify 424 authoritative projects, IDs, grade/section mapping
+        run: node scripts/verify-authoritative-catalog.mjs
+      - name: Compare real Apps Script GET catalog to all authoritative project IDs and titles
+        run: node scripts/verify-live-final-catalog.mjs
+      - name: Wait for exactly published Pages HTML CSS JS and 424-project snapshot (GET only)
+        run: node scripts/wait-for-pages.mjs
+      - name: Install isolated browser driver
+        run: npm install --no-save playwright-core
+      - name: Verify live public grade/section dropdowns and removal of legacy demo projects
+        run: node scripts/verify-hosted-ui.mjs
+      - name: Verify live quick project lookup, visitor voting lock and deferred passes
+        run: node scripts/verify-hosted-search.mjs
+      - name: Verify private faculty Results, language participation and ranked projects on board and phones
+        run: node scripts/verify-results-ui.mjs
+      - name: Verify no-save owner demo and English Telugu Hindi transcript simulation
+        run: node scripts/verify-owner-demo.mjs
+      - name: Verify real Google English translation preview in five no-save cases
+        run: node scripts/verify-live-translation-preview.mjs
+      - name: Verify Google Apps Script POST permission without casting a vote
+        run: node scripts/verify-post-probe.mjs
