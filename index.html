@@ -372,6 +372,18 @@ button:disabled, textarea:disabled, input:disabled {
 
   <label for="feedback">Your Feedback</label>
   <textarea id="feedback" maxlength="2000" placeholder="Speak or type your feedback here..."></textarea>
+  <section id="englishTranslationPanel" class="translation-panel" aria-label="English translation preview" hidden>
+    <div class="translation-heading">
+      <div>
+        <span class="translation-eyebrow">✦ AI-POWERED TRANSLATION</span>
+        <h4>English Translation</h4>
+      </div>
+      <button type="button" id="refreshTranslationBtn" class="translation-refresh" disabled>↻ Retry</button>
+    </div>
+    <p id="englishTranslationStatus" class="translation-status" role="status" aria-live="polite">Finish speaking or typing to see the English translation.</p>
+    <p id="englishTranslationText" class="translation-output" lang="en" aria-live="polite"></p>
+    <p class="translation-note">Preview only. The original feedback is submitted in its chosen language; the final English translation is created when a real vote is saved.</p>
+  </section>
   </section>
 
   <section class="step-section step-rate" aria-labelledby="rateHeading">
@@ -400,7 +412,7 @@ button:disabled, textarea:disabled, input:disabled {
     <p id="presenterReceiptProject"></p>
     <p id="presenterReceiptStars"></p>
     <p id="presenterReceiptFeedback"></p>
-    <p class="owner-receipt-note">This is a local example, not a Google confirmation. The rating is not counted, browser voting eligibility is unchanged, and AI translation was not called.</p>
+    <p class="owner-receipt-note">This is a local example, not a Google confirmation. The rating is not counted and browser voting eligibility is unchanged. Any English translation shown above is a preview only, not saved feedback.</p>
     <button id="presenterTryAgain" type="button">↻ Demonstrate Again</button>
   </section>
   <div class="footer">
@@ -437,6 +449,13 @@ let recognition = null;
 let isRecording = false;
 let isSubmitting = false;
 let voiceErrorShown = false;
+// Translation preview is independent of real feedback submission and browser
+// eligibility. Every new edit/language switch invalidates older responses.
+let translationTimer = null;
+let translationPending = null;
+let translationVersion = 0;
+let translationLastKey = '';
+let translationLastResult = '';
 
 function hasLocalVote() {
   try { return window.localStorage?.getItem(VOTED_STORAGE_KEY) === "1"; }
@@ -745,20 +764,24 @@ function startRecording() {
   recognition.lang = document.getElementById("language").value;
   recognition.continuous = true;
   recognition.interimResults = true;
-  let finalTranscript = document.getElementById("feedback").value.trim();
+  // Web Speech often reports the ENTIRE recognition result list repeatedly.
+  // A new final event can include a prior final result again. Never append
+  // every event to a growing buffer: rebuild from results by stable index.
+  const speechBase = document.getElementById("feedback").value.trim();
   voiceErrorShown = false;
+  invalidateTranslationPreview('Listening… English translation follows when you stop.');
 
   recognition.onresult = function(event) {
-    let interim = "";
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const transcript = event.results[i][0].transcript;
-      if (event.results[i].isFinal) {
-        finalTranscript += (finalTranscript ? " " : "") + transcript.trim();
-      } else {
-        interim += transcript;
-      }
+    const phrases = [];
+    // Deliberately scan from 0, not event.resultIndex: older final segments
+    // remain in event.results but are NOT appended again on re-emission.
+    for (let i = 0; i < event.results.length; i++) {
+      const result = event.results[i];
+      const transcript = result && result[0] ? String(result[0].transcript || '').trim() : '';
+      if (transcript) phrases.push(transcript);
     }
-    document.getElementById("feedback").value = finalTranscript + (interim ? " " + interim : "");
+    document.getElementById("feedback").value =
+      [speechBase].concat(phrases).filter(Boolean).join(' ');
   };
 
   recognition.onerror = function(event) {
@@ -774,6 +797,7 @@ function startRecording() {
     statusElement.textContent = help;
     isRecording = false;
     syncVoteStatus();
+    scheduleEnglishTranslation();
   };
   recognition.onend = function() {
     isRecording = false;
@@ -782,6 +806,7 @@ function startRecording() {
     if (!isSubmitting && !voiceErrorShown) {
       statusElement.textContent = "Recording stopped. Review or edit your transcript before submitting.";
     }
+    scheduleEnglishTranslation();
   };
 
   try {
@@ -843,6 +868,7 @@ document.getElementById('presenterTryAgain').addEventListener('click',function()
   if (!presenterVerified) return;
   rating=0;
   document.getElementById('feedback').value='';
+  invalidateTranslationPreview('Speak or type feedback to see an English translation.');
   document.querySelectorAll('.star').forEach(function(star) {
     star.classList.remove('active');
     star.setAttribute('aria-pressed','false');
