@@ -15,7 +15,7 @@
 
 ## AI — truthful demonstration
 
-Speech-to-text uses the browser's native recognition API when supported and appropriate microphone permission is granted. Real submit translates supported non-English feedback into English in the Apps Script backend. **The owner demo deliberately does not call the translation backend**, so it does not display a pretend live translation or send user speech via an extra app endpoint. Presenters may explain the real translation stage using the fixed **From voice to insight** educational section on Results, without live submissions.
+Speech-to-text uses the browser's native recognition API when supported and appropriate microphone permission is granted. Real submit translates supported non-English feedback into English in the Apps Script backend. **The owner demo and the parent Voting page now display a real English translation preview immediately below the editable transcript for Telugu, Hindi, Tamil and Kannada.** The preview calls the existing Google `LanguageApp.translate` service through a read-only `action=translatePreview` HTTPS POST using a hidden frame and a verified message response. Transcripts are never sent in a URL, and preview requests cannot save feedback or consume a vote. The preview refreshes after speech stops or typing pauses; it may fail if Google is unavailable, without blocking real feedback. English-only hides the preview. The submitted original text remains editable and authoritative; a **separate** translation is generated during a real save. Presenters can demonstrate actual translation without casting a test vote.
 
 ## Feedback, rankings and privacy
 

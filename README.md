@@ -6,7 +6,7 @@ VoiceVote is a multilingual, AI-assisted science fair feedback experience: **407
 
 **Live pages:** [Parent Voting UI](https://drcharan287-sketch.github.io/science-fair-feedback/) · [Audience Results & Demo](https://drcharan287-sketch.github.io/science-fair-feedback/results.html)
 
-**Owner demonstration:** Use the authenticated Admin Console → **Owner Demonstration** to generate a temporary two-hour link that opens the SAME Voting page in no-write demo mode. It can rehearse repeatedly even on a browser that previously voted. No public Practice app, feedback submission, translation request, vote-lock reset or ranking change occurs. Parents never see a Practice invitation. See [Audience and owner operations guide](docs/AUDIENCE_RESULTS_EXPERIENCE.md).
+**Owner demonstration:** Use the authenticated Admin Console → **Owner Demonstration** to generate a temporary two-hour link that opens the SAME Voting page in no-write demo mode. It can rehearse repeatedly even on a browser that previously voted. No public Practice app, feedback submission, vote-lock reset or ranking change occurs. Parents never see a Practice invitation. The SAME Voting UI now shows an English translation preview below Telugu/Hindi/Tamil/Kannada feedback, using the real translation service via a separate **no-save POST**. Preview text is not recorded; the real vote handler performs its own translation on actual save. See [Audience and owner operations guide](docs/AUDIENCE_RESULTS_EXPERIENCE.md).
 
 **How to operate the audience screen safely:** [Audience Results guide](docs/AUDIENCE_RESULTS_EXPERIENCE.md). **Default = DEMO** (fictional sample display, no real rankings), with real Live totals and Published grade rankings available only after an authenticated, audited organizer decision.
 

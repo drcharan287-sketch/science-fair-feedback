@@ -372,6 +372,18 @@ button:disabled, textarea:disabled, input:disabled {
 
   <label for="feedback">Your Feedback</label>
   <textarea id="feedback" maxlength="2000" placeholder="Speak or type your feedback here..."></textarea>
+  <section id="englishTranslationPanel" class="translation-panel" aria-label="English translation preview" hidden>
+    <div class="translation-heading">
+      <div>
+        <span class="translation-eyebrow">✦ AI-POWERED TRANSLATION</span>
+        <h4>English Translation</h4>
+      </div>
+      <button type="button" id="refreshTranslationBtn" class="translation-refresh" disabled>↻ Retry</button>
+    </div>
+    <p id="englishTranslationStatus" class="translation-status" role="status" aria-live="polite">Finish speaking or typing to see the English translation.</p>
+    <p id="englishTranslationText" class="translation-output" lang="en" aria-live="polite"></p>
+    <p class="translation-note">Preview only. The original feedback is submitted in its chosen language; the final English translation is created when a real vote is saved.</p>
+  </section>
   </section>
 
   <section class="step-section step-rate" aria-labelledby="rateHeading">
@@ -400,7 +412,7 @@ button:disabled, textarea:disabled, input:disabled {
     <p id="presenterReceiptProject"></p>
     <p id="presenterReceiptStars"></p>
     <p id="presenterReceiptFeedback"></p>
-    <p class="owner-receipt-note">This is a local example, not a Google confirmation. The rating is not counted, browser voting eligibility is unchanged, and AI translation was not called.</p>
+    <p class="owner-receipt-note">This is a local example, not a Google confirmation. The rating is not counted and browser voting eligibility is unchanged. Any English translation shown above is a preview only, not saved feedback.</p>
     <button id="presenterTryAgain" type="button">↻ Demonstrate Again</button>
   </section>
   <div class="footer">
@@ -437,6 +449,13 @@ let recognition = null;
 let isRecording = false;
 let isSubmitting = false;
 let voiceErrorShown = false;
+// Translation preview is independent of real feedback submission and browser
+// eligibility. Every new edit/language switch invalidates older responses.
+let translationTimer = null;
+let translationPending = null;
+let translationVersion = 0;
+let translationLastKey = '';
+let translationLastResult = '';
 
 function hasLocalVote() {
   try { return window.localStorage?.getItem(VOTED_STORAGE_KEY) === "1"; }
@@ -733,6 +752,183 @@ document.querySelectorAll(".star").forEach(function(star) {
   });
 });
 
+function mergeSpeechRecognitionResults(results) {
+  let spoken = '';
+  for (let i = 0; i < results.length; i++) {
+    const item = results[i];
+    const phrase = item && item[0] ? String(item[0].transcript || '').trim() : '';
+    if (!phrase) continue;
+    if (!spoken) { spoken = phrase; continue; }
+    const old = spoken.toLocaleLowerCase();
+    const next = phrase.toLocaleLowerCase();
+    // Some recognition engines return a cumulative replacement ("science",
+    // then "science fair"), not a separate utterance. Replace, don't repeat.
+    if (next === old || old.endsWith(' ' + next)) continue;
+    if (next.startsWith(old + ' ')) { spoken = phrase; continue; }
+    spoken += ' ' + phrase;
+  }
+  return spoken;
+}
+
+function cleanupTranslationRequest() {
+  if (!translationPending) return;
+  const pending = translationPending;
+  translationPending = null;
+  clearTimeout(pending.timeout);
+  if (pending.form && pending.form.parentNode) pending.form.remove();
+  if (pending.frame && pending.frame.parentNode) pending.frame.remove();
+}
+function invalidateTranslationPreview(message) {
+  translationVersion++;
+  if (translationTimer) { clearTimeout(translationTimer); translationTimer=null; }
+  cleanupTranslationRequest();
+  translationLastKey = '';
+  translationLastResult = '';
+  const panel = document.getElementById('englishTranslationPanel');
+  const language = document.getElementById('language').value;
+  panel.hidden = language === 'en-IN';
+  document.getElementById('englishTranslationText').textContent='';
+  document.getElementById('englishTranslationStatus').textContent = message ||
+    'Finish speaking or typing to see the English translation.';
+  document.getElementById('refreshTranslationBtn').disabled = true;
+}
+function scheduleEnglishTranslation(immediate) {
+  translationVersion++;
+  if (translationTimer) { clearTimeout(translationTimer); translationTimer=null; }
+  cleanupTranslationRequest();
+  const language=document.getElementById('language').value;
+  const panel=document.getElementById('englishTranslationPanel');
+  const text=document.getElementById('feedback').value.trim();
+  panel.hidden = language === 'en-IN';
+  const status=document.getElementById('englishTranslationStatus');
+  const output=document.getElementById('englishTranslationText');
+  const refresh=document.getElementById('refreshTranslationBtn');
+  if (panel.hidden) {
+    status.textContent='';
+    output.textContent='';
+    refresh.disabled=true;
+    translationLastKey='';
+    translationLastResult='';
+    return;
+  }
+  if (!text || isRecording || isSubmitting || isVoteLocked()) {
+    output.textContent='';
+    status.textContent=isRecording?'Listening… Translation follows when you stop.':
+      !text?'Speak or type your feedback to see its English translation.':
+        'Translation preview is unavailable while voting is locked or submitting.';
+    refresh.disabled=true;
+    return;
+  }
+  refresh.disabled=false;
+  const key=language+'\n'+text;
+  if (key===translationLastKey && translationLastResult && !immediate) {
+    output.textContent=translationLastResult;
+    status.textContent='English translation ready (preview).';
+    return;
+  }
+  output.textContent='';
+  status.textContent='Preparing English translation…';
+  const version=translationVersion;
+  translationTimer=setTimeout(function() {
+    translationTimer=null;
+    if (version===translationVersion) requestEnglishTranslation(language,text,key,version);
+  },immediate?0:1300);
+}
+function requestEnglishTranslation(language,text,key,version) {
+  if (version!==translationVersion || isVoteLocked() || isRecording || isSubmitting) return;
+  const status=document.getElementById('englishTranslationStatus');
+  let requestId;
+  try { requestId=secureSubmissionId(); }
+  catch (_) {
+    status.textContent='Translation preview is unavailable in this browser.';
+    return;
+  }
+  // A hidden HTTPS form POST keeps free-text out of URLs and browser JSONP.
+  // It NEVER sends action=save or changes the real vote guard.
+  const frame=document.createElement('iframe');
+  frame.name='voicevote_translate_'+requestId.replace(/-/g,'');
+  frame.setAttribute('aria-hidden','true');
+  frame.style.cssText='position:absolute;width:0;height:0;border:0;visibility:hidden';
+  const form=document.createElement('form');
+  form.method='POST';
+  form.action=SCRIPT_URL.trim();
+  form.target=frame.name;
+  form.style.display='none';
+  const fields={action:'translatePreview',requestId:requestId,
+    language:language,feedback:text};
+  Object.keys(fields).forEach(function(name) {
+    const input=document.createElement('input');
+    input.type='hidden';input.name=name;input.value=fields[name];
+    form.appendChild(input);
+  });
+  document.body.appendChild(frame);
+  document.body.appendChild(form);
+  const timeout=setTimeout(function() {
+    if (!translationPending || translationPending.id!==requestId) return;
+    cleanupTranslationRequest();
+    status.textContent='English preview timed out. Retry or submit the original feedback.';
+  },20000);
+  translationPending={id:requestId,version:version,key:key,
+    frame:frame,form:form,timeout:timeout};
+  status.textContent='Translating to English…';
+  try { form.submit(); }
+  catch (_) {
+    cleanupTranslationRequest();
+    status.textContent='Could not open English preview. Please retry.';
+  }
+}
+window.addEventListener('message',function(event) {
+  const payload=event && event.data;
+  if (!payload || payload.type!=='voicevote-translation-preview' ||
+      !translationPending || payload.requestId!==translationPending.id ||
+      translationPending.version!==translationVersion) return;
+  // Only accept Google Apps Script HTML responses. The unpredictable requestId
+  // prevents unrelated pages/windows from forging a translation response.
+  let allowed=false;
+  try {
+    const origin=new URL(event.origin);
+    allowed=origin.protocol==='https:' &&
+      (origin.hostname==='script.google.com' ||
+       origin.hostname==='script.googleusercontent.com' ||
+       origin.hostname.endsWith('.googleusercontent.com'));
+  } catch (_) { return; }
+  if (!allowed) return;
+  const key=translationPending.key;
+  const language=document.getElementById('language').value;
+  const current=language+'\n'+document.getElementById('feedback').value.trim();
+  cleanupTranslationRequest();
+  if (key!==current || isRecording || isVoteLocked()) return;
+  const status=document.getElementById('englishTranslationStatus');
+  const output=document.getElementById('englishTranslationText');
+  if (payload.success===true && typeof payload.translation==='string' &&
+      payload.translation.trim()) {
+    const translated=payload.translation.trim();
+    // Free-text from translators is NEVER interpreted as markup.
+    output.textContent=translated;
+    status.textContent='English translation ready (preview).';
+    translationLastKey=key;
+    translationLastResult=translated;
+    document.getElementById('refreshTranslationBtn').textContent='↻ Refresh';
+  } else {
+    output.textContent='';
+    status.textContent=typeof payload.message==='string' ? payload.message :
+      'English translation is temporarily unavailable. You can retry.';
+  }
+});
+document.getElementById('feedback').addEventListener('input',function() {
+  scheduleEnglishTranslation(false);
+});
+document.getElementById('language').addEventListener('change',function() {
+  translationLastKey='';
+  translationLastResult='';
+  scheduleEnglishTranslation(false);
+});
+document.getElementById('refreshTranslationBtn').addEventListener('click',function() {
+  translationLastKey='';
+  translationLastResult='';
+  scheduleEnglishTranslation(true);
+});
+
 function startRecording() {
   if (isRecording || isSubmitting || isVoteLocked()) return;
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -745,20 +941,19 @@ function startRecording() {
   recognition.lang = document.getElementById("language").value;
   recognition.continuous = true;
   recognition.interimResults = true;
-  let finalTranscript = document.getElementById("feedback").value.trim();
+  // Web Speech often reports the ENTIRE recognition result list repeatedly.
+  // A new final event can include a prior final result again. Never append
+  // every event to a growing buffer: rebuild from results by stable index.
+  const speechBase = document.getElementById("feedback").value.trim();
   voiceErrorShown = false;
+  invalidateTranslationPreview('Listening… English translation follows when you stop.');
 
   recognition.onresult = function(event) {
-    let interim = "";
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const transcript = event.results[i][0].transcript;
-      if (event.results[i].isFinal) {
-        finalTranscript += (finalTranscript ? " " : "") + transcript.trim();
-      } else {
-        interim += transcript;
-      }
-    }
-    document.getElementById("feedback").value = finalTranscript + (interim ? " " + interim : "");
+    // Recompute from the complete result list; even a re-emitted resultIndex
+    // cannot append the same words two or three times.
+    const spoken=mergeSpeechRecognitionResults(event.results);
+    document.getElementById("feedback").value =
+      [speechBase,spoken].filter(Boolean).join(' ');
   };
 
   recognition.onerror = function(event) {
@@ -774,6 +969,7 @@ function startRecording() {
     statusElement.textContent = help;
     isRecording = false;
     syncVoteStatus();
+    scheduleEnglishTranslation();
   };
   recognition.onend = function() {
     isRecording = false;
@@ -782,6 +978,7 @@ function startRecording() {
     if (!isSubmitting && !voiceErrorShown) {
       statusElement.textContent = "Recording stopped. Review or edit your transcript before submitting.";
     }
+    scheduleEnglishTranslation();
   };
 
   try {
@@ -843,6 +1040,7 @@ document.getElementById('presenterTryAgain').addEventListener('click',function()
   if (!presenterVerified) return;
   rating=0;
   document.getElementById('feedback').value='';
+  invalidateTranslationPreview('Speak or type feedback to see an English translation.');
   document.querySelectorAll('.star').forEach(function(star) {
     star.classList.remove('active');
     star.setAttribute('aria-pressed','false');

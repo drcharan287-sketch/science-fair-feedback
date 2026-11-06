@@ -42,3 +42,20 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;op
 @media(max-width:365px){.votenav-results{font-size:.68rem;padding:7px 9px}.step-caption{font-size:.59rem}.step-topline h3{font-size:1.13rem}.step-section button.star{min-width:37px}.step-section .buttons{flex-direction:column}}
 @media(hover:none){button:hover{transform:none!important}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
+
+
+/* English preview appears directly BELOW the editable original-language text.
+   The original transcript remains authoritative; preview never casts a vote. */
+.translation-panel{margin-top:17px;padding:19px 19px 15px;border:1.5px solid #6de9ed83;border-radius:18px;background:linear-gradient(145deg,#0b3c50cb,#133b5bab);box-shadow:0 13px 27px #07152b32}
+.translation-panel[hidden]{display:none!important}
+.translation-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.translation-eyebrow{color:#8cf7ed;letter-spacing:.1em;font-size:.68rem;font-weight:900}
+.translation-heading h4{font-size:1.18rem;color:#f1fdff;margin:5px 0 0;letter-spacing:-.025em;font-weight:900}
+.translation-refresh{border:1px solid #7cdbea83;border-radius:12px;color:#d4f9ff;background:#17516a;min-height:41px;padding:10px 12px;font-size:.8rem;font-weight:850}
+.translation-refresh:not(:disabled):hover{background:#21657e}
+.translation-refresh:disabled{opacity:.45}
+.translation-status{margin:15px 0 7px;color:#bcf1fa;font-size:.83rem;line-height:1.5}
+.translation-output{margin:9px 0 13px;padding:13px 16px;border-radius:12px;background:#09273d;border:1px solid #6db9d65e;color:#faffff;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65;font-size:1rem;min-height:48px}
+.translation-output:empty{display:none}
+.translation-note{margin:11px 0 0!important;font-size:.75rem!important;color:#bddde9!important;line-height:1.6}
+@media(max-width:560px){.translation-panel{padding:16px 14px}.translation-heading h4{font-size:1.05rem}.translation-refresh{font-size:.76rem}.translation-output{font-size:.97rem}}

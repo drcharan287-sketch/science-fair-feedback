@@ -51,3 +51,7 @@ jobs:
         run: node scripts/verify-results-ui.mjs
       - name: Verify owner-only demonstration uses real Voting UI without writing feedback
         run: node scripts/verify-owner-demo.mjs
+      - name: Verify corrected live speech preview on parent and owner page without real vote submission
+        run: node scripts/verify-translation-preview.mjs
+      - name: Verify actual Google English translation in no-write preview (synthetic Hindi only)
+        run: node scripts/verify-live-translation-preview.mjs
