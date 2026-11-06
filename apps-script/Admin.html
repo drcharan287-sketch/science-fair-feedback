@@ -590,8 +590,9 @@
       const description=action==='ADD'?'ADD new project':
         action==='EDIT'?'UPDATE existing project':
         action==='DEACTIVATE'?'DEACTIVATE existing project':'REACTIVATE existing project';
-      const summary='Class '+(data.grade||current.grade)+' · '+
-        (data.section||current.section)+' · '+(data.project||current.project);
+      const summary='Class '+(data.grade||(current&&current.grade)||'—')+' · '+
+        (data.section||(current&&current.section)||'—')+' · '+
+        (data.project||(current&&current.project)||'—');
       const impact=action==='DEACTIVATE'?'\nThis will hide '+(current.votes||0)+
         ' valid vote(s) from active rankings until restored. No feedback is deleted.':'';
       if(!confirm(description+'?\n'+summary+impact+'\n\nReason: '+reason))return;
