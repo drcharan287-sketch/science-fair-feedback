@@ -16,6 +16,24 @@ The admin page is served by Google Apps Script, not public GitHub Pages. It cont
 - Exclude/restore a vote from rankings without deleting the underlying feedback. Admin Rankings sheet excludes entries whose hidden Feedback column K (Vote status) equals VOID.
 - Every administrator mutation must first append a PENDING audit intent; a later APPLIED status confirms the write path completed. Unresolved intents block further admin changes. See recovery procedure below.
 
+## Faculty Presentation: private Demo and Live Results
+
+Only **the Parent/Visitor Voting page** is linked from the common QR. Parents cannot navigate to the presentation screen from Voting; direct opening of the static `results.html` shell shows an access-required message and does not fetch real feedback aggregates without a valid presenter capability.
+
+To open the faculty/student smart-board experience:
+
+1. Sign into this protected Admin Console using the existing organizer credential.
+2. Expand **Faculty Presentation · Demo Voting and Private Live Results** and click **Create temporary owner demo link**.
+3. The same temporary session produces three links: **Open Faculty Demo Screen** (educational, clearly fictional example rankings); **Open Private Live Results** (real read-only participation, grade-wise weighted rankings and language counts); and **Open No-Save Voting Demo** (same visitor form, no feedback writes or browser vote resets).
+4. Use **Open Private Live Results** on the Senses smart board. The presenter screen has a Demo/Live switch, a bright-room toggle, fullscreen control and grade filters/rotation. Reopen a new authenticated link after the two-hour session expires.
+5. **Do not share any temporary presenter link with visitors, embed it in a QR code, or publish it.** The URL fragment contains a bearer capability: whoever obtains it can see the permitted aggregate display until expiry. The static page itself remains publicly fetchable from GitHub Pages, but real data is protected server-side by ticket validation on every refresh.
+
+The prior **Audience Display public publication controls have been removed**. Backend `action=publicResults` responds only with a fictional/DEMO summary even if an older publication property was set to LIVE/PUBLISHED. Only ticket-validated `action=presenterResults` can return actual aggregate metrics. **No manual feedback approval queue is required or enabled**: valid feedback saves automatically. Existing audited vote-exclusion/restore is for exceptional integrity issues, not routine approval of submitted comments.
+
+### iPhone Chrome/Safari demonstration
+
+The existing English preview uses a no-save HTML POST in an embedded frame, which may fail on iOS browser configurations. The Voting UI offers **Open English translation in a separate tab** after recording/editing the source text. This launches a top-level `action=translatePreview` POST and displays the original and English rendering; it **never submits a vote**. iOS dictation uses a single-utterance lifecycle. Browser speech/translation support for the 22 Eighth Schedule languages is not guaranteed; staff should validate Telugu/Hindi on an actual iPhone (not Chromium emulation) and use typed entry if needed.
+
 ## Security
 The existing public web app executes as the owner, so Session.getActiveUser().getEmail() is not a trustworthy identity check for anonymous visitors. The admin login therefore uses a randomly generated 256-bit key. Only its SHA-256 hash is versioned on public GitHub. Every admin API validates the key *before* opening the private Google Sheet; the key is not stored in browser localStorage, HTML or URLs.
 
