@@ -122,6 +122,39 @@ function voiceVoteTranslationPreview_(params) {
       result.message = 'Could not translate now. You can still submit your original feedback.';
     }
   }
+  if (params.view === 'standalone') {
+    // iOS/Safari/Chrome can block third-party frames. This is an explicit,
+    // user-initiated TOP-LEVEL no-save POST: text remains in the POST body,
+    // not in the URL, and there is never a Feedback or localStorage write.
+    const esc = function(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    };
+    const output = result.success
+      ? '<h2>English translation</h2><p class="translated">' + esc(result.translation) + '</p>'
+      : '<p role="alert">' + esc(result.message ||
+          'English translation is temporarily unavailable.') + '</p>';
+    const html = '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+      '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<title>VoiceVote · English preview</title><style>' +
+      '*{box-sizing:border-box}body{margin:0;min-height:100vh;padding:22px;' +
+      'background:linear-gradient(150deg,#08152e,#143b60);color:#eefaff;' +
+      'font:18px/1.6 system-ui,Arial,sans-serif}' +
+      'main{max-width:680px;margin:7vh auto;padding:clamp(25px,5vw,48px);' +
+      'border:1px solid #79eaff66;border-radius:23px;background:#203957}' +
+      'h1{font-size:clamp(26px,5vw,36px);margin:0 0 18px;color:#7aeafb}' +
+      'h2{font-size:22px;color:#b6f4ff;margin:20px 0 12px}' +
+      'p{overflow-wrap:anywhere;white-space:pre-wrap}' +
+      '.translated{padding:19px;background:#102c47;border-radius:12px;font-size:21px}' +
+      '.hint{font-size:15px;color:#c9deed;margin-top:26px}' +
+      '</style></head><body><main><h1>VoiceVote · Translation preview</h1>' +
+      '<h2>Original feedback</h2><p>' + esc(feedback) + '</p>' + output +
+      '<p class="hint">Preview only · no vote submitted or saved. ' +
+      'Return to your VoiceVote tab to review the original text and submit feedback. ' +
+      'You can close this preview tab when finished.</p></main></body></html>';
+    return HtmlService.createHtmlOutput(html).setTitle('VoiceVote · English preview');
+  }
   // Do NOT interpolate raw feedback directly into HTML. JSON is escaped for
   // script-element and Unicode-syntax safety, preventing script injection.
   const payload = JSON.stringify(result).replace(/</g,'\\u003c')
