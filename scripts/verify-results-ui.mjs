@@ -120,7 +120,8 @@ try{
       }
       return {x,y};
     });
-    await page.mouse.click(center.x,center.y);
+    if(size.hasTouch) await page.touchscreen.tap(center.x,center.y);
+    else await page.mouse.click(center.x,center.y);
     assert.equal(await page.locator('#projectFeedbackOverlay').isVisible(),true);
     assert.match(await page.locator('#projectFeedbackEyebrow').innerText(),/FICTIONAL/);
     assert.match(await page.locator('#projectFeedbackList').innerText(),/Original feedback/i);
@@ -160,7 +161,8 @@ try{
       }
       return {x,y};
     });
-    await page.mouse.click(center.x,center.y);
+    if(size.hasTouch) await page.touchscreen.tap(center.x,center.y);
+    else await page.mouse.click(center.x,center.y);
     await page.waitForFunction(()=>document.querySelectorAll('.project-feedback-card').length===8,
       null,{timeout:12000});
     assert.equal(reviewCalls,1,'Only one explicit project review request');
