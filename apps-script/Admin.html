@@ -100,6 +100,11 @@
     #adminPanel .tab.active{background:linear-gradient(110deg,#0c7394,#19577b)}
     .brand{color:#a8ecf9}
     .tagline{color:#c4d6e6}
+    .project-editor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    #managerForm .actions{margin-top:18px}
+    #managerProject{min-width:0}
+    #managerStatus{overflow-wrap:anywhere}
+    @media(max-width:690px){.project-editor-grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -136,6 +141,7 @@
         <button id="rankingsTab" class="tab active" type="button">Project rankings</button>
         <button id="votersTab" class="tab" type="button">Voter controls</button>
         <button id="passesTab" class="tab" type="button">Visitor passes</button>
+        <button id="projectsTab" class="tab" type="button">Manage projects</button>
       </nav>
       <p id="adminStatus" role="status" class="help" aria-live="polite"></p>
       <p id="auditAlert" class="notice" role="alert" hidden></p>
@@ -163,6 +169,45 @@
           <div id="reviewsList"></div>
           <button id="moreReviews" class="muted-btn" hidden>Show more reviews</button>
         </section>
+      </section>
+
+      <section id="projectsPanel" class="panel" hidden>
+        <div class="section-heading">
+          <div>
+            <h2>Event-Day Project Manager</h2>
+            <p class="help">Add, correct, deactivate or restore a project safely. Existing Project IDs and feedback records are preserved. The public voter catalog refreshes from the live Google Sheet.</p>
+          </div>
+          <span class="badge">Admin only · Audited</span>
+        </div>
+        <div class="notice">Changes are audited and affect public project selection. Never use permanent row deletion during the fair. Deactivation hides a project and its existing ratings from active rankings until it is restored.</div>
+        <div class="controls">
+          <input type="search" id="managerSearch" placeholder="Search project, section or ID" aria-label="Find existing project">
+          <select id="managerProject" aria-label="Select an existing project"><option value="">Choose a project to edit</option></select>
+        </div>
+        <div class="actions">
+          <button type="button" id="managerNew" class="muted-btn">+ Add a new project</button>
+          <button type="button" id="managerRefresh" class="muted-btn">Refresh current roster</button>
+        </div>
+        <form id="managerForm" class="drawer">
+          <h3 id="managerModeTitle">Add a new project</h3>
+          <p id="managerSelectionInfo" class="help">The system generates a unique Project ID. Choose an existing class and section.</p>
+          <div class="project-editor-grid">
+            <div><label for="managerGrade">Class / grade</label><select id="managerGrade" required></select></div>
+            <div><label for="managerSection">Section</label><select id="managerSection" required></select></div>
+          </div>
+          <label for="managerName">Project name</label>
+          <input id="managerName" type="text" maxlength="200" autocomplete="off" required placeholder="Enter the official project name">
+          <label for="managerReason">Reason for the change (minimum 8 characters)</label>
+          <input id="managerReason" type="text" maxlength="400" autocomplete="off" placeholder="e.g. Teacher approved this addition at the fair">
+          <p class="help" id="managerImpact">No existing feedback is modified by these actions.</p>
+          <div class="actions">
+            <button id="managerAdd" type="submit">Add project</button>
+            <button id="managerSave" type="button" hidden>Save corrections</button>
+            <button id="managerDeactivate" type="button" class="warn-btn" hidden>Deactivate project</button>
+            <button id="managerReactivate" type="button" hidden>Reactivate project</button>
+          </div>
+        </form>
+        <p id="managerStatus" class="notice" role="status" aria-live="polite">Select this tab to load the live project registry.</p>
       </section>
 
       <section id="votersPanel" class="panel" hidden>
@@ -281,6 +326,9 @@
     let reviewProject = null;
     let reviewOffset = 0;
     let voters = [];
+    let managerData = null;
+    let managerSelectedId = '';
+    let managerBusy = false;
     // A sign-out or new login attempt invalidates all outstanding admin RPCs.
     // Google Apps Script calls cannot be cancelled after dispatch, but stale
     // responses must never repopulate private DOM or in-memory dashboard data.
@@ -322,6 +370,12 @@
       // Hidden panels still contain DOM nodes. Remove their sensitive values,
       // not merely the visible login state, when an organizer signs out.
       ['rankingRows', 'voterRows', 'passesRows'].forEach(id => $(id).replaceChildren());
+      managerData=null;managerSelectedId='';managerBusy=false;
+      $('managerProject').replaceChildren(new Option('Choose a project to edit',''));
+      $('managerGrade').replaceChildren();
+      $('managerSection').replaceChildren();
+      $('managerSearch').value='';$('managerName').value='';$('managerReason').value='';
+      text($('managerStatus'),'');
       ['projectCount','voteCount','ratedCount','langCount','protectedCount',
         'legacyCount','excludedCount','rankingCount','reviewsTitle',
         'reviewsStatus','adminStatus','votingState','passesAvailable',
@@ -458,15 +512,121 @@
         text($('reviewsStatus'),'Could not load private feedback. Try again.');
       });
     }
+
+    function managerOptions() {
+      const list=managerData ? managerData.projects : [];
+      const query=$('managerSearch').value.trim().toLocaleLowerCase();
+      const matches=list.filter(p=>!query ||
+        [p.grade,p.section,p.project,p.id].join(' ').toLocaleLowerCase().includes(query));
+      const select=$('managerProject');
+      select.replaceChildren(new Option('Choose a project to edit ('+list.length+' total)',''));
+      matches.slice(0,250).forEach(p=>select.add(new Option(
+        (p.active?'● ':'○ ')+'Grade '+p.grade+' · '+p.section+' · '+p.project,p.id
+      )));
+      select.value=matches.some(p=>p.id===managerSelectedId)?managerSelectedId:'';
+      if(query && matches.length>250){
+        text($('managerStatus'),'Showing the first 250 matches. Refine your search to locate the correct project.');
+      }
+    }
+    function managerSections(keep) {
+      const grade=$('managerGrade').value,selected=keep||'';
+      const sections=managerData?[...new Set(managerData.projects
+        .filter(p=>p.grade===grade).map(p=>p.section))]
+        .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})):[];
+      $('managerSection').replaceChildren(new Option('Select section',''));
+      sections.forEach(s=>$('managerSection').add(new Option(s,s)));
+      $('managerSection').value=sections.includes(selected)?selected:'';
+    }
+    function managerMode(id) {
+      managerSelectedId=id||'';
+      const current=managerData?.projects.find(p=>p.id===managerSelectedId);
+      const grades=managerData?[...new Set(managerData.projects.map(p=>p.grade))]
+        .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})):[];
+      $('managerGrade').replaceChildren(new Option('Select grade',''));
+      grades.forEach(g=>$('managerGrade').add(new Option('Grade '+g,g)));
+      $('managerGrade').value=current?current.grade:'';
+      managerSections(current?.section);
+      $('managerName').value=current?.project||'';
+      $('managerReason').value='';
+      text($('managerModeTitle'),current?'Edit project · '+current.id:'Add a new project');
+      text($('managerSelectionInfo'),current
+        ? 'Permanent ID: '+current.id+' · '+(current.active?'ACTIVE':'INACTIVE')+
+          ' · Original source key: '+current.sourceKey
+        : 'A unique permanent ID and event-day source key will be generated.');
+      text($('managerImpact'),current
+        ? (current.votes||0)+' valid vote(s) currently attributed to this project.'+
+          (current.legacyVotes?' Old votes lack stable IDs; renaming requires organizer reconciliation.':'')
+        : 'New project will have zero ratings. Existing feedback is never modified.');
+      $('managerAdd').hidden=!!current;
+      $('managerSave').hidden=!current||!current.active;
+      $('managerDeactivate').hidden=!current||!current.active;
+      $('managerReactivate').hidden=!current||current.active;
+      managerOptions();
+    }
+    function refreshManagedProjects(preferredId) {
+      text($('managerStatus'),'Loading the current protected Projects sheet…');
+      call('adminGetManagedProjects',[key],data=>{
+        managerData=data;
+        managerMode(preferredId||managerSelectedId);
+        text($('managerStatus'),data.active+' active of '+data.total+
+          ' project(s). '+(data.pendingAuditActions
+            ? 'WARNING: unresolved audit actions prevent changes.'
+            : 'Select a project, or choose Add a new project.'));
+      },err=>{text($('managerStatus'),'Could not load projects: '+(err.message||String(err)));});
+    }
+    function managerAction(action) {
+      if(managerBusy || !managerData)return;
+      const current=managerData.projects.find(p=>p.id===managerSelectedId);
+      if(action!=='ADD'&&!current)return;
+      const reason=$('managerReason').value.trim();
+      if(reason.length<8) {
+        text($('managerStatus'),'Enter an explanation of at least eight characters.');
+        return;
+      }
+      const data={action,reason,grade:$('managerGrade').value,
+        section:$('managerSection').value,project:$('managerName').value.trim(),
+        id:current?.id||'',expectedVersion:current?.version||'',
+        confirmAffectedVotes:action==='DEACTIVATE'};
+      const description=action==='ADD'?'ADD new project':
+        action==='EDIT'?'UPDATE existing project':
+        action==='DEACTIVATE'?'DEACTIVATE existing project':'REACTIVATE existing project';
+      const summary='Class '+(data.grade||current.grade)+' · '+
+        (data.section||current.section)+' · '+(data.project||current.project);
+      const impact=action==='DEACTIVATE'?'\nThis will hide '+(current.votes||0)+
+        ' valid vote(s) from active rankings until restored. No feedback is deleted.':'';
+      if(!confirm(description+'?\n'+summary+impact+'\n\nReason: '+reason))return;
+      managerBusy=true;
+      ['managerAdd','managerSave','managerDeactivate','managerReactivate']
+        .forEach(id=>$(id).disabled=true);
+      text($('managerStatus'),'Saving audited '+action.toLowerCase()+'…');
+      call('adminChangeProject',[key,data],result=>{
+        managerBusy=false;
+        ['managerAdd','managerSave','managerDeactivate','managerReactivate']
+          .forEach(id=>$(id).disabled=false);
+        text($('managerStatus'),(result.changed?'Saved: ':'No change: ')+
+          result.project+'. Public Voting will read the current catalog on refresh.');
+        refresh();
+        refreshManagedProjects(result.id);
+      },err=>{
+        managerBusy=false;
+        ['managerAdd','managerSave','managerDeactivate','managerReactivate']
+          .forEach(id=>$(id).disabled=false);
+        text($('managerStatus'),'Not confirmed: '+(err.message||String(err))+
+          ' Refresh the list before retrying. Do not blindly repeat an uncertain write.');
+      });
+    }
     function changeTab(tab) {
       $('rankingsPanel').hidden = tab!=='rankings';
       $('votersPanel').hidden = tab!=='voters';
       $('passesPanel').hidden = tab!=='passes';
+      $('projectsPanel').hidden = tab!=='projects';
       $('rankingsTab').classList.toggle('active',tab==='rankings');
       $('votersTab').classList.toggle('active',tab==='voters');
       $('passesTab').classList.toggle('active',tab==='passes');
+      $('projectsTab').classList.toggle('active',tab==='projects');
       if(tab==='voters') refreshVoters();
       if(tab==='passes') refreshPasses();
+      if(tab==='projects') refreshManagedProjects();
     }
     function refreshVoters() {
       text($('adminStatus'),'Loading recent voter activity…');
@@ -660,6 +820,16 @@
     $('rankingsTab').addEventListener('click',()=>changeTab('rankings'));
     $('votersTab').addEventListener('click',()=>changeTab('voters'));
     $('passesTab').addEventListener('click',()=>changeTab('passes'));
+    $('projectsTab').addEventListener('click',()=>changeTab('projects'));
+    $('managerRefresh').addEventListener('click',()=>refreshManagedProjects());
+    $('managerSearch').addEventListener('input',managerOptions);
+    $('managerNew').addEventListener('click',()=>managerMode(''));
+    $('managerProject').addEventListener('change',()=>managerMode($('managerProject').value));
+    $('managerGrade').addEventListener('change',()=>managerSections(''));
+    $('managerForm').addEventListener('submit',e=>{e.preventDefault();managerAction('ADD');});
+    $('managerSave').addEventListener('click',()=>managerAction('EDIT'));
+    $('managerDeactivate').addEventListener('click',()=>managerAction('DEACTIVATE'));
+    $('managerReactivate').addEventListener('click',()=>managerAction('REACTIVATE'));
     $('closeReviews').addEventListener('click',noReviews);
     $('moreReviews').addEventListener('click',fetchReviews);
     $('reloadVoters').addEventListener('click',refreshVoters);
