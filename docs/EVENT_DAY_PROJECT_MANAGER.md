@@ -1,0 +1,27 @@
+# VoiceVote event-day project manager — 6 November handover and implementation plan
+
+**Owner request:** Implement a reliable, authenticated **Add / Edit / Deactivate Project** capability inside the existing private Apps Script Admin Console, plus public-Voting catalog freshness and no-vote regression testing. This document is the **pre-implementation handover**, not proof of deployment.
+
+## Existing release baseline
+- **424 active projects** from the 6 November authoritative school workbook; 44 detailed section tabs. The separate summary lists 379; school has not resolved the mismatch. Do not force-delete 45 named projects.
+- Published GitHub Pages and deployed Apps Script passed read-only release gate [42242938311](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42242938311); [PRs #64, #65, #66 and #68](https://github.com/drcharan287-sketch/science-fair-feedback/pulls?q=is%3Apr+is%3Amerged) documented roster and final release. Initial test records cleared under earlier one-time organizer instruction. **Never repeat feedback clear once the fair begins.**
+- Schema: `Projects!A` grade, `B` section, `C` exact project title, `D` Active, `E` stable Project ID, `F` Source Key, `G` import header, `H` last-seen metadata. Feedback column `M` stores the stable ID for new votes. Displayed private aggregate ranking resolves by stable ID and legacy aliases.
+- `apps-script/Code.gs` validates exact grade+section+title+ID against live active projects before saving votes. `voicevote-catalog.js` currently prefers GitHub Pages versioned `projects.json` and uses `action=catalog` via JSONP only when that static snapshot is absent or fails. **This is the principal blocker** to event-day Sheet edits appearing to all visitors immediately.
+- Admin key is a protected 256-bit secret validated server-side by `adminRequireKey_`. Existing journal functions `adminAuditBegin_`, `adminAuditedChange_` and unresolved-PENDING detection protect moderation and voting changes. Reuse this pattern; do not invent weaker bypass APIs.
+
+## User-facing controls and expected behavior
+- **Add:** choose an existing grade and section; type unique project name; server creates immutable, unique Project ID and new event-day source key. A new project becomes available in live catalog and private overview only after durable audited successful write and verification.
+- **Edit:** select existing stable ID and correct title or grade/section; preserve ID, source provenance and existing vote attribution. If an existing vote uses old title with a missing stable ID, require a safe alias or block until reconciled. Reject ambiguous name collisions. Use an explicit confirmation showing before/after and how existing voting records will be preserved.
+- **Deactivate / reactivate:** set column D FALSE/TRUE (do not delete row or Feedback); only active projects available to visitor voting and private ratings. If project already has votes, require a visible impact warning and confirmation because rankings will omit inactive projects. Re-activation restores the exact original ID. Never hard-delete during the event.
+- **Concurrency:** server validates the current row and immutable ID in a script lock; reject stale edits and concurrent conflicting titles. No partial/invisible success; audit PENDING->APPLIED or fail closed with organizer recovery instructions.
+- **Public catalog:** live Google Apps Script authoritative on each new page session and on user-requested refresh; bounded request and fallback. A cached snapshot may help only if clearly labeled as potentially stale; it must not silently override deactivation/rename or cause incorrect votes. No new public Results, Practice or visitor-pass controls.
+- **Admin controls:** new private panel with filter, safely rendered text, grade/section selectors, project name, Add / Save changes / Deactivate / Reactivate buttons, status and exact id/row preview; never expose the admin key, Feedback or private results via anonymous GET.
+
+## Release criteria
+1. Tests: unauthorized calls; missing key; duplicate titles/IDs; malicious spreadsheet-formula text; IDs preserved on rename/move; active toggle; stale form/concurrency; audit failures; no audit bypass; inactive projects rejected by save; existing feedback not edited; old-title alias policy.
+2. Browser: staged Admin UI simulated and public Voting at 360px/390px/1920px; live-authoritative catalog GET; slow/offline fallback with no vote; quick search refresh; no posted save; presenter private data remains protected.
+3. Exact source CI, deployment of Apps Script followed by Pages, no-writing public GET checks with live backend, and validation that **no production project row or Feedback row was changed by test runs**.
+4. Update `PROJECT_STATUS.md` and `docs/THREAD_HANDOVER.md` with PR/Actions proof **after** success; leave VV-30 staged or blocked otherwise.
+
+## Continuation instruction for a fresh thread
+Read **current GitHub main** and these three docs, check open PRs/Actions. Complete VV-30 from the next incomplete step. Protect 424 source roster until organizer intentionally changes it. Do not use a production key or submit test feedback. Finish each reply with the next best constructive step.
