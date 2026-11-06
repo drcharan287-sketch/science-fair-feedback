@@ -447,101 +447,90 @@ test('public Results default DEMO does not read private Feedback or expose ranki
   assert.doesNotMatch(out.text,/XenoChat.*Interesting use of AI/);
 });
 
-test('anonymous LIVE results reveal aggregates but no per-project standings or private reviews',()=>{
-  const a=setup();
-  a.props.set('VOICEVOTE_PUBLIC_RESULTS_MODE','LIVE');
-  const data=a.context.publicSummary_();
-  assert.equal(data.mode,'LIVE');
-  assert.equal(data.acceptedVotes,2);
-  assert.equal(data.ratedProjects,2);
-  assert.equal(data.languages.reduce((n,p)=>n+p.count,0),2);
-  assert.equal('rankings' in data,false);
-  const serialized=JSON.stringify(data);
-  for(const secret of ['Interesting use of AI','ఈ ప్రాజెక్టు','ab'.repeat(32),'rowProof','deviceToken','submissionId','original','translation']){
-    assert.ok(!serialized.includes(secret),secret+' must never appear in public totals');
-  }
-  assert.equal(a.feedbackRows.length,3,'Reading results may not append feedback');
-});
-
-test('PUBLISHED results use existing weighted scores and grade-local rankings, not original text',()=>{
-  const a=setup();
-  a.props.set('VOICEVOTE_PUBLIC_RESULTS_MODE','PUBLISHED');
-  const data=a.context.publicSummary_();
-  const privateData=a.context.adminGetOverview(DEMO_KEY);
-  assert.equal(data.mode,'PUBLISHED');
-  assert.equal(data.rankings.length,2);
-  assert.equal(data.rankings.every(p=>p.rank===1),true,'Each grade has its own rank 1');
-  for(const publicProject of data.rankings){
-    const privateProject=privateData.projects.find(p=>p.id===publicProject.id);
-    assert.ok(privateProject);
-    assert.equal(publicProject.weighted,privateProject.weighted);
-    assert.equal(publicProject.votes,privateProject.votes);
-  }
-  assert.equal(JSON.stringify(data).includes('Interesting use of AI'),false);
-});
-
-test('public results contain no individual feedback or manual approval list in any mode',()=>{
-  const a=setup();
-  for(const mode of ['DEMO','LIVE','PUBLISHED']){
-    a.props.set('VOICEVOTE_PUBLIC_RESULTS_MODE',mode);
-    const out=a.context.publicSummary_();
-    const raw=JSON.stringify(out);
-    assert.equal('highlights' in out,false);
-    assert.equal('reviews' in out,false);
-    assert.ok(!raw.includes('Interesting use of AI'));
-    assert.ok(!raw.includes('ఈ ప్రాజెక్టు'));
-    assert.ok(!raw.includes('APPROVED'));
+test('anonymous requests remain DEMO even if legacy script properties say LIVE or PUBLISHED',()=>{
+  for(const oldMode of ['LIVE','PUBLISHED']){
+    const a=setup();
+    a.props.set('VOICEVOTE_PUBLIC_RESULTS_MODE',oldMode);
+    a.sheets.Feedback.getRange=()=>{throw Error('Anonymous Results must not read private Feedback');};
+    const d=a.context.publicSummary_();
+    assert.equal(a.context.publicResultsMode_(),'DEMO');
+    assert.equal(d.mode,'DEMO');
+    assert.equal(d.totalProjects,2);
+    for(const field of ['acceptedVotes','rankings','languages','ratedProjects','highlights']){
+      assert.equal(Object.hasOwn(d,field),false);
+    }
+    const reply=a.context.doGet({parameter:{action:'publicResults',callback:'safeCb',mode:'PUBLISHED'}});
+    assert.match(reply.text,/"mode":"DEMO"/);
+    assert.doesNotMatch(reply.text,/"acceptedVotes"|"rankings"|"original"|"translation"/);
   }
 });
 
-test('public results publication changes require a real admin key and leave an audit trail',()=>{
+test('private presenter results require a real owner-issued short-lived capability',()=>{
+  const a=setup();
+  const denied=a.context.doGet({parameter:{action:'presenterResults',callback:'cb',ticket:'bogus'}});
+  assert.match(denied.text,/"success":false/);
+  assert.match(denied.text,/"mode":"DENIED"/);
+  assert.doesNotMatch(denied.text,/acceptedVotes|rankings|Interesting use of AI/);
+  let nonce=0;
+  a.context.Utilities.getUuid=()=>{
+    nonce++;return nonce===1?'123e4567-e89b-42d3-a456-426614174001':
+      '123e4567-e89b-42d3-a456-426614174002';
+  };
+  const token=a.context.adminCreatePresenterSession(DEMO_KEY).token;
+  const privateReply=a.context.doGet({parameter:{action:'presenterResults',callback:'cb',ticket:token}});
+  assert.match(privateReply.text,/"mode":"PRESENTER_LIVE"/);
+  assert.match(privateReply.text,/"acceptedVotes":2/);
+  const json=JSON.parse(privateReply.text.replace(/^cb\(/,'').replace(/\);$/,''));
+  assert.equal(json.rankings.length,2);
+  assert.equal(json.rankings.every(p=>p.rank===1),true,'Grade-local ranking applies');
+  const staffOverview=a.context.adminGetOverview(DEMO_KEY);
+  for(const p of json.rankings){
+    const internal=staffOverview.projects.find(item=>item.id===p.id);
+    assert.ok(internal);
+    assert.equal(p.weighted,internal.weighted);
+  }
+  for(const secret of ['Interesting use of AI','ఈ ప్రాజెక్టు','rowProof','deviceToken','submissionId','original','translation']){
+    assert.ok(!privateReply.text.includes(secret),'Presenter aggregate response must exclude '+secret);
+  }
+  assert.equal(a.feedbackRows.length,3,'Presenter results never write feedback');
+  a.ticketCache.clear();
+  const expired=a.context.doGet({parameter:{action:'presenterResults',callback:'cb',ticket:token}});
+  assert.match(expired.text,/"mode":"DENIED"/);
+  assert.doesNotMatch(expired.text,/acceptedVotes|rankings/);
+});
+
+test('public publication controls can no longer enable visitor LIVE/PUBLISHED results',()=>{
   const a=setup();
   assert.throws(()=>a.context.adminSetPublicResultsMode('bad','PUBLISHED','Organizer permission'),/denied/);
-  assert.equal(a.props.has('VOICEVOTE_PUBLIC_RESULTS_MODE'),false);
-  assert.throws(()=>a.context.adminSetPublicResultsMode(DEMO_KEY,'PUBLISHED','short'),/reason/i);
-  assert.throws(()=>a.context.adminSetPublicResultsMode(DEMO_KEY,'EVERYTHING','Specific organizer decision'),/Invalid public results mode/);
-  const updated=a.context.adminSetPublicResultsMode(DEMO_KEY,'LIVE','Display aggregate participation only');
-  assert.equal(updated.mode,'LIVE');assert.equal(updated.changed,true);
-  assert.equal(a.props.get('VOICEVOTE_PUBLIC_RESULTS_MODE'),'LIVE');
-  const history=a.sheets['Admin Action Log'].rows;
-  assert.equal(history[1][1],'PUBLIC_RESULTS_LIVE');
-  assert.equal(history[1][5],'APPLIED');
-  assert.equal(history[1][7],'DEMO');assert.equal(history[1][8],'LIVE');
-  assert.equal(a.context.adminGetOverview(DEMO_KEY).publicResultsMode,'LIVE');
-  const repeat=a.context.adminSetPublicResultsMode(DEMO_KEY,'LIVE','Already approved display state');
-  assert.equal(repeat.changed,false);assert.equal(history.length,2);
-  a.context.adminSetPublicResultsMode(DEMO_KEY,'DEMO','Return the public display to samples');
+  assert.throws(()=>a.context.adminSetPublicResultsMode(DEMO_KEY,'LIVE','Public display request'),/disabled/);
+  assert.throws(()=>a.context.adminSetPublicResultsMode(DEMO_KEY,'PUBLISHED','Public results request'),/disabled/);
+  a.props.set('VOICEVOTE_PUBLIC_RESULTS_MODE','PUBLISHED');
+  const restore=a.context.adminSetPublicResultsMode(DEMO_KEY,'DEMO','Keep the display private for faculty');
+  assert.equal(restore.mode,'DEMO');
   assert.equal(a.context.publicSummary_().mode,'DEMO');
-  assert.equal(history[2][1],'PUBLIC_RESULTS_DEMO');
+  assert.equal(a.props.get('VOICEVOTE_PUBLIC_RESULTS_MODE'),'PUBLISHED',
+    'Legacy setting is harmless because anonymous reads are hard-fixed to DEMO');
 });
 
-
-test('public results cache stays mode-scoped and is cleared on authorized publication changes',()=>{
+test('public DEMO cache stays isolated from private presenter aggregate cache',()=>{
   const a=setup();
-  const data=new Map();
-  const touched=[];
+  const original=a.context.CacheService;
+  const cache=new Map();
   a.context.CacheService={getScriptCache:()=>({
-    get:key=>data.get(key)||null,
-    put:(key,value,seconds)=>{data.set(key,value);touched.push([key,seconds]);},
-    remove:key=>{data.delete(key);}
+    get:key=>cache.get(key)||null,
+    put:(key,value)=>cache.set(key,value),
+    remove:key=>cache.delete(key)
   })};
-  const first=a.context.publicSummary_();
-  assert.equal(first.mode,'DEMO');
-  const initialOpens=a.opens();
+  const demo=a.context.publicSummary_();
+  assert.equal(demo.mode,'DEMO');
+  const live=a.context.publicSummary_('PRIVATE_PRESENTER_RESULTS');
+  assert.equal(live.mode,'PUBLISHED');
+  assert.equal(live.acceptedVotes,2);
+  assert.notEqual(JSON.stringify(demo),JSON.stringify(live));
   const again=a.context.publicSummary_();
   assert.equal(again.mode,'DEMO');
-  assert.equal(a.opens(),initialOpens,'Demo cache avoids redundant catalog sheet reads');
-  assert.equal(touched[0][1],45);
-  a.context.adminSetPublicResultsMode(DEMO_KEY,'LIVE','Publish anonymous engagement only');
-  const live=a.context.publicSummary_();
-  assert.equal(live.mode,'LIVE');
-  assert.equal(live.acceptedVotes,2);
-  assert.equal('rankings' in live,false);
-  a.context.adminSetPublicResultsMode(DEMO_KEY,'DEMO','Revert to synthetic fair presentation');
-  const restored=a.context.publicSummary_();
-  assert.equal(restored.mode,'DEMO');
-  assert.equal('acceptedVotes' in restored,false);
-  assert.equal('rankings' in restored,false);
+  assert.equal(Object.hasOwn(again,'acceptedVotes'),false);
+  a.context.CacheService=original;
 });
 
 test('only authenticated owner can issue a temporary, no-write demonstration ticket',()=>{

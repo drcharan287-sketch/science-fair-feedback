@@ -33,6 +33,14 @@ function doGet(e) {
     catch (_) { payload = {success:false,mode:'DEMO',message:'Results temporarily unavailable.'}; }
     return jsonpResponse_(payload,params.callback);
   }
+  if (params.action === 'presenterResults') {
+    // Strict server-side check on EVERY refresh; a guessed public URL, stale
+    // mode setting or modified JavaScript never receives actual vote totals.
+    let payload;
+    try { payload = presenterSummary_(params.ticket); }
+    catch (_) { payload = {success:false,mode:'DENIED',message:'Private presenter results unavailable.'}; }
+    return jsonpResponse_(payload,params.callback);
+  }
   if (params.action === 'presenterVerify') {
     // Opaque, short-lived ticket verification only. No admin key, vote,
     // person, feedback, or private dashboard data is ever returned.

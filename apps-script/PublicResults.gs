@@ -1,19 +1,17 @@
 /**
- * VoiceVote audience-safe Results API.
- * Data classification:
- *  DEMO      - catalog count only; does NOT read Feedback.
- *  LIVE      - anonymous, aggregate participation only.
- *  PUBLISHED - aggregate rankings by stable project ID; explicit admin action.
- * Review text is NEVER read from Feedback for this endpoint.
- * No manual public feedback approval workflow is required.
+ * VoiceVote presenter-only Results API.
+ * Public/anonymous requests are ALWAYS DEMO and never read Feedback.
+ * Authenticated short-lived presenter tickets unlock aggregate live results
+ * without opening the admin key, individual reviews, or visitor identifiers.
+ * No manual feedback approval queue exists.
  */
 const VOICEVOTE_PUBLIC_RESULTS_MODE_KEY = 'VOICEVOTE_PUBLIC_RESULTS_MODE';
 const VOICEVOTE_RESULTS_MODES = ['DEMO','LIVE','PUBLISHED'];
 
 function publicResultsMode_() {
-  const stored = String(PropertiesService.getScriptProperties()
-    .getProperty(VOICEVOTE_PUBLIC_RESULTS_MODE_KEY) || 'DEMO').trim().toUpperCase();
-  return VOICEVOTE_RESULTS_MODES.includes(stored) ? stored : 'DEMO';
+  // Fail closed even if older deployments left LIVE/PUBLISHED in script props.
+  // Real aggregates now require a separately validated presenter capability.
+  return 'DEMO';
 }
 function publicFiniteNumber_(value) {
   const n = Number(value);
@@ -25,7 +23,7 @@ function publicResultsCache_() {
   } catch (_) { return null; }
 }
 function publicResultsCacheKey_(mode) {
-  return 'voicevote-public-v2-'+mode;
+  return 'voicevote-results-v3-'+mode;
 }
 function publicResultsSaveCache_(cache, mode, result) {
   if (!cache) return;
@@ -35,8 +33,10 @@ function publicResultsSaveCache_(cache, mode, result) {
     cache.put(publicResultsCacheKey_(mode),JSON.stringify(result),45);
   } catch (_) { /* Uncached read-only fallback is always safe. */ }
 }
-function publicSummary_() {
-  const mode = publicResultsMode_();
+function publicSummary_(internalScope) {
+  // Only server code can pass the PRIVATE capability scope. Never pass a
+  // request parameter here, or infer authority from a URL mode selector.
+  const mode = internalScope === 'PRIVATE_PRESENTER_RESULTS' ? 'PUBLISHED' : 'DEMO';
   const cache = publicResultsCache_();
   if (cache) {
     try {
@@ -78,7 +78,7 @@ function publicSummary_() {
     item.stars += v.rating;
     acceptedVotes++;
     const language = String(v.language || '');
-    if (['en-IN','te-IN','hi-IN','ta-IN','kn-IN'].includes(language)) {
+    if (Object.prototype.hasOwnProperty.call(VOICEVOTE_FEEDBACK_LANGUAGE_CODES, language)) {
       languages[language] = (languages[language] || 0) + 1;
     }
   });
@@ -116,13 +116,28 @@ function publicSummary_() {
   return payload;
 }
 
-/** Authenticated, audited publication control. No automatic public promotion. */
+/**
+ * After the private-presenter conversion, anonymous public publication is
+ * permanently disabled. Retain this RPC for older Admin clients, but reject
+ * LIVE/PUBLISHED rather than reviving public results accidentally.
+ */
+function presenterSummary_(ticket) {
+  if (!publicVerifyPresenterSession_(ticket)) {
+    return {success:false,mode:'DENIED',message:'Private presenter access is required or has expired.'};
+  }
+  const payload = publicSummary_('PRIVATE_PRESENTER_RESULTS');
+  // Deliberately do not expose an APPROVED/PUBLIC flag: this is a private view.
+  return Object.assign({},payload,{mode:'PRESENTER_LIVE',
+    message:'Private live audience aggregates. No individual visitor reviews.'});
+}
+
+/** Legacy publication RPC kept only for explicitly returning to DEMO. */
 function adminSetPublicResultsMode(key, requested, reason) {
   adminRequireKey_(key);
   const mode = String(requested || '').trim().toUpperCase();
   const why = String(reason || '').trim();
-  if (!VOICEVOTE_RESULTS_MODES.includes(mode)) {
-    throw new Error('Invalid public results mode.');
+  if (mode !== 'DEMO') {
+    throw new Error('Public results publication is disabled. Use the private presenter display.');
   }
   if (why.length < 8 || why.length > 200) {
     throw new Error('Provide a specific reason (8–200 characters).');
