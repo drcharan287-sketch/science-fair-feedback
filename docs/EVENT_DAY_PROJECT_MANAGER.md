@@ -1,12 +1,12 @@
 # VoiceVote event-day project manager — 6 November handover and implementation plan
 
-**Owner request:** Implement a reliable, authenticated **Add / Edit / Deactivate Project** capability inside the existing private Apps Script Admin Console, plus public-Voting catalog freshness and no-vote regression testing. This document is the **pre-implementation handover**, not proof of deployment.
+**Release status:** Implemented in [PR #70](https://github.com/drcharan287-sketch/science-fair-feedback/pull/70), Apps Script production deployment [PASS](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42255171574), Pages browser no-vote acceptance [PASS](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42259973939). Documentation was synchronized first in PR #69. No production Add/Edit/Deactivate writes were made during QA. 6 Nov readback: **424 active projects**, 424 unique IDs, **0 Feedback**. **Read-only valid-key organizer acceptance is pending**, not a blocker to software deployment.
 
 ## Existing release baseline
 - **424 active projects** from the 6 November authoritative school workbook; 44 detailed section tabs. The separate summary lists 379; school has not resolved the mismatch. Do not force-delete 45 named projects.
 - Published GitHub Pages and deployed Apps Script passed read-only release gate [42242938311](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42242938311); [PRs #64, #65, #66 and #68](https://github.com/drcharan287-sketch/science-fair-feedback/pulls?q=is%3Apr+is%3Amerged) documented roster and final release. Initial test records cleared under earlier one-time organizer instruction. **Never repeat feedback clear once the fair begins.**
 - Schema: `Projects!A` grade, `B` section, `C` exact project title, `D` Active, `E` stable Project ID, `F` Source Key, `G` import header, `H` last-seen metadata. Feedback column `M` stores the stable ID for new votes. Displayed private aggregate ranking resolves by stable ID and legacy aliases.
-- `apps-script/Code.gs` validates exact grade+section+title+ID against live active projects before saving votes. `voicevote-catalog.js` currently prefers GitHub Pages versioned `projects.json` and uses `action=catalog` via JSONP only when that static snapshot is absent or fails. **This is the principal blocker** to event-day Sheet edits appearing to all visitors immediately.
+- `apps-script/Code.gs` validates grade+section+title+ID against live active projects, including a **second check inside the vote lock**. `voicevote-catalog.js` now uses live read-only Google Apps Script `action=catalog` first, with versioned GitHub Pages `projects.json` only as a clearly labeled backup. Refreshing keeps unsent original feedback and alerts users if the chosen project was renamed or deactivated. Admin edits do not require a new Pages build.
 - Admin key is a protected 256-bit secret validated server-side by `adminRequireKey_`. Existing journal functions `adminAuditBegin_`, `adminAuditedChange_` and unresolved-PENDING detection protect moderation and voting changes. Reuse this pattern; do not invent weaker bypass APIs.
 
 ## User-facing controls and expected behavior
@@ -25,3 +25,15 @@
 
 ## Continuation instruction for a fresh thread
 Read **current GitHub main** and these three docs, check open PRs/Actions. Complete VV-30 from the next incomplete step. Protect 424 source roster until organizer intentionally changes it. Do not use a production key or submit test feedback. Finish each reply with the next best constructive step.
+
+## Organizer operating instructions (deployed)
+
+Open the existing private Apps Script Admin Console and sign in using the existing secret admin key. Choose **Manage projects**, not the public voting QR. The manager loads the live protected roster and shows active/inactive status, exact stable IDs, provenance and current aggregate vote impact. Search or filter to the intended title and double-check class/section.
+
+- **Add:** Click **+ Add a new project**, choose an existing Grade 3–9 and its registered section, enter the approved title and an explanation of at least eight characters, confirm. The system allocates a new immutable ID and source key. A fresh public Voting page or **Refresh project list** immediately requests the current live catalog.
+- **Edit:** Search/select the original project by ID, correct name, class or section, enter reason, choose **Save corrections**, confirm. The stable ID is deliberately unchanged, so ID-keyed ratings remain associated; unkeyed legacy votes block risky name/move edits until reconciled.
+- **Deactivate:** Select project and **Deactivate project**; read the warning about existing votes disappearing from active ranking, enter reason and confirm. The row remains in Google Sheets and its ID and feedback are preserved. **Reactivate** restores the same ID when allowed. Never delete the row on fair day.
+- **Failure:** If the Admin action reports uncertain outcome or an audit PENDING row, **do not retry blindly**. Refresh and ask the owner to reconcile the Admin Action Log against the actual Projects row before any further write. The fail-closed journal prevents additional ambiguous changes.
+- **Post-change verification:** From a separate fresh public QR session refresh **project list**, confirm exact grade, section and title present/absent and that private Results remain inaccessible. No trial vote is needed. If live catalog is unavailable the site labels a potentially stale backup, and saving is still validated against the live backend under the lock.
+
+**Manual acceptance not yet performed:** organizer's valid-key sign-in on actual device, physical Senses smart-board, real iPhone. The numerical workbook summary discrepancy of 379 vs 424 explicit named entries remains for school coordinators to resolve.
