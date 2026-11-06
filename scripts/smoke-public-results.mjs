@@ -29,15 +29,3 @@ for(const name of ['acceptedVotes','languages','rankings','ratedProjects','highl
   assert.equal(Object.hasOwn(data,name),false,'Anonymous Results exposed '+name);
 }
 console.log('PASS anonymous Results is DEMO-only, even with a forced PUBLISHED URL; no private fields.');
-);
-const matchPayload=wrapper.exec(source);
-assert.ok(matchPayload,'Public Results endpoint did not return expected JSONP');
-const data=JSON.parse(matchPayload[1]);
-assert.equal(data.success,true);
-assert.equal(data.mode,'DEMO','Real Results must not be publicly accessible');
-assert.ok(Number.isInteger(data.totalProjects)&&data.totalProjects>=1);
-for(const name of ['acceptedVotes','languages','rankings','ratedProjects','highlights',
-  'original','translation','submissionId','deviceToken','reviews','votes']){
-  assert.equal(Object.hasOwn(data,name),false,'Anonymous Results exposed '+name);
-}
-console.log('PASS anonymous Results is DEMO-only, even with a forced PUBLISHED URL; no private fields.');
