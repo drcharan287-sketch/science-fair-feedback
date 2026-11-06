@@ -1,5 +1,6 @@
-// Live, GET-only VoiceVote public Results API safety check.
-// Never reads a private review endpoint, submits a vote or mutates the Sheet.
+// Production read-only safety probe. The anonymous Results API must NEVER
+// expose real votes or rankings, even if an old publication property said LIVE.
+// No real submissions, admin credentials or visitor data are sent.
 import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
@@ -10,42 +11,20 @@ const callback='voiceVoteReadOnlyResultsProbe';
 const url=new URL(match[1]);
 url.searchParams.set('action','publicResults');
 url.searchParams.set('callback',callback);
+url.searchParams.set('mode','PUBLISHED'); // Malicious/public override must be ignored.
 const response=await fetch(url,{redirect:'follow',
   signal:AbortSignal.timeout(30000),headers:{Accept:'application/javascript'}});
-assert.ok(response.ok,'Public results GET returned HTTP '+response.status);
+assert.ok(response.ok,'Public Results GET returned HTTP '+response.status);
 const source=(await response.text()).trim();
-const wrapper=new RegExp('^'+callback+'\\(([\\s\\S]*?)\\);?$');
-const received=wrapper.exec(source);
-assert.ok(received,'Public results endpoint did not return expected safe JSONP callback');
-const data=JSON.parse(received[1]);
-assert.equal(data.success,true,'Public results backend did not accept GET');
-assert.ok(['DEMO','LIVE','PUBLISHED'].includes(data.mode),'Invalid public mode');
-assert.ok(Number.isInteger(data.totalProjects)&&data.totalProjects>=1,'Missing catalog count');
-const forbidden=['adminKey','deviceHash','rowProof','submissionId','original','protectedVotes','legacyVotes','feedbackRows'];
-for(const key of forbidden)assert.equal(Object.hasOwn(data,key),false,'Forbidden private field '+key);
-if(data.mode==='DEMO'){
-  for(const key of ['acceptedVotes','languages','rankings','highlights','ratedProjects']){
-    assert.equal(Object.hasOwn(data,key),false,'DEMO must not read/display '+key);
-  }
-}else{
-  assert.ok(Number.isInteger(data.acceptedVotes)&&data.acceptedVotes>=0);
-  assert.ok(Array.isArray(data.languages));
-  assert.ok(Array.isArray(data.highlights));
-  for(const item of data.highlights){
-    assert.ok(Object.keys(item).every(k=>['project','grade','language','quote','translation'].includes(k)));
-    assert.ok(typeof item.quote==='string'&&item.quote.length<=240);
-  }
-  if(data.mode==='LIVE')assert.equal(Object.hasOwn(data,'rankings'),false,
-    'LIVE must not expose rankings');
-  else{
-    assert.ok(Array.isArray(data.rankings));
-    for(const item of data.rankings){
-      assert.ok(Object.keys(item).every(k=>
-        ['id','grade','section','project','votes','average','weighted','rank'].includes(k)));
-      assert.ok(Number.isFinite(item.weighted));
-    }
-  }
+const wrapper=new RegExp('^'+callback.replace(/[.*+?^\\$\{\}()|[\]\\]/g,'\\$&')+'\\(([\\s\\S]*)\\);?$');
+const matchPayload=wrapper.exec(source);
+assert.ok(matchPayload,'Public Results endpoint did not return expected JSONP');
+const data=JSON.parse(matchPayload[1]);
+assert.equal(data.success,true);
+assert.equal(data.mode,'DEMO','Real Results must not be publicly accessible');
+assert.ok(Number.isInteger(data.totalProjects)&&data.totalProjects>=1);
+for(const name of ['acceptedVotes','languages','rankings','ratedProjects','highlights',
+  'original','translation','submissionId','deviceToken','reviews','votes']){
+  assert.equal(Object.hasOwn(data,name),false,'Anonymous Results exposed '+name);
 }
-console.log('PASS read-only public Results API: mode='+data.mode+
-  ', catalog='+data.totalProjects+
-  ', no private identifiers/feedback or unapproved rankings in response.');
+console.log('PASS anonymous Results is DEMO-only, even with a forced PUBLISHED URL; no private fields.');
