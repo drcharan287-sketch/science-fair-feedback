@@ -23,7 +23,7 @@
   <header class="topbar">
     <div class="brand" aria-label="VoiceVote presenter display">
       <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 44 44" fill="none"><path d="M9 24c5-2 5-13 10-13s5 22 10 22 5-13 8-13" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="8" cy="24" r="3" fill="currentColor"/></svg></span>
-      <span>Voice<span class="brand-accent">Vote</span><small>SCIENCE FAIR EXPERIENCE</small></span>
+      <span>Voice<span class="brand-accent">Vote</span><small>CURIOSITY CARNIVAL · SCIENCE FAIR</small></span>
     </div>
     <nav class="main-nav" aria-label="Private presenter views">
       <button type="button" id="presenterShowDemo" class="nav-link active" aria-pressed="true">Demo · How it works</button>
@@ -38,8 +38,9 @@
   <main>
     <section class="hero" aria-labelledby="heroTitle">
       <div class="hero-copy">
-        <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> BUILT BY STUDENTS · POWERED BY CURIOSITY</p>
-        <h1 id="heroTitle">Every great idea <em>deserves a voice.</em></h1>
+        <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> OUR SCIENCE FAIR · BUILT BY STUDENTS</p>
+        <h1 id="heroTitle" class="carnival-hero-heading">Curiosity Carnival</h1>
+        <h2 class="hero-idea-title">Every great idea <em>deserves a voice.</em></h2>
         <p class="hero-description">Explore the ideas, voices and discoveries from our science fair. See how multilingual feedback becomes meaningful audience insights.</p>
         <div class="hero-tags" aria-label="Capabilities"><span>🎙 Speech recognition</span><span>文 AI translation</span><span>✦ Audience insights</span></div>
         <div class="hero-ctas">
@@ -47,13 +48,22 @@
           <a class="secondary-btn" href="#leaderboard">Explore the display <span aria-hidden="true">↓</span></a>
         </div>
       </div>
-      <div class="hero-art" aria-hidden="true">
-        <div class="halo halo-outer"></div><div class="halo halo-inner"></div>
-        <div class="orb"><span class="orb-lines">)))</span><strong>V<span>V</span></strong><small>IDEAS · VOICES · IMPACT</small></div>
-        <div class="floating-card floating-left"><span>✦</span> IDEAS</div>
-        <div class="floating-card floating-right">AI <span>↗</span></div>
-        <div class="orb-floor"></div>
-      </div>
+      <aside class="hero-art" aria-label="Visitor voting QR code">
+        <div class="halo halo-outer" aria-hidden="true"></div>
+        <div class="halo halo-inner" aria-hidden="true"></div>
+        <div class="board-qr-card">
+          <span class="board-qr-eyebrow">VISITORS · SCAN TO VOTE</span>
+          <div class="board-qr-frame">
+            <img class="board-qr-image" src="assets/curiosity-carnival-voting-qr.png"
+                 width="560" height="560" loading="eager" decoding="async"
+                 alt="Delhi Public School crest QR code linking to the public VoiceVote feedback form">
+          </div>
+          <strong class="board-qr-heading">Share your voice</strong>
+          <span class="board-qr-caption">Opens public feedback only · No results access</span>
+          <a class="board-qr-expand" href="assets/curiosity-carnival-voting-qr.png"
+             target="_blank" rel="noopener noreferrer">Enlarge QR for the smart board ↗</a>
+        </div>
+      </aside>
     </section>
 
     <section class="status-banner" role="status" aria-live="polite">
