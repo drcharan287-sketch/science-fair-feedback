@@ -131,6 +131,54 @@ function presenterSummary_(ticket) {
     message:'Private live audience aggregates. No individual visitor reviews.'});
 }
 
+/**
+ * PRIVATE READ-ONLY project feedback: a faculty presenter explicitly opens
+ * one rated project in the protected Live Results screen. Never bundle
+ * comments in presenterSummary_() or publicResults(). A public visitor URL,
+ * missing/expired presenter token, or unknown ID must fail BEFORE reading
+ * the Feedback sheet.
+ *
+ * Only valid rated votes are shown; excluded/VOID votes remain in the
+ * administrator-only audit/review tools. No device token, pass, submission ID,
+ * row number, voter identity, or admin credential is returned. Pagination
+ * limits accidental projection and response size on the smart board.
+ */
+function presenterProjectReviews_(ticket, projectId, offset) {
+  if (!publicVerifyPresenterSession_(ticket)) {
+    return {success:false,mode:'DENIED',
+      message:'Faculty presenter access is required or has expired.'};
+  }
+  const id = String(projectId || '').trim();
+  if (!id || id.length > 180) {
+    return {success:false,mode:'DENIED',message:'Select a known project.'};
+  }
+  const projects = readProjectCatalog_();
+  const known = projects.some(function(p) { return adminProjectId_(p) === id; });
+  if (!known) {
+    return {success:false,mode:'DENIED',message:'Select a known project.'};
+  }
+  // Read only after permission and project identity have both been validated.
+  const ss = adminSheet_();
+  const resolveVote = adminProjectLookup_(ss,projects);
+  const page = Math.max(0,Math.min(10000,Math.floor(Number(offset)||0)));
+  const size = 8;
+  const matches = adminRawVotes_(ss).filter(function(v) {
+    return v.status === 'VALID' && v.rating >= 1 && v.rating <= 5 &&
+      resolveVote(v) === id;
+  }).reverse();
+  return {
+    success:true,mode:'PRESENTER_REVIEWS',projectId:id,total:matches.length,
+    offset:page,hasMore:page+size<matches.length,
+    reviews:matches.slice(page,page+size).map(function(v) {
+      return {
+        rating:v.rating,language:v.language,time:v.time,
+        original:String(v.original || '').slice(0,2000),
+        translation:String(v.translation || '').slice(0,6000)
+      };
+    })
+  };
+}
+
 /** Legacy publication RPC kept only for explicitly returning to DEMO. */
 function adminSetPublicResultsMode(key, requested, reason) {
   adminRequireKey_(key);
