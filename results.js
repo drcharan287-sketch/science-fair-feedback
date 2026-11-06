@@ -23,12 +23,22 @@
     {id:'demo-05',grade:'9',section:'Sample Section E',project:'Future Mobility Project',votes:104,weighted:4.86,rank:1},
     {id:'demo-06',grade:'9',section:'Sample Section F',project:'AI for a Better Tomorrow',votes:96,weighted:4.69,rank:2}
   ]);
+  const DEMO_FEEDBACK = {
+    'demo-01':[{rating:5,language:'te-IN',original:'ఈ పచ్చని నగరం చాలా బాగుంది.',translation:'This green city is very good.'}],
+    'demo-02':[{rating:5,language:'hi-IN',original:'प्रकृति के बारे में बहुत अच्छी जानकारी मिली।',translation:'I learned a lot about nature.'}],
+    'demo-03':[{rating:5,language:'en-IN',original:'The water-saving model was practical.',translation:'The water-saving model was practical.'}],
+    'demo-04':[{rating:4,language:'te-IN',original:'సౌర శక్తి వివరణ స్పష్టంగా ఉంది.',translation:'The solar energy explanation was clear.'}],
+    'demo-05':[{rating:5,language:'en-IN',original:'A creative transport model.',translation:'A creative transport model.'}],
+    'demo-06':[{rating:5,language:'hi-IN',original:'एआई का उपयोग रचनात्मक है।',translation:'The use of AI is creative.'}]
+  };
   const launch = new URLSearchParams(String(window.location.hash || '').replace(/^#/,''));
   const presenterToken = String(launch.get('presenter') || '');
   let presenterVerified=false, presenterView=launch.get('view')==='live'?'LIVE':'DEMO';
   let mode='DEMO', current=null, selectedGrade='all', intervalId=null;
   let requestInFlight=false, sequence=0, lastCatalogCount=null;
+  let reviewProject=null,reviewOffset=0,reviewEpoch=0,reviewBusy=false,reviewCleanup=null,reviewTrigger=null;
   function denyAccess(message) {
+    closeReviews(true);
     presenterVerified=false;current=null;mode='DEMO';selectedGrade='all';
     if(intervalId){clearInterval(intervalId);intervalId=null;}
     $('pageShell').hidden=true;
@@ -50,6 +60,7 @@
   }
   function setPresenterView(view) {
     if(!presenterVerified)return;
+    closeReviews(true);
     presenterView=view==='LIVE'?'LIVE':'DEMO';
     selectedGrade='all';
     if(presenterView==='DEMO')setAuto(false);
@@ -139,6 +150,11 @@
       const score=make('div','rank-score');
       score.appendChild(make('strong','',Number(item.weighted).toFixed(2)+' ★'));
       score.appendChild(make('span','',fmt(item.votes)+' ratings'+(mode==='DEMO'?' · SAMPLE':'')));
+      const details=make('button','feedback-open-btn',mode==='DEMO'?'Sample feedback':'View feedback');
+      details.type='button';
+      details.setAttribute('aria-label','View '+(mode==='DEMO'?'sample ':'')+'feedback for '+item.project);
+      details.addEventListener('click',()=>openReviews(item,details));
+      score.appendChild(details);
       card.append(number,name,score);host.appendChild(card);
     });
   }
