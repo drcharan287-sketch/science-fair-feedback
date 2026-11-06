@@ -108,6 +108,10 @@ try{
       'QR enlarge link must point to the same public scan image');
     assert.ok(await page.locator('#leaderboardCards .rank-card').count()>0);
     const beforeDemoReviews=reviewCalls;
+    // The existing fixed presenter toolbar can cover the bottom of a small
+    // viewport. Position the project action in the safe center first.
+    await page.locator('.feedback-open-btn').first().evaluate(el=>
+      el.scrollIntoView({block:'center',inline:'nearest'}));
     await page.locator('.feedback-open-btn').first().click();
     assert.equal(await page.locator('#projectFeedbackOverlay').isVisible(),true);
     assert.match(await page.locator('#projectFeedbackEyebrow').innerText(),/FICTIONAL/);
@@ -136,6 +140,10 @@ try{
       'Live view selection should survive browser refresh on the same private ticket');
     assert.equal(await page.locator('#leaderboardCards .rank-card').count(),2);
     assert.equal(reviewCalls,0,'Live aggregate refresh must never include individual comments');
+    // The existing fixed presenter toolbar can cover the bottom of a small
+    // viewport. Position the project action in the safe center first.
+    await page.locator('.feedback-open-btn').first().evaluate(el=>
+      el.scrollIntoView({block:'center',inline:'nearest'}));
     await page.locator('.feedback-open-btn').first().click();
     await page.waitForFunction(()=>document.querySelectorAll('.project-feedback-card').length===8,
       null,{timeout:12000});
