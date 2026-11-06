@@ -214,6 +214,59 @@
       put('projectFeedbackStatus',examples.length+' fictional example(s) · no visitor submissions');
     }else fetchReviews();
   }
+  function fetchReviews(){
+    if(reviewBusy||!reviewProject||!presenterVerified||mode!=='PUBLISHED')return;
+    const id=reviewProject.id,offset=reviewOffset,epoch=++reviewEpoch;
+    const cb='voiceVotePresenterReviews_'+epoch;
+    const script=document.createElement('script');
+    let finished=false;
+    reviewBusy=true;
+    $('projectFeedbackMore').hidden=true;
+    put('projectFeedbackStatus','Loading project feedback…');
+    const finish=()=>{
+      if(finished)return false;
+      finished=true;reviewBusy=false;
+      clearTimeout(timer);script.remove();delete window[cb];
+      if(reviewCleanup===finish)reviewCleanup=null;
+      return true;
+    };
+    reviewCleanup=finish;
+    const retry=message=>{
+      put('projectFeedbackStatus',message);
+      $('projectFeedbackMore').hidden=false;
+      $('projectFeedbackMore').textContent='Retry feedback';
+    };
+    window[cb]=reply=>{
+      if(!finish()||epoch!==reviewEpoch||!reviewProject||reviewProject.id!==id)return;
+      if(!reply||reply.success!==true||reply.mode!=='PRESENTER_REVIEWS'||
+         reply.projectId!==id||!Array.isArray(reply.reviews)){
+        if(reply&&reply.mode==='DENIED'){
+          denyAccess('Presenter permission expired. Generate a fresh private link from Admin.');
+        }else retry('Feedback cannot be loaded now. Please try again.');
+        return;
+      }
+      reply.reviews.forEach((entry,i)=>addReview(entry,offset+i));
+      reviewOffset=offset+reply.reviews.length;
+      const total=Math.max(0,Number(reply.total)||0);
+      put('projectFeedbackStatus',total?
+        'Showing '+reviewOffset+' of '+total+' feedback'+(total===1?'':'s')+'.':
+        'No captured feedback for this project yet.');
+      $('projectFeedbackMore').hidden=!reply.hasMore;
+      $('projectFeedbackMore').textContent='Show more feedback';
+    };
+    script.onerror=()=>{if(finish())retry('Connection unavailable. Try again.');};
+    const timer=setTimeout(()=>{
+      if(finish())retry('Feedback request timed out. Try again.');
+    },20000);
+    const u=new URL(SCRIPT_URL);
+    u.searchParams.set('action','presenterReviews');
+    u.searchParams.set('ticket',presenterToken);
+    u.searchParams.set('projectId',id);
+    u.searchParams.set('offset',String(offset));
+    u.searchParams.set('callback',cb);
+    u.searchParams.set('_',String(Date.now()));
+    script.src=u.toString();document.head.appendChild(script);
+  }
   function renderLanguages(data) {
     const host=$('languageBars');host.replaceChildren();
     const list=(data.languages||[]).filter(r=>r.count>0).slice(0,5);
@@ -305,6 +358,15 @@
   $('liveRefreshButton').addEventListener('click',()=>{if(presenterVerified)refreshServer();});
   $('liveBrightnessButton').addEventListener('click',()=>{if(presenterVerified)$('brightToggle').click();});
   $('liveFullScreenButton').addEventListener('click',()=>{if(presenterVerified)$('screenToggle').click();});
+  $('projectFeedbackClose').addEventListener('click',()=>closeReviews(false));
+  $('projectFeedbackDone').addEventListener('click',()=>closeReviews(false));
+  $('projectFeedbackBackdrop').addEventListener('click',()=>closeReviews(false));
+  $('projectFeedbackMore').addEventListener('click',fetchReviews);
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&!$('projectFeedbackOverlay').hidden){
+      e.preventDefault();closeReviews(false);
+    }
+  });
   $('gradeFilter').addEventListener('change',e=>{
     selectedGrade=e.target.value;renderRankings(sourceData());
   });
