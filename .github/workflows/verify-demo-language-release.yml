@@ -1,0 +1,35 @@
+name: Verify published Demo header and language chart (no-save)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-demo-language-release.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-demo-language-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  published-presentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out reviewed release
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm exact published HTML CSS and JS from current main (GET-only)
+        run: node scripts/wait-for-pages.mjs
+      - name: Install isolated Chromium driver
+        run: npm install --no-save playwright-core
+      - name: Verify live Demo VoiceVote header prominence and ranked language participation, board and phones
+        run: node scripts/verify-results-ui.mjs
+      - name: Confirm public Voting and no-save owner Demo remain operational
+        run: node scripts/verify-owner-demo.mjs
