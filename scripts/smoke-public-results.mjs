@@ -17,10 +17,10 @@ const response=await fetch(url,{redirect:'follow',
   signal:AbortSignal.timeout(30000),headers:{Accept:'application/javascript'}});
 assert.ok(response.ok,'Public Results GET returned HTTP '+response.status);
 const source=(await response.text()).trim();
-const wrapper=new RegExp('^'+callback+'\\\\(([\\\\s\\\\S]*?)\\\\);?
-const matchPayload=wrapper.exec(source);
-assert.ok(matchPayload,'Public Results endpoint did not return expected JSONP');
-const data=JSON.parse(matchPayload[1]);
+const prefix=callback+'(';
+assert.ok(source.startsWith(prefix) && source.endsWith(');'),
+  'Public Results endpoint did not return expected JSONP callback');
+const data=JSON.parse(source.slice(prefix.length,-2));
 assert.equal(data.success,true);
 assert.equal(data.mode,'DEMO','Real Results must not be publicly accessible');
 assert.ok(Number.isInteger(data.totalProjects)&&data.totalProjects>=1);
