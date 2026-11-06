@@ -41,6 +41,21 @@ try {
       const request = route.request();
       const destination = new URL(request.url());
       if (destination.origin === origin && request.method() === 'GET') return route.continue();
+      // Event-day Voting now reads the current Google catalog first. Stub the
+      // read-only JSONP request so this speech simulation remains fully isolated
+      // from external systems, even if the Google project roster changes.
+      if (destination.hostname === 'script.google.com' && request.method()==='GET' &&
+          destination.searchParams.get('action')==='catalog') {
+        const cb=destination.searchParams.get('callback');
+        if(cb && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(cb)){
+          const projects=[
+            {grade:'9',section:'Keats',project:'VoiceVote App',id:'VVP-LOCAL-STAGED'},
+            {grade:'6',section:'Heidelberg',project:'Xeno Chat App',id:'VVP-LOCAL-SECOND'}
+          ];
+          return route.fulfill({status:200,contentType:'application/javascript',
+            body:cb+'('+JSON.stringify({success:true,projects})+');'});
+        }
+      }
       // English preview is now an intentional, NO-SAVE POST. Mock it here to
       // keep this readiness test completely offline from production Google.
       if (destination.hostname === 'script.google.com' && request.method()==='POST') {
