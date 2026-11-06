@@ -115,6 +115,8 @@ Legend: **DONE** = implemented and verified in the indicated scope; **AUTO PENDI
 | VV-22 | P0 | Make Private Live board statistics-first without introductory screen, preserve server Updated time, same-ticket refresh, and give Admin rankings independent vertical scroll | Developer + faculty | **DEPLOYED; AUTOMATED PASS** — PR #52; full Demo QR retained, Live banner/stats/rankings only, 45s polling and two-hour ticket unchanged; Pages, Apps Script, source, no-write POST and published browser checks green. **Physical Senses board and organizer Admin visual acceptance pending.** |
 | VV-23 | P0 | Show captured original-language feedback and saved English translations for each rated project beside Live star rankings without exposing them to public visitors | Developer + faculty | **DEPLOYED; AUTOMATED PASS** — PR #54; private on-demand same-page, paged and redacted review view; ticket, project, exclusion and no-write safeguards verified; Demo uses clearly fictional feedback. **Physical board/presenter review acceptance pending.** |
 
+| VV-24 | P0 | Translate Indian-script comments mislabeled English and retry Google auto-detection; distinguish unsupported iPhone speech from definite microphone denial | Developer + QA | **PR #56 STAGED; CI/RELEASE PENDING** — read-only inspection confirmed test row 6 had mixed Telugu/Devanagari, language en-IN and translation equal to original; new save/preview fallback plus private reviewer label regression and iOS keyboard Dictation guidance added. **Native iPhone recognition remains browser-dependent and requires on-device acceptance.** |
+
 ## 6. Final physical-device sign-off sheet (fill once when ready)
 
 Do not claim a pass before an actual device or isolated test environment has been used.
