@@ -44,12 +44,24 @@ try {
       await page.waitForFunction(() =>
         document.getElementById('studentClass') &&
         !document.getElementById('studentClass').disabled &&
-        Array.from(document.getElementById('studentClass').options).some(o=>o.value==='9'),
+        Array.from(document.getElementById('studentClass').options).some(o=>o.value),
         null,{timeout:12000}
       );
-      await page.selectOption('#studentClass','9');
-      await page.selectOption('#section','Keats');
-      await page.selectOption('#project','VoiceVote');
+      // Select a currently listed project rather than the retired legacy
+      // fixture "VoiceVote". Organizer-approved event-day roster updates
+      // may change names, class and section without a GitHub release.
+      const grade=(await page.locator('#studentClass option').evaluateAll(nodes=>
+        nodes.map(n=>n.value).filter(Boolean)))[0];
+      assert.ok(grade,'At least one active grade must exist');
+      await page.selectOption('#studentClass',grade);
+      const section=(await page.locator('#section option').evaluateAll(nodes=>
+        nodes.map(n=>n.value).filter(Boolean)))[0];
+      assert.ok(section,'At least one active section must exist');
+      await page.selectOption('#section',section);
+      const project=(await page.locator('#project option').evaluateAll(nodes=>
+        nodes.map(n=>n.value).filter(Boolean)))[0];
+      assert.ok(project,'At least one active project must exist');
+      await page.selectOption('#project',project);
       assert.equal(await page.locator('#visitorPassFeature').isVisible(),false,'Deferred visitor passes must not appear');
       assert.equal(await page.locator('#newVisitorBtn').isVisible(),false,'Shared-phone pass flow must remain hidden');
       await page.fill('#feedback','AUTOMATED DRY RUN - never transmitted to Google.');
@@ -83,9 +95,9 @@ try {
       assert.equal(destination.searchParams.get('feedback'),null,'Feedback must not appear in URL');
       const fields = new URLSearchParams(captured.body || '');
       assert.equal(fields.get('action'),'save');
-      assert.equal(fields.get('studentClass'),'9');
-      assert.equal(fields.get('section'),'Keats');
-      assert.equal(fields.get('project'),'VoiceVote');
+      assert.equal(fields.get('studentClass'),grade);
+      assert.equal(fields.get('section'),section);
+      assert.equal(fields.get('project'),project);
       assert.equal(fields.get('rating'),'5');
       assert.equal(fields.get('visitorPass'),'','Deferred pass field must always be empty');
       assert.equal(fields.get('feedback'),'AUTOMATED DRY RUN - never transmitted to Google.');
