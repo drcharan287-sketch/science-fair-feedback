@@ -348,7 +348,7 @@ button:disabled, textarea:disabled, input:disabled {
   </section>
   <p id="voteGuardStatus" class="vote-lock" role="status" aria-live="polite" hidden></p>
   <p id="presenterBanner" class="vote-lock" role="status" aria-live="polite" hidden></p>
-  <button type="button" id="retryCatalogBtn" hidden>Retry loading projects</button>
+  <button type="button" id="retryCatalogBtn" hidden>Refresh project list</button>
   </section>
 
   <section class="step-section step-speak" aria-labelledby="speakHeading">
@@ -657,7 +657,22 @@ newVisitorBtn.addEventListener("click", function() {
   syncVoteStatus();
   statusElement.textContent = "New visitor session ready. Submit using this person's unique unused pass.";
 });
-retryCatalogBtn.addEventListener("click", function() { window.location.reload(); });
+retryCatalogBtn.addEventListener("click", function() {
+  if (!catalogReady || !selectedCatalogController || !selectedCatalogController.refreshCatalog) {
+    window.location.reload();
+    return;
+  }
+  if (isSubmitting || isRecording) return;
+  retryCatalogBtn.disabled = true;
+  selectedCatalogController.refreshCatalog().then(function() {
+    retryCatalogBtn.disabled = false;
+    updateGradeLabels();updateSectionLabels();syncVoteStatus();
+  }).catch(function(error) {
+    retryCatalogBtn.disabled = false;
+    catalogStatus.textContent = "Could not refresh the school roster: " + error.message +
+      ". Existing selection may be outdated; ask an organizer before submitting.";
+  });
+});
 
 function hasValidWebAppUrl() {
   return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(SCRIPT_URL.trim());
@@ -697,6 +712,8 @@ function startCatalog() {
     apiUrl: SCRIPT_URL.trim(),
     snapshotUrl: "./projects.json?roster=2026-11-06-aa7f4dd3-424",
      snapshotVersion: "2026-11-06-aa7f4dd3-424",
+    preferLiveCatalog: true,
+    liveCatalogTimeoutMs: 9000,
     gradeSelector: "#studentClass",
     sectionSelector: "#section",
     projectSelector: "#project",
@@ -710,7 +727,8 @@ function startCatalog() {
   }).then(function(controller) {
     selectedCatalogController = controller;
     catalogReady = true;
-    retryCatalogBtn.hidden = true;
+    retryCatalogBtn.hidden = false;
+    retryCatalogBtn.textContent = 'Refresh project list';
     submitButton.disabled = isVoteLocked();
     updateGradeLabels();
     syncVoteStatus();
