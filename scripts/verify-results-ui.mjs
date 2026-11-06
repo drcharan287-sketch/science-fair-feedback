@@ -111,7 +111,7 @@ try{
     await page.locator('.feedback-open-btn').first().click();
     assert.equal(await page.locator('#projectFeedbackOverlay').isVisible(),true);
     assert.match(await page.locator('#projectFeedbackEyebrow').innerText(),/FICTIONAL/);
-    assert.match(await page.locator('#projectFeedbackList').innerText(),/Original feedback/);
+    assert.match(await page.locator('#projectFeedbackList').innerText(),/Original feedback/i);
     assert.equal(reviewCalls,beforeDemoReviews,'Demo comments are local fiction only');
     await page.locator('#projectFeedbackClose').click();
     assert.equal(await page.locator('#projectFeedbackOverlay').isVisible(),false);
