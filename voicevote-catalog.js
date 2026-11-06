@@ -147,7 +147,9 @@
       else if (!options.length) setStatus('No active projects for this class/grade.');
     }
 
-    function setCatalog(entries) {
+    function setCatalog(entries, preserveSelection) {
+      const prior=preserveSelection?{grade:grade.value,section:section.value,
+        project:project.value}:null;
       if (!Array.isArray(entries)) throw new Error('Project catalog must be an array.');
       catalog = entries.filter(function (entry) {
         return entry && ['grade', 'section', 'project'].every(function (key) {
@@ -168,7 +170,18 @@
       const grades = (preserveExistingGrades && existingGradeValues.length)
         ? existingGradeValues : unique(catalog.map(function (entry) { return entry.grade; }));
       resetSelect(grade, 'Select class/grade', grades);
+      if(prior && grades.includes(prior.grade))grade.value=prior.grade;
       updateSections();
+      if(prior && grade.value===prior.grade) {
+        const sections=Array.from(section.options).map(function(o){return o.value;});
+        if(sections.includes(prior.section)){
+          section.value=prior.section;
+          updateProjects();
+          const titles=Array.from(project.options).map(function(o){return o.value;});
+          if(titles.includes(prior.project))project.value=prior.project;
+          else if(prior.project)setStatus('The previously selected project was changed or deactivated. Choose an active project.');
+        }
+      }
       if (search) {
         search.disabled = isBlocked() || catalog.length === 0;
         if (searchSelected) searchSelected.textContent = '';
@@ -187,8 +200,8 @@
         const script = document.createElement('script');
         let finished = false;
         const timeout = setTimeout(function () {
-          finish(new Error('Project list request timed out.'));
-        }, 15000);
+          finish(new Error('Live school project list request timed out.'));
+        }, config.liveCatalogTimeoutMs || 9000);
         function finish(error, data) {
           if (finished) return;
           finished = true;
@@ -291,18 +304,50 @@
       setStatus('Missing Apps Script URL.');
       return Promise.reject(new Error('Pass apiUrl or catalog to VoiceVoteCatalogSelector.init.'));
     }
-    const request = (config.snapshotUrl && typeof global.fetch === 'function')
-      ? loadSnapshot(config.snapshotUrl).catch(function(snapshotError) {
-          setStatus('Local project list unavailable; checking Google Apps Script…');
-          return loadCatalog(config.apiUrl);
-        })
-      : loadCatalog(config.apiUrl);
-
-    return request.then(function (entries) {
-      setCatalog(entries);
-      return { setCatalog: setCatalog, loadCatalog: loadCatalog, getSelectedProjectId: getSelectedProjectId };
-    }).catch(function (error) {
-      setStatus(error.message + ' Please retry.');
+    // The protected Google Sheet is now the event-day authority. Use the live
+    // read-only Apps Script catalog first, not a frozen GitHub Pages snapshot.
+    // When Google cannot be reached, an explicitly labeled static backup helps
+    // visitors browse; the server still rejects stale/deactivated projects.
+    function liveFirst() {
+      return loadCatalog(config.apiUrl).then(function(entries){
+        return {entries:entries,source:'live'};
+      }).catch(function(error){
+        if(!config.snapshotUrl || typeof global.fetch!=='function')throw error;
+        setStatus('Live catalog unavailable; checking a backup project list…');
+        return loadSnapshot(config.snapshotUrl).then(function(entries){
+          return {entries:entries,source:'backup'};
+        });
+      });
+    }
+    function refreshCatalog() {
+      setStatus('Checking the latest live school project list…');
+      return liveFirst().then(function(result){
+        setCatalog(result.entries,true);
+        if(result.source==='live'){
+          setStatus('Current school project list verified · '+result.entries.length+' active projects. Recheck your selection.');
+        } else {
+          setStatus('BACKUP ONLY: Google project updates could not be checked. This list may be outdated. Retry when connected; the server will reject changed or deactivated projects.');
+        }
+        return result;
+      });
+    }
+    const request=config.preferLiveCatalog
+      ? liveFirst()
+      : (config.snapshotUrl && typeof global.fetch==='function')
+        ? loadSnapshot(config.snapshotUrl).then(function(entries){return {entries:entries,source:'snapshot'};})
+          .catch(function(){
+            setStatus('Local project list unavailable; checking Google Apps Script…');
+            return loadCatalog(config.apiUrl).then(function(entries){return {entries:entries,source:'live'};});
+          })
+        : loadCatalog(config.apiUrl).then(function(entries){return {entries:entries,source:'live'};});
+    return request.then(function(result){
+      setCatalog(result.entries);
+      if(result.source==='backup')
+        setStatus('BACKUP ONLY: live catalog could not be verified. Retry project refresh before voting.');
+      return {setCatalog:setCatalog,loadCatalog:loadCatalog,
+        getSelectedProjectId:getSelectedProjectId,refreshCatalog:refreshCatalog};
+    }).catch(function(error){
+      setStatus(error.message+' Please retry.');
       throw error;
     });
   }
