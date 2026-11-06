@@ -21,11 +21,13 @@ try {
       await page.selectOption('#studentClass', '6');
       await page.selectOption('#section', 'Heidelberg');
       const p1 = await page.locator('#project option').allTextContents();
-      assert.ok(p1.includes('XenoChat'), 'Grade 6 / Heidelberg must include XenoChat');
+      assert.ok(p1.includes('Xeno Chat App'), 'Authoritative Grade 6 / Heidelberg must include Xeno Chat App');
+      assert.equal(p1.includes('XenoChat'),false,'Retired demonstration-only XenoChat must not appear');
       await page.selectOption('#studentClass', '9');
       await page.selectOption('#section', 'Keats');
       const p2 = await page.locator('#project option').allTextContents();
-      assert.ok(p2.includes('VoiceVote'), 'Grade 9 / Keats must include VoiceVote');
+      assert.ok(p2.includes('VoiceVote App'), 'Authoritative Grade 9 / Keats must include VoiceVote App');
+      assert.equal(p2.includes('VoiceVote'),false,'Retired demonstration-only VoiceVote must not appear');
       success = true;
       break;
     } catch (e) {
