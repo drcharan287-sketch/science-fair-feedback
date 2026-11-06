@@ -68,8 +68,19 @@
 
     <section class="status-banner" role="status" aria-live="polite">
       <span class="status-symbol" id="modeSymbol">✦</span>
-      <div><strong id="modeTitle">DEMONSTRATION MODE</strong><p id="modeDetails">You are viewing sample data, not actual votes or winners.</p></div>
-      <span id="lastUpdated" class="last-updated">Sample experience</span>
+      <div class="status-banner-text">
+        <strong id="modeTitle">DEMONSTRATION MODE</strong>
+        <p id="modeDetails">You are viewing sample data, not actual votes or winners.</p>
+      </div>
+      <div class="status-banner-meta">
+        <span id="lastUpdated" class="last-updated">Sample experience</span>
+        <div class="live-banner-controls" id="liveBannerControls" hidden>
+          <button id="liveDemoButton" type="button" title="Return to the faculty demonstration">Demo</button>
+          <button id="liveRefreshButton" type="button" title="Fetch current authorized results">↻ Refresh</button>
+          <button id="liveBrightnessButton" type="button" title="Toggle bright-room display">◐ Brightness</button>
+          <button id="liveFullScreenButton" type="button" title="Enter or exit full screen">⛶ Full screen</button>
+        </div>
+      </div>
     </section>
 
     <section class="stat-grid" aria-label="Science fair insights">
