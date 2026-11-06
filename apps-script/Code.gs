@@ -41,6 +41,18 @@ function doGet(e) {
     catch (_) { payload = {success:false,mode:'DENIED',message:'Private presenter results unavailable.'}; }
     return jsonpResponse_(payload,params.callback);
   }
+  if (params.action === 'presenterReviews') {
+    // Private project-level comments are fetched only after a deliberate
+    // click and full presenter-ticket validation. Never use publicResults
+    // or the visitor Voting URL to retrieve individual comments.
+    let payload;
+    try { payload = presenterProjectReviews_(params.ticket,params.projectId,params.offset); }
+    catch (_) {
+      payload = {success:false,mode:'DENIED',
+        message:'Private project feedback is temporarily unavailable.'};
+    }
+    return jsonpResponse_(payload,params.callback);
+  }
   if (params.action === 'presenterVerify') {
     // Opaque, short-lived ticket verification only. No admin key, vote,
     // person, feedback, or private dashboard data is ever returned.
