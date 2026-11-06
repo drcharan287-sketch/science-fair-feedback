@@ -1,6 +1,8 @@
 # VoiceVote event-day project manager — 6 November handover and implementation plan
 
-**Release status:** Implemented in [PR #70](https://github.com/drcharan287-sketch/science-fair-feedback/pull/70), Apps Script production deployment [PASS](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42255171574), Pages browser no-vote acceptance [PASS](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42259973939). Documentation was synchronized first in PR #69. No production Add/Edit/Deactivate writes were made during QA. 6 Nov readback: **424 active projects**, 424 unique IDs, **0 Feedback**. **Read-only valid-key organizer acceptance is pending**, not a blocker to software deployment.
+**Release status:** Implemented in [PR #70](https://github.com/drcharan287-sketch/science-fair-feedback/pull/70), Apps Script production deployment [PASS](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42255171574), Pages browser no-vote acceptance [PASS](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42259973939). Documentation was synchronized first in PR #69. No production Add/Edit/Deactivate writes were made during QA. 6 Nov readback: **424 active projects**, 424 unique IDs, **0 Feedback**. **Organizer's subsequent real valid-key Add is verified**: one TEST PROJECT was added and then specifically removed after the separate Android Hindi vote test; see [fair-eve sign-off](FAIR_EVE_TEST_SIGNOFF_2026-11-06.md). Live Edit/Deactivate/Reactivate were not trialed, only covered in nonwriting regression tests.
+
+**Current continuation:** [Single-copy next-thread prompt](NEXT_THREAD_COPY_PASTE_PROMPT.md).
 
 ## Existing release baseline
 - **424 active projects** from the 6 November authoritative school workbook; 44 detailed section tabs. The separate summary lists 379; school has not resolved the mismatch. Do not force-delete 45 named projects.
