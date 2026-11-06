@@ -168,7 +168,7 @@ jobs:
         run: node scripts/verify-admin-access.mjs
       - name: Verify protected Event-Day Project Manager is present in production Admin shell
         if: github.event_name == 'push' || inputs.mode == 'deploy'
-        run: node scripts/verify-live-admin-design.mjs
+        run: node scripts/verify-live-project-manager.mjs
       - name: Restore previous live deployment if smoke test fails
         if: failure() && (github.event_name == 'push' || inputs.mode == 'deploy')
         env:
