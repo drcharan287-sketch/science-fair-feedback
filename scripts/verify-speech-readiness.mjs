@@ -41,6 +41,18 @@ try {
       const request = route.request();
       const destination = new URL(request.url());
       if (destination.origin === origin && request.method() === 'GET') return route.continue();
+      // English preview is now an intentional, NO-SAVE POST. Mock it here to
+      // keep this readiness test completely offline from production Google.
+      if (destination.hostname === 'script.google.com' && request.method()==='POST') {
+        const fields=new URLSearchParams(request.postData()||'');
+        if (fields.get('action')==='translatePreview') {
+          const payload={type:'voicevote-translation-preview',success:true,
+            requestId:fields.get('requestId'),translation:'Synthetic English preview'};
+          return route.fulfill({status:200,contentType:'text/html',
+            body:'<!doctype html><script>window.top.postMessage('+
+              JSON.stringify(payload)+','+JSON.stringify(origin)+');<\/script>'});
+        }
+      }
       outboundAttempts++;
       return route.abort('blockedbyclient');
     });
@@ -84,7 +96,8 @@ try {
           resultIndex: 0, results: [{ 0: { transcript: text }, isFinal: false }]
         });
       }, phrase);
-      assert.equal(await page.locator('#feedback').inputValue(), ' ' + phrase);
+      assert.equal(await page.locator('#feedback').inputValue(), phrase,
+        'Interim results should not invent a leading space');
       await page.locator('#stopBtn').click();
       assert.equal(await page.locator('#submitBtn').isDisabled(), true,
         'Still waiting for asynchronous recognition completion');
@@ -121,7 +134,8 @@ try {
     }
 
     assert.deepEqual(uncaught, [], profile.label + ': browser JS errors');
-    assert.equal(outboundAttempts, 0, 'No external requests or POSTs were sent');
+    assert.equal(outboundAttempts, 0,
+      'No real external requests or save POSTs were sent; preview was mocked');
     console.log('PASS ' + profile.label +
       ': English/Telugu/Hindi mocked speech, editing, errors, responsive width; no vote submitted');
     await context.close();
