@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 
-function app(fetchProjects, search = '', stored = new Map(), hash = '') {
+function app(fetchProjects, search = '', stored = new Map(), hash = '', userAgent = '') {
   class Element {
     constructor() { this.options = []; this.value = ''; this.disabled = false; this.textContent = ''; this.listeners = {}; this.dataset = {}; this.children = []; this.style = {}; this.hidden = false; this.classList = { toggle() {}, remove() {} }; }
     focus() { this.focused = true; }
@@ -25,7 +25,7 @@ function app(fetchProjects, search = '', stored = new Map(), hash = '') {
   const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn', 'stopBtn', 'projectSearch', 'projectSearchResults', 'projectSearchStatus', 'projectSearchSelected', 'visitorPass', 'newVisitorBtn', 'visitorPassFeature', 'networkStatus', 'presenterBanner', 'presenterReceipt',
     'presenterReceiptProject', 'presenterReceiptStars', 'presenterReceiptFeedback',
     'presenterTryAgain', 'presenterClose', 'englishTranslationPanel', 'englishTranslationStatus',
-    'englishTranslationText', 'refreshTranslationBtn'].map(id => [id, new Element()]));
+    'englishTranslationText', 'refreshTranslationBtn', 'openTranslationPageBtn'].map(id => [id, new Element()]));
   elements.language.value = 'hi-IN';
   elements.submitBtn.disabled = true;
   const stars = Array.from({ length: 5 }, (_, i) => { const e = new Element(); e.dataset.value = String(i + 1); return e; });
@@ -40,7 +40,7 @@ function app(fetchProjects, search = '', stored = new Map(), hash = '') {
   const windowListeners = {};
   const context = { document, console: { error() {} }, URLSearchParams, URL, Option: function(text, value) { this.textContent = text; this.value = value; }, Event: function(type) { this.type = type; }, 
     setTimeout: (fn,ms)=>{const t=setTimeout(fn,ms);t.unref();return t;}, clearTimeout,
-    navigator: { onLine: true },
+    navigator: { onLine: true, userAgent },
     addEventListener: (name, fn) => { (windowListeners[name] ||= []).push(fn); },
     dispatchWindowEvent: (name,detail) => (windowListeners[name] || []).forEach(fn => fn(detail)),
     crypto: { randomUUID: () => '123e4567-e89b-42d3-a456-426614174000', getRandomValues: a => a.fill(7) },
@@ -994,4 +994,58 @@ test('owner demo shares the same language reset and Close behavior without savin
   assert.match(a.elements.status.textContent,/close this tab/i);
   assert.equal(a.forms.length,0);
   assert.equal(locked.get('voicevote_voted_v1'),'1');
+});
+
+test('visitor header contains only central VoiceVote brand; 23 languages, no Results navigation',()=>{
+  const html=fs.readFileSync('index.html','utf8');
+  assert.doesNotMatch(html,/votenav-results|Explore the experience/i);
+  assert.doesNotMatch(html,/文 5 languages/);
+  assert.match(html,/22 Indian languages \+ English/);
+  const css=fs.readFileSync('voicevote-theme.css','utf8');
+  assert.match(css,/\.vote-topnav\{justify-content:center/);
+});
+
+test('iOS Chrome can open a real no-save preview in a separate browser tab',async()=>{
+  const stored=new Map([['voicevote_device_token_v1','123e4567-e89b-42d3-a456-426614174000']]);
+  const a=app(null,'',stored,'','Mozilla/5.0 (iPhone; CPU iPhone OS 18_0) CriOS/123.0');
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  a.elements.language.value='te-IN';
+  a.elements.feedback.value='ఈ ప్రాజెక్టు బాగుంది';
+  a.context.scheduleEnglishTranslation();
+  assert.equal(a.elements.openTranslationPageBtn.hidden,false,'iOS shows top-level fallback');
+  a.elements.openTranslationPageBtn.click();
+  const standalone=a.forms.find(f=>f.children.some(x=>x.name==='view'&&x.value==='standalone'));
+  assert.ok(standalone);
+  assert.equal(standalone.method,'POST');
+  assert.equal(standalone.target,'_blank');
+  assert.equal(standalone.submitted,true);
+  const fields=Object.fromEntries(standalone.children.map(x=>[x.name,x.value]));
+  assert.deepEqual(fields,{
+    action:'translatePreview',view:'standalone',
+    requestId:'123e4567-e89b-42d3-a456-426614174000',
+    language:'te-IN',feedback:'ఈ ప్రాజెక్టు బాగుంది'
+  });
+  assert.equal(a.forms.some(f=>f.children.some(x=>x.name==='action'&&x.value==='save')),false);
+  assert.deepEqual(Array.from(stored),[
+    ['voicevote_device_token_v1','123e4567-e89b-42d3-a456-426614174000']
+  ]);
+  a.elements.language.value='hi-IN';
+  a.elements.language.dispatchEvent(new a.context.Event('change'));
+  assert.equal(a.elements.feedback.value,'');
+  assert.equal(a.elements.openTranslationPageBtn.hidden,true);
+});
+
+test('standalone Google translation HTML is escaped and cannot save feedback',()=>{
+  const b=backend([['Class/Grade','Section','Project Name','Active'],
+    ['9','Keats','VoiceVote','TRUE']]);
+  const input='<img src=x onerror=alert(1)> & పరీక్ష';
+  const reply=b.context.doPost({parameter:{action:'translatePreview',
+    view:'standalone',language:'te-IN',
+    feedback:input,requestId:'123e4567-e89b-42d3-a456-426614174000'}});
+  assert.match(reply.html,/Translation preview/);
+  assert.match(reply.html,/No vote submitted or saved/i);
+  assert.ok(reply.html.includes('&lt;img src=x onerror=alert(1)&gt;'));
+  assert.ok(!reply.html.includes(input),'No raw HTML injection');
+  assert.equal(b.writes.length,0,'Separate preview cannot append feedback');
 });
