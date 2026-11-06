@@ -54,3 +54,22 @@ html:fullscreen .stat-card{padding:15px 18px}
 html:fullscreen .stat-value{font-size:clamp(2rem,3vw,3rem);margin-top:6px}
 html:fullscreen .main-grid{margin-top:17px}
 @media(max-width:760px){html:fullscreen .hero{display:block;min-height:auto;padding:35px 0 20px}}
+
+/* Private faculty board: hidden content remains hidden even though app layout
+   styles set display types. The public static HTML never contains live data. */
+[hidden]{display:none!important}
+.presenter-access-gate{min-height:100vh;max-width:710px;margin:0 auto;padding:clamp(65px,15vh,150px) 24px 60px;text-align:center}
+.presenter-access-gate .gate-mark{display:inline-grid;place-items:center;width:74px;height:74px;
+  border-radius:21px;border:1px solid #6aeafa88;background:#194464;font-size:39px;color:var(--cyan)}
+.presenter-access-gate h1{font-size:clamp(3rem,8vw,5rem);margin:17px 0 10px;font-weight:900}
+.presenter-access-gate h1 span{color:var(--cyan)}
+.presenter-access-gate h2{font-size:clamp(1.3rem,3vw,1.9rem);margin:8px 0 20px;color:#dff8ff}
+.presenter-access-gate p{font-size:clamp(1rem,2.2vw,1.15rem);line-height:1.7;color:var(--soft)}
+.presenter-access-gate .gate-help{font-size:.88rem;color:var(--muted)}
+.main-nav button.nav-link{border:0;background:transparent;cursor:pointer;white-space:nowrap}
+.main-nav button.nav-link.active{background:rgba(96,221,246,.18);color:var(--ink)}
+.main-nav button.nav-link:hover{background:rgba(96,221,246,.14)}
+@media(max-width:760px){
+  .main-nav{flex-wrap:wrap;justify-content:center}
+  .main-nav button.nav-link{font-size:.76rem;padding:8px 11px}
+}

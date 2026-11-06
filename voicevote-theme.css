@@ -71,3 +71,24 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;op
 @media(max-width:480px){.owner-receipt{padding:27px 18px}
   .owner-receipt-actions{flex-direction:column}
   .owner-receipt-actions button{width:100%;font-size:1.08rem;min-height:58px}}
+
+/* 2026-11-06: the common QR is voting-only. Give the actual VoiceVote brand
+   central prominence; the editorial tagline is supportive, not the title. */
+.vote-topnav{justify-content:center;min-height:93px}
+.votenav-brand{font-size:clamp(2.2rem,5.5vw,3.05rem);letter-spacing:-.06em}
+.votenav-brand>span:first-child{width:47px;height:47px;font-size:1.55rem}
+.header .logo{font-size:clamp(1.55rem,3.35vw,2.12rem);line-height:1.17;letter-spacing:-.05em;max-width:650px}
+.header .logo span{display:inline}
+.header h2{margin-top:15px}
+.translation-fallback{margin:9px 0 8px;padding:11px 14px;min-height:46px;
+  max-width:100%;border:1px solid #79eaf6a8;border-radius:12px;
+  font-size:.86rem;font-weight:800;color:#d5faff;background:#135878}
+.translation-fallback[hidden]{display:none!important}
+.translation-fallback:hover{background:#20718f}
+@media(max-width:560px){
+  .vote-topnav{min-height:82px}
+  .votenav-brand{font-size:clamp(1.95rem,7.2vw,2.4rem)}
+  .votenav-brand>span:first-child{width:40px;height:40px;margin-right:10px}
+  .header .logo{font-size:clamp(1.5rem,6.3vw,1.8rem)}
+  .translation-fallback{width:100%;font-size:.87rem;min-height:50px}
+}

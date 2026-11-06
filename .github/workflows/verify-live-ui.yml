@@ -53,5 +53,7 @@ jobs:
         run: node scripts/verify-owner-demo.mjs
       - name: Verify corrected live speech preview on parent and owner page without real vote submission
         run: node scripts/verify-translation-preview.mjs
+      - name: Verify top-level no-vote iPhone Chrome-like translation fallback (emulated, not native iOS)
+        run: node scripts/verify-ios-translation-fallback.mjs
       - name: Verify actual Google English translation in no-write preview (synthetic Hindi only)
         run: node scripts/verify-live-translation-preview.mjs
