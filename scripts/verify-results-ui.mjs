@@ -102,11 +102,12 @@ try{
     assert.match(await page.locator('#modeDetails').innerText(),/fictional/i);
     assert.match(await page.locator('#heroTitle').innerText(),/Curiosity Carnival/);
     const demoType=await page.evaluate(()=>({
+      brand:parseFloat(getComputedStyle(document.querySelector('.topbar .brand')).fontSize),
       heading:parseFloat(getComputedStyle(document.querySelector('#heroTitle')).fontSize),
       subheading:parseFloat(getComputedStyle(document.querySelector('.hero-idea-title')).fontSize)
     }));
-    assert.ok(demoType.heading>demoType.subheading,
-      'Demo page main event heading must be larger than its subtitle: '+JSON.stringify(demoType));
+    assert.ok(demoType.brand>demoType.heading&&demoType.heading>demoType.subheading,
+      'Demo must present VoiceVote brand > Curiosity Carnival > subtitle: '+JSON.stringify(demoType));
     const boardQR=page.locator('.board-qr-image');
     assert.equal(await boardQR.isVisible(),true,'Presenter board QR is visible after authorization');
     assert.equal(await boardQR.evaluate(img=>img.complete && img.naturalWidth>0),true,
@@ -162,6 +163,46 @@ try{
       'Live view selection should survive browser refresh on the same private ticket');
     assert.equal(await page.locator('#leaderboardCards .rank-card').count(),2);
     assert.equal(reviewCalls,0,'Live aggregate refresh must never include individual comments');
+    const initialLanguagePayload=privatePayload.languages;
+    // Reproduce the real bug: the Apps Script returns language-code order
+    // (English 6, Hindi 1, Tamil 1, Telugu 4), not participation ranking.
+    // Top language counts must sort by response volume, with alphabetical ties.
+    privatePayload.languages=[
+      {code:'en-IN',count:6},{code:'hi-IN',count:1},
+      {code:'ta-IN',count:1},{code:'te-IN',count:4}
+    ];
+    await page.locator('#liveRefreshButton').click();
+    await page.waitForFunction(()=>document.querySelectorAll('#languageBars .language-row').length===4,
+      null,{timeout:12000});
+    assert.deepEqual(await page.locator('#languageBars .language-label').allTextContents(),
+      ['English','Telugu','Hindi','Tamil'],
+      'Language frequency order is descending, ties alphabetical, not source-code order');
+    assert.deepEqual(await page.locator('#languageBars .language-count').allTextContents(),
+      ['6','4','1','1']);
+    assert.deepEqual(await page.locator('#languageBars .language-position').allTextContents(),
+      ['01','02','03','04'],'Participation positions must be contiguous like project ranks');
+    const firstFourColors=await page.locator('#languageBars .language-position')
+      .evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).color));
+    assert.equal(new Set(firstFourColors).size,4,'Each placement tier must have distinct colors');
+    assert.match(await page.locator('#languageSummary').innerText(),/Highest response count first/);
+    // Test source with more than five languages: slice after ranking, and
+    // stable alphabetical tie ordering, not truncation before sorting.
+    privatePayload.languages=[
+      {code:'en-IN',count:6},{code:'hi-IN',count:1},
+      {code:'ta-IN',count:1},{code:'te-IN',count:4},
+      {code:'kn-IN',count:2},{code:'bn-IN',count:1},
+      {code:'mr-IN',count:0}
+    ];
+    await page.locator('#liveRefreshButton').click();
+    await page.waitForFunction(()=>document.querySelectorAll('#languageBars .language-row').length===5,
+      null,{timeout:12000});
+    assert.deepEqual(await page.locator('#languageBars .language-label').allTextContents(),
+      ['English','Telugu','Kannada','Bengali','Hindi'],
+      'Only the true five most-used languages should be displayed, ties by label');
+    privatePayload.languages=initialLanguagePayload;
+    await page.locator('#liveRefreshButton').click();
+    await page.waitForFunction(()=>document.querySelectorAll('#languageBars .language-row').length===2,
+      null,{timeout:12000});
     // Board: true pointer input. Emulated phone: verify the visual hit target
     // then dispatch a DOM click to exercise UI logic; native phone tapping
     // remains a separate physical-device acceptance task.
