@@ -55,13 +55,22 @@ async function loadPage(page) {
   assert.ok(response?.ok(), 'GitHub Pages app must be accessible');
   await page.waitForFunction(() => {
     const field = document.getElementById('studentClass');
-    return field && !field.disabled && [...field.options].some(x => x.value === '9');
+    return field && !field.disabled && [...field.options].some(x => x.value);
   }, null, { timeout: 16000 });
 }
 async function fillVote(page) {
-  await page.selectOption('#studentClass', '9');
-  await page.selectOption('#section', 'Keats');
-  await page.selectOption('#project', 'VoiceVote');
+  const grade=(await page.locator('#studentClass option').evaluateAll(nodes =>
+    nodes.map(n=>n.value).filter(Boolean)))[0];
+  assert.ok(grade,'Active class/grade must exist for recovery test');
+  await page.selectOption('#studentClass',grade);
+  const section=(await page.locator('#section option').evaluateAll(nodes =>
+    nodes.map(n=>n.value).filter(Boolean)))[0];
+  assert.ok(section,'Active section must exist for recovery test');
+  await page.selectOption('#section',section);
+  const project=(await page.locator('#project option').evaluateAll(nodes =>
+    nodes.map(n=>n.value).filter(Boolean)))[0];
+  assert.ok(project,'Active project must exist for recovery test');
+  await page.selectOption('#project',project);
   await page.fill('#feedback', 'SIMULATED ONLY — never sent to Google');
   await page.locator('.star[data-value="5"]').click();
   await page.waitForFunction(() => {
@@ -82,28 +91,32 @@ async function inspectLock(page, kind) {
   return result;
 }
 try {
-  // A. Missing project snapshot and blocked live-catalog fallback must fail
-  // closed and recover when the public snapshot is reachable again.
+  // A. Block BOTH live-first Google catalog and backup snapshot: visitor
+  // selection must fail closed and recover when the backup is reachable again.
   {
     const a = await newIsolatedPage();
     const { page, context } = a;
-    await page.route('**/projects.json', route => route.abort('failed'));
+    await page.route('**/projects.json*', route => route.abort('failed'));
     const response = await page.goto(site + '?catalogFault=' + Date.now(), {
       waitUntil: 'domcontentloaded', timeout: 25000
     });
     assert.ok(response?.ok());
     await page.waitForFunction(() => {
-      const b = document.getElementById('retryCatalogBtn');
-      return b && !b.hidden;
+      const b=document.getElementById('retryCatalogBtn');
+      const status=document.getElementById('catalogStatus');
+      const grade=document.getElementById('studentClass');
+      return b && !b.hidden && grade.disabled &&
+        /retry|unable to load projects/i.test(status?.textContent||'');
     }, null, { timeout: 18000 });
     assert.equal(await page.locator('#submitBtn').isDisabled(), true);
-    assert.match(await page.locator('#catalogStatus').textContent(), /retry/i);
+    assert.equal(await page.locator('#studentClass').isDisabled(),true);
+    assert.match(await page.locator('#catalogStatus').textContent(), /retry|Unable to load/i);
     assert.equal(a.count, 0);
-    await page.unroute('**/projects.json');
+    await page.unroute('**/projects.json*');
     await page.locator('#retryCatalogBtn').click();
     await page.waitForFunction(() => {
       const b = document.getElementById('studentClass');
-      return b && !b.disabled && [...b.options].some(o => o.value === '9');
+      return b && !b.disabled && [...b.options].some(o => o.value);
     }, null, { timeout: 16000 });
     await fillVote(page);
     await context.setOffline(true);
