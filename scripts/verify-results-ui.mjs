@@ -33,6 +33,7 @@ try{
     });
     const page=await ctx.newPage();
     let approved=false,postCount=0,unexpected=0,privateCalls=0;
+    let liveVoteCount=15,serverUpdatedAt='2026-11-06T07:39:00.000Z';
     const errors=[];
     page.on('pageerror',err=>errors.push(err.message));
     await page.route('**/*',route=>{
@@ -45,8 +46,9 @@ try{
         const cb=u.searchParams.get('callback');
         assert.match(cb,/^voiceVotePresenterResults_\d+$/);
         return route.fulfill({status:200,contentType:'application/javascript',
-          body:cb+'('+JSON.stringify(approved?privatePayload:
-            {success:false,mode:'DENIED',message:'Expired presenter session'})+');'});
+          body:cb+'('+JSON.stringify(approved?Object.assign({},privatePayload,{
+            acceptedVotes:liveVoteCount,updatedAt:serverUpdatedAt
+          }):{success:false,mode:'DENIED',message:'Expired presenter session'})+');'});
       }
       unexpected++;return route.abort('blockedbyclient');
     });
@@ -92,22 +94,53 @@ try{
     assert.ok((await page.locator('#presenterVotingLink').getAttribute('href')).includes('#presenter='),
       'Faculty demo must point to the verified no-save Voting UI');
     await page.locator('#presenterShowLive').click();
-    assert.match(await page.locator('#modeTitle').innerText(),/PRIVATE LIVE/i);
-    assert.equal(await page.locator('.board-qr-card').isVisible(),true,
-      'Faculty Live Results must retain the visitor QR');
+    assert.match(await page.locator('#modeTitle').innerText(),/Curiosity Carnival/i);
+    assert.match(await page.locator('#modeDetails').innerText(),/Trending Projects/i);
+    for(const selector of ['.topbar','.hero','.board-qr-card','#feedbackJourney','.story-strip','.page-footer']){
+      assert.equal(await page.locator(selector).isVisible(),false,
+        'Private Live must hide its introductory/teaching section: '+selector);
+    }
+    assert.equal(await page.locator('.status-banner').isVisible(),true);
     assert.equal(await page.locator('#totalVotes').innerText(),'15');
+    assert.match(await page.locator('#lastUpdated').innerText(),/^Updated /);
+    assert.equal(await page.locator('#lastUpdated').isVisible(),true,
+      'Updated time must stay visible in private Live on every viewport');
+    assert.match(await page.evaluate(()=>location.hash),/view=live/,
+      'Live view selection should survive browser refresh on the same private ticket');
     assert.equal(await page.locator('#leaderboardCards .rank-card').count(),2);
     await page.locator('#gradeFilter').selectOption('9');
     assert.equal(await page.locator('#leaderboardCards .rank-card').count(),1);
     assert.match(await page.locator('#leaderboardCards').innerText(),/Synthetic Rain Harvest/);
-    await page.locator('#brightToggle').click();
+    await page.locator('#liveBrightnessButton').click();
     assert.equal(await page.evaluate(()=>document.body.classList.contains('bright')),true);
+    assert.equal(await page.locator('#liveFullScreenButton').isVisible(),true);
     await page.locator('#autoplayToggle').click();
     assert.equal(await page.locator('#autoplayToggle').getAttribute('aria-pressed'),'true');
     await page.locator('#resetView').click();
     assert.equal(await page.locator('#autoplayToggle').getAttribute('aria-pressed'),'false');
-    await page.locator('#presenterShowDemo').click();
+    // Simulate new submissions: clicking Refresh reuses the SAME ticket and
+    // fetches updated server aggregates without reopening Admin or voting.
+    const beforeRefreshCalls=privateCalls;
+    liveVoteCount=17;serverUpdatedAt='2026-11-06T08:09:00.000Z';
+    await page.locator('#liveRefreshButton').click();
+    await page.waitForFunction(()=>document.querySelector('#totalVotes')?.textContent==='17',null,{timeout:12000});
+    assert.ok(privateCalls>beforeRefreshCalls);
+    assert.match(await page.locator('#lastUpdated').innerText(),/Updated /);
+    // Browser reload must return to Live (not reset to Demo), keep the same
+    // presenter capability, and revalidate/fetch rather than reissue it.
+    const beforeReloadCalls=privateCalls;
+    await page.reload({waitUntil:'domcontentloaded',timeout:30000});
+    await page.waitForFunction(()=>document.body.dataset.resultsMode==='PUBLISHED' &&
+      document.querySelector('#totalVotes')?.textContent==='17',null,{timeout:12000});
+    assert.ok(privateCalls>beforeReloadCalls);
+    assert.equal(await page.locator('.hero').isVisible(),false);
+    assert.equal(await page.locator('#lastUpdated').isVisible(),true);
+    await page.locator('#liveDemoButton').click();
     assert.match(await page.locator('#modeTitle').innerText(),/DEMO/);
+    assert.equal(await page.locator('.hero').isVisible(),true);
+    assert.equal(await page.locator('.board-qr-card').isVisible(),true,
+      'QR and education remain available to authorized faculty Demo');
+    assert.match(await page.evaluate(()=>location.hash),/view=demo/);
     assert.equal(await page.locator('#totalVotes').innerText(),'—');
     const width=await page.evaluate(()=>({
       width:innerWidth,scroll:document.documentElement.scrollWidth
