@@ -101,20 +101,20 @@
       ? ['DEMO MODE · SAMPLE DATA','These examples are fictional. No actual rankings or visitor comments are being published.']
       : live
         ? ['LIVE INSIGHTS · RANKINGS PRIVATE','Real, anonymous participation totals only. Organizers have not published project rankings.']
-        : ['Curiosity Carnival','Trending Projects · Private live audience ratings by grade, not official jury results.'];
+        : ['Curiosity Carnival','Trending Projects · Top audience scores, not official jury results.'];
     put('modeTitle',message[0]);put('modeDetails',message[1]);put('modeSymbol',demo?'✧':live?'◉':'★');
     put('lastUpdated',demo?'Sample experience':data.updatedAt?'Updated '+new Date(data.updatedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'Read-only display');
     put('totalProjects',fmt(data.totalProjects ?? lastCatalogCount));
     put('totalVotes',fmt(data.acceptedVotes));put('ratedProjects',fmt(data.ratedProjects));
     put('languageCount',demo?'—':fmt((data.languages||[]).filter(x=>x.count>0).length));
     put('voteMetricHint',demo?'Real vote totals are not published in preview':'Valid anonymous ratings');
-    put('rankingsHeading',demo?'Ideas worth celebrating.':live?'Discoveries in motion.':'Audience favourites by grade.');
+    put('rankingsHeading',demo?'Sample audience favourites.':live?'Discoveries in motion.':'Top 10 audience favourites.');
     put('rankingsSubheading',demo?'Illustrative project cards, not actual rankings.':
       live?'Project rankings remain private until the organizers approve publication.':
-        'Private presenter view: rated exhibits ordered by the existing weighted audience score.');
+        'A clear Top 10, ordered by the existing weighted audience score. Select a grade for its own Top 10.');
     put('rankingNote',demo?'ALL SCORES AND REVIEWS SHOWN HERE ARE FICTIONAL. No winners are being announced.':
       live?'No leading projects are displayed during the fair. Audience activity is not a competition result.':
-        'Private audience appreciation is not an official jury award. Scores account for rating and number of votes.');
+        'Top 10 audience appreciation, not official jury awards. The weighted score accounts for stars and number of votes.');
     put('feedbackIntro','Feedback is recorded and translated automatically during a real submission; no student approval queue is needed.');
   }
   function renderGradeFilter(data) {
@@ -128,22 +128,50 @@
     selectedGrade=keep;select.value=keep;
     select.disabled=mode==='LIVE'||grades.length<2;
   }
+  // The server's rank is deliberately within a grade. A combined All-grades
+  // view must NOT display several projects as "01": it is an overall Top 10
+  // ordered by the same weighted score. Grade filters produce grade-local ranks.
+  // Do not mutate the private backend payload or modify its score formula.
+  function rankedProjectsForView(data) {
+    return (data.rankings||[]).filter(p=>Number(p.votes)>0)
+      .slice().sort((a,b)=>
+        Number(b.weighted)-Number(a.weighted) ||
+        Number(b.votes)-Number(a.votes) ||
+        String(a.project).localeCompare(String(b.project)) ||
+        String(a.grade).localeCompare(String(b.grade),undefined,{numeric:true}) ||
+        String(a.section).localeCompare(String(b.section))
+      ).filter(p=>selectedGrade==='all'||String(p.grade)===selectedGrade);
+  }
   function renderRankings(data) {
     const host=$('leaderboardCards');host.replaceChildren();
+    const rankInfo=$('rankingCount');
     if(mode==='LIVE'){
+      if(rankInfo)rankInfo.textContent='';
       host.appendChild(make('div','empty-collection','The spotlight is on every exhibit. Rankings will appear only after organizer approval.'));
       return;
     }
-    const list=(data.rankings||[]).filter(p=>selectedGrade==='all'||String(p.grade)===selectedGrade);
+    const list=rankedProjectsForView(data);
+    const filterLabel=selectedGrade==='all'?'all grades':'Grade '+selectedGrade;
+    const rankingScope=selectedGrade==='all'?'Overall rank':'Grade '+selectedGrade+' rank';
+    if(mode==='PUBLISHED'){
+      put('rankingsHeading',selectedGrade==='all'?'Top 10 audience favourites.':'Grade '+selectedGrade+' · Top 10.');
+    }
     if(!list.length){
+      if(rankInfo)rankInfo.textContent='No rated projects in '+filterLabel+'.';
       host.appendChild(make('div','empty-collection','No rated projects to display yet.'));
       return;
     }
-    const limited=list.slice(0,mode==='DEMO'?6:15);
+    const limited=list.slice(0,10);
+    if(rankInfo)rankInfo.textContent='Showing '+limited.length+' of '+list.length+
+      ' rated projects · '+(selectedGrade==='all'?'Overall Top 10':'Grade '+selectedGrade+' Top 10')+
+      (mode==='DEMO'?' · Fictional sample':'');
     limited.forEach((item,index)=>{
-      const card=make('article','rank-card'+(index===0?' featured':''));
-      const number=make('div','rank-number'+(index===0?'':' other'),String(item.rank||index+1).padStart(2,'0'));
-      number.setAttribute('aria-label','Grade rank '+(item.rank||index+1));
+      const placement=index+1;
+      const tier=placement===1?'gold':placement===2?'silver':placement===3?'bronze':'standard';
+      const card=make('article','rank-card rank-'+tier+(placement===1?' featured':''));
+      card.setAttribute('data-placement',String(placement));
+      const number=make('div','rank-number medal-'+tier,String(placement).padStart(2,'0'));
+      number.setAttribute('aria-label',rankingScope+' '+placement);
       const name=make('div','rank-main');
       name.appendChild(make('strong','',item.project));
       name.appendChild(make('span','', 'Grade '+item.grade+' · '+item.section));
