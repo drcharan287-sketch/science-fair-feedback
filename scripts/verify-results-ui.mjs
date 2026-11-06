@@ -32,7 +32,12 @@ try{
       viewport:size.viewport,isMobile:!!size.isMobile,hasTouch:!!size.hasTouch
     });
     const page=await ctx.newPage();
-    let approved=false,postCount=0,unexpected=0,privateCalls=0;
+    let approved=false,postCount=0,unexpected=0,privateCalls=0,reviewCalls=0;
+    const privateReviews=Array.from({length:9},(_,i)=>({
+      rating:5,language:i===0?'hi-IN':'en-IN',
+      original:i===0?'यह मॉडल बहुत अच्छा है <img src=x onerror=alert(1)>':'Helpful feedback '+i,
+      translation:i===0?'This model is very good.':'Helpful feedback '+i
+    }));
     let liveVoteCount=15,serverUpdatedAt='2026-11-06T07:39:00.000Z';
     const errors=[];
     page.on('pageerror',err=>errors.push(err.message));
@@ -49,6 +54,20 @@ try{
           body:cb+'('+JSON.stringify(approved?Object.assign({},privatePayload,{
             acceptedVotes:liveVoteCount,updatedAt:serverUpdatedAt
           }):{success:false,mode:'DENIED',message:'Expired presenter session'})+');'});
+      }
+      if(u.hostname==='script.google.com' && u.searchParams.get('action')==='presenterReviews'){
+        reviewCalls++;
+        assert.equal(u.searchParams.get('ticket'),ticket);
+        assert.equal(u.searchParams.get('projectId'),'SYN-1');
+        const offset=Number(u.searchParams.get('offset'));
+        const cb=u.searchParams.get('callback');
+        assert.match(cb,/^voiceVotePresenterReviews_\d+$/);
+        const reply=approved?
+          {success:true,mode:'PRESENTER_REVIEWS',projectId:'SYN-1',total:9,
+            reviews:privateReviews.slice(offset,offset+8),hasMore:offset+8<9}:
+          {success:false,mode:'DENIED',message:'Presenter access expired'};
+        return route.fulfill({status:200,contentType:'application/javascript',
+          body:cb+'('+JSON.stringify(reply)+');'});
       }
       unexpected++;return route.abort('blockedbyclient');
     });
@@ -88,6 +107,14 @@ try{
       /assets\/curiosity-carnival-voting-qr\.png$/,
       'QR enlarge link must point to the same public scan image');
     assert.ok(await page.locator('#leaderboardCards .rank-card').count()>0);
+    const beforeDemoReviews=reviewCalls;
+    await page.locator('.feedback-open-btn').first().click();
+    assert.equal(await page.locator('#projectFeedbackOverlay').isVisible(),true);
+    assert.match(await page.locator('#projectFeedbackEyebrow').innerText(),/FICTIONAL/);
+    assert.match(await page.locator('#projectFeedbackList').innerText(),/Original feedback/);
+    assert.equal(reviewCalls,beforeDemoReviews,'Demo comments are local fiction only');
+    await page.locator('#projectFeedbackClose').click();
+    assert.equal(await page.locator('#projectFeedbackOverlay').isVisible(),false);
     assert.equal(await page.locator('#totalVotes').innerText(),'—',
       'Demo must not show genuine live vote totals');
     assert.equal(await page.locator('#feedbackCards .quote-card').count(),3);
@@ -108,6 +135,20 @@ try{
     assert.match(await page.evaluate(()=>location.hash),/view=live/,
       'Live view selection should survive browser refresh on the same private ticket');
     assert.equal(await page.locator('#leaderboardCards .rank-card').count(),2);
+    assert.equal(reviewCalls,0,'Live aggregate refresh must never include individual comments');
+    await page.locator('.feedback-open-btn').first().click();
+    await page.waitForFunction(()=>document.querySelectorAll('.project-feedback-card').length===8,
+      null,{timeout:12000});
+    assert.equal(reviewCalls,1,'Only one explicit project review request');
+    assert.equal(await page.locator('#projectFeedbackList img').count(),0,
+      'Review text must never become executable markup');
+    assert.match(await page.locator('#projectFeedbackList').innerText(),/This model is very good/);
+    await page.locator('#projectFeedbackMore').click();
+    await page.waitForFunction(()=>document.querySelectorAll('.project-feedback-card').length===9,
+      null,{timeout:12000});
+    assert.equal(reviewCalls,2,'Pagination fetches only the selected project');
+    await page.locator('#projectFeedbackDone').click();
+    assert.equal(await page.locator('#projectFeedbackOverlay').isVisible(),false);
     await page.locator('#gradeFilter').selectOption('9');
     assert.equal(await page.locator('#leaderboardCards .rank-card').count(),1);
     assert.match(await page.locator('#leaderboardCards').innerText(),/Synthetic Rain Harvest/);
