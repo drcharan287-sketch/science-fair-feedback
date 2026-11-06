@@ -24,7 +24,8 @@ function app(fetchProjects, search = '', stored = new Map(), hash = '') {
   }
   const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn', 'stopBtn', 'projectSearch', 'projectSearchResults', 'projectSearchStatus', 'projectSearchSelected', 'visitorPass', 'newVisitorBtn', 'visitorPassFeature', 'networkStatus', 'presenterBanner', 'presenterReceipt',
     'presenterReceiptProject', 'presenterReceiptStars', 'presenterReceiptFeedback',
-    'presenterTryAgain'].map(id => [id, new Element()]));
+    'presenterTryAgain', 'englishTranslationPanel', 'englishTranslationStatus',
+    'englishTranslationText', 'refreshTranslationBtn'].map(id => [id, new Element()]));
   elements.language.value = 'hi-IN';
   elements.submitBtn.disabled = true;
   const stars = Array.from({ length: 5 }, (_, i) => { const e = new Element(); e.dataset.value = String(i + 1); return e; });
@@ -37,7 +38,8 @@ function app(fetchProjects, search = '', stored = new Map(), hash = '') {
     body: { appendChild: node => forms.push(node) }
   };
   const windowListeners = {};
-  const context = { document, console: { error() {} }, URLSearchParams, Option: function(text, value) { this.textContent = text; this.value = value; }, Event: function(type) { this.type = type; }, setTimeout, clearTimeout,
+  const context = { document, console: { error() {} }, URLSearchParams, URL, Option: function(text, value) { this.textContent = text; this.value = value; }, Event: function(type) { this.type = type; }, 
+    setTimeout: (fn,ms)=>{const t=setTimeout(fn,ms);t.unref();return t;}, clearTimeout,
     navigator: { onLine: true },
     addEventListener: (name, fn) => { (windowListeners[name] ||= []).push(fn); },
     dispatchWindowEvent: name => (windowListeners[name] || []).forEach(fn => fn()),
