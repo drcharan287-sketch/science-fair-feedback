@@ -348,9 +348,12 @@ function backend(rows) {
       getProperty: key => receipts.get(key),
       setProperty: (key, value) => receipts.set(key, value)
     }) },
-    HtmlService: { createHtmlOutput: html => ({
-      html, setTitle(title) { this.title = title; return this; }
-    }) }
+    HtmlService: { XFrameOptionsMode:{ALLOWALL:'ALLOWALL'},
+      createHtmlOutput: html => ({
+        html,
+        setTitle(title) { this.title = title; return this; },
+        setXFrameOptionsMode(mode){this.frameMode=mode;return this;}
+      }) }
   };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync('apps-script/Code.gs', 'utf8'), context);
@@ -738,4 +741,144 @@ test('a denied or malformed presenter ticket cannot unlock real Voting',async()=
   assert.equal(malformed.elements.submitBtn.disabled,true);
   malformed.context.submitFeedback();
   assert.equal(malformed.forms.length,0);
+});
+
+
+test('speech re-emitting old final fragments does not repeat words (English, Telugu, Hindi)',async()=>{
+  for(const [lang,one,two,whole] of [
+    ['en-IN','science','science fair','science fair is good'],
+    ['te-IN','సైన్స్','సైన్స్ ఫెయిర్','సైన్స్ ఫెయిర్ చాలా బాగుంది'],
+    ['hi-IN','विज्ञान','विज्ञान मेला','विज्ञान मेला बहुत अच्छा है']
+  ]){
+    const a=app();
+    respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+    await tick();
+    let speech;
+    a.context.SpeechRecognition=function(){
+      speech=this;
+      this.start=function(){};
+      this.stop=function(){if(this.onend)this.onend();};
+    };
+    a.elements.language.value=lang;
+    a.context.startRecording();
+    speech.onresult({resultIndex:0,results:[{0:{transcript:one},isFinal:true}]});
+    assert.equal(a.elements.feedback.value,one,lang+' first word');
+    speech.onresult({resultIndex:0,results:[
+      {0:{transcript:one},isFinal:true},
+      {0:{transcript:two},isFinal:false}
+    ]});
+    assert.equal(a.elements.feedback.value,two,lang+' cumulative interim replacement');
+    const latest=[{0:{transcript:one},isFinal:true},
+      {0:{transcript:two},isFinal:true},
+      {0:{transcript:whole},isFinal:true}];
+    speech.onresult({resultIndex:0,results:latest});
+    speech.onresult({resultIndex:0,results:latest}); // browser callback repeats entire final set
+    assert.equal(a.elements.feedback.value,whole,lang+' no repeated final words');
+    speech.onend();
+    assert.equal(a.elements.feedback.value,whole,lang+' finalized speech remains editable');
+    assert.equal(a.elements.englishTranslationPanel.hidden,lang==='en-IN');
+    a.elements.feedback.value=whole+' — edited';
+    a.elements.feedback.dispatchEvent(new a.context.Event('input'));
+    assert.equal(a.elements.feedback.value,whole+' — edited');
+  }
+});
+
+test('English preview uses a separate POST action, never save or localStorage',async()=>{
+  const stored=new Map([['voicevote_device_token_v1','123e4567-e89b-42d3-a456-426614174000']]);
+  const a=app(null,'',stored);
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  a.elements.language.value='te-IN';
+  a.elements.feedback.value='ఈ ప్రాజెక్టు చాలా బాగుంది';
+  a.context.scheduleEnglishTranslation(true);
+  await new Promise(resolve=>setTimeout(resolve,15));
+  const form=a.forms.find(e=>e.method==='POST');
+  assert.ok(form,'Translation preview creates POST form');
+  const fields=Object.fromEntries(form.children.map(x=>[x.name,x.value]));
+  assert.deepEqual(fields,{
+    action:'translatePreview',requestId:'123e4567-e89b-42d3-a456-426614174000',
+    language:'te-IN',feedback:'ఈ ప్రాజెక్టు చాలా బాగుంది'
+  });
+  assert.equal(form.submitted,true);
+  assert.equal(a.elements.englishTranslationPanel.hidden,false);
+  assert.equal(a.elements.englishTranslationText.textContent,'');
+  a.context.dispatchWindowEvent('message',{
+    origin:'https://evil.example.org',
+    data:{type:'voicevote-translation-preview',
+      requestId:fields.requestId,success:true,translation:'INJECTED'}
+  });
+  assert.equal(a.elements.englishTranslationText.textContent,'','Reject non-Google origin');
+  a.context.dispatchWindowEvent('message',{
+    origin:'https://script.google.com',
+    data:{type:'voicevote-translation-preview',
+      requestId:fields.requestId,success:true,
+      translation:'This project is very good.'}
+  });
+  assert.equal(a.elements.englishTranslationText.textContent,'This project is very good.');
+  assert.match(a.elements.englishTranslationStatus.textContent,/translation ready/i);
+  assert.deepEqual(Array.from(stored),[
+    ['voicevote_device_token_v1','123e4567-e89b-42d3-a456-426614174000']
+  ],'Preview cannot change browser vote eligibility');
+  assert.equal(a.forms.filter(e=>e.method==='POST'&&e.submitted).length,1);
+  assert.equal(a.forms.some(e=>e.children.some(x=>x.name==='submissionId')),false);
+
+  a.elements.language.value='en-IN';
+  a.elements.language.dispatchEvent(new a.context.Event('change'));
+  assert.equal(a.elements.englishTranslationPanel.hidden,true);
+  assert.equal(a.elements.englishTranslationText.textContent,'');
+});
+
+test('stale preview response after editing must not overwrite new text',async()=>{
+  const a=app();
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  a.elements.language.value='hi-IN';
+  a.elements.feedback.value='पहला वाक्य';
+  a.context.scheduleEnglishTranslation(true);
+  await new Promise(resolve=>setTimeout(resolve,15));
+  const req=a.forms.find(e=>e.method==='POST');
+  const requestId=req.children.find(x=>x.name==='requestId').value;
+  a.elements.feedback.value='नया वाक्य';
+  a.elements.feedback.dispatchEvent(new a.context.Event('input'));
+  a.context.dispatchWindowEvent('message',{
+    origin:'https://script.googleusercontent.com',
+    data:{type:'voicevote-translation-preview',requestId,success:true,translation:'Old result'}
+  });
+  assert.equal(a.elements.englishTranslationText.textContent,'');
+  assert.equal(a.elements.feedback.value,'नया वाक्य');
+});
+
+test('read-only translation backend validates Telugu/Hindi/Tamil/Kannada, escapes HTML, never writes Feedback',()=>{
+  const b=backend([
+    ['Class/Grade','Section','Project Name','Active'],
+    ['9','Keats','VoiceVote','TRUE']
+  ]);
+  const id='123e4567-e89b-42d3-a456-426614174000';
+  for(const [language,expected] of [
+    ['te-IN','te:en:'],['hi-IN','hi:en:'],['ta-IN','ta:en:'],['kn-IN','kn:en:']
+  ]){
+    const reply=b.context.doPost({parameter:{
+      action:'translatePreview',requestId:id,language,feedback:'Nice experiment'
+    }});
+    assert.equal(reply.frameMode,'ALLOWALL');
+    assert.match(reply.html,/voicevote-translation-preview/);
+    assert.match(reply.html,new RegExp(expected));
+    assert.match(reply.html,/window\.top\.postMessage/);
+    assert.doesNotMatch(reply.html,/Feedback saved|saveFeedback_/);
+  }
+  const attacker='</script><img src=x onerror=alert(1)>';
+  const safe=b.context.doPost({parameter:{
+    action:'translatePreview',requestId:id,language:'hi-IN',feedback:attacker
+  }});
+  assert.ok(!safe.html.includes(attacker),'Preview must HTML-escape translation');
+  assert.ok(safe.html.includes('u003c'),'Encoded HTML unsafe chars');
+  for(const wrong of [
+    {language:'en-IN',feedback:'hello',requestId:id},
+    {language:'hi-IN',feedback:'hello',requestId:'wrong'},
+    {language:'te-IN',feedback:'a'.repeat(2001),requestId:id}
+  ]){
+    const reply=b.context.doPost({parameter:{action:'translatePreview',...wrong}});
+    assert.match(reply.html,/"success":false/);
+  }
+  assert.equal(b.writes.length,0,'Translation preview may never create a Feedback row or header');
 });
