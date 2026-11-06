@@ -143,6 +143,15 @@ function presenterSummary_(ticket) {
  * row number, voter identity, or admin credential is returned. Pagination
  * limits accidental projection and response size on the smart board.
  */
+// Mask obvious contact details for an event projector. This is a basic
+// guard, NOT a guarantee that arbitrary user-entered text contains no PII.
+// Full unmodified reviews remain available in the authenticated Admin Console.
+function presenterReviewDisplayText_(value, limit) {
+  return String(value || '').slice(0,limit)
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,'[email hidden]')
+    .replace(/(^|[^0-9])(?:\+91[ -]?)?[6-9][0-9]{9}(?=$|[^0-9])/g,
+      function(_matched,prefix) {return prefix+'[phone hidden]';});
+}
 function presenterProjectReviews_(ticket, projectId, offset) {
   if (!publicVerifyPresenterSession_(ticket)) {
     return {success:false,mode:'DENIED',
@@ -171,9 +180,9 @@ function presenterProjectReviews_(ticket, projectId, offset) {
     offset:page,hasMore:page+size<matches.length,
     reviews:matches.slice(page,page+size).map(function(v) {
       return {
-        rating:v.rating,language:v.language,time:v.time,
-        original:String(v.original || '').slice(0,2000),
-        translation:String(v.translation || '').slice(0,6000)
+        rating:v.rating,language:v.language,
+        original:presenterReviewDisplayText_(v.original,2000),
+        translation:presenterReviewDisplayText_(v.translation,6000)
       };
     })
   };
