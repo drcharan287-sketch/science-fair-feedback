@@ -55,6 +55,20 @@ function voiceVoteManagerCollision_(items,grade,section,project,ignoreId) {
       voiceVoteManagerKey_(item.grade,item.section,item.project)===wanted;
   });
 }
+/** Drop the read-only presenter summary cache after a roster change. */
+function voiceVoteManagerInvalidateResults_() {
+  try {
+    if(typeof publicResultsCache_!=='function')return;
+    const cache=publicResultsCache_();
+    if(!cache || typeof cache.remove!=='function')return;
+    ['PUBLISHED','DEMO'].forEach(function(mode){
+      cache.remove(publicResultsCacheKey_(mode));
+    });
+  } catch (_) {
+    // A cache miss only causes the existing at-most-45-second TTL fallback;
+    // never obscure a successfully audited project mutation.
+  }
+}
 function voiceVoteManagerVotes_(ss,item) {
   const votes=adminRawVotes_(ss).filter(function(v) {
     return v.status!=='VOID' &&
@@ -135,6 +149,7 @@ function adminChangeProject(key,payload) {
       adminAuditedChange_(ss,'ADD_PROJECT',row,reason,'',JSON.stringify(entry),function(){
         source.sheet.appendRow(entry);
       });
+      voiceVoteManagerInvalidateResults_();
       return {success:true,action:action,id:id,project:project,changed:true};
     }
     const id=String(data.id||'').trim();
@@ -156,6 +171,7 @@ function adminChangeProject(key,payload) {
         JSON.stringify([grade,section,project,record.id]),function(){
           source.sheet.getRange(record.row,1,1,3).setValues([[Number(grade),section,project]]);
         });
+      voiceVoteManagerInvalidateResults_();
       return {success:true,action:action,id:id,project:project,changed:true,affectedVotes:affected.count};
     }
     const active=action==='REACTIVATE';
@@ -168,6 +184,7 @@ function adminChangeProject(key,payload) {
       record.row,reason,record.active?'ACTIVE':'INACTIVE',active?'ACTIVE':'INACTIVE',function(){
         source.sheet.getRange(record.row,4).setValue(active);
       });
+    voiceVoteManagerInvalidateResults_();
     return {success:true,action:action,id:id,project:record.project,
       changed:true,affectedVotes:affected.count};
   } finally {
