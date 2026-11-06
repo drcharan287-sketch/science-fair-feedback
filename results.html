@@ -156,6 +156,33 @@
     <span>Audience appreciation is not the official jury result.</span>
   </footer>
 </div>
+<!-- Read-only, deliberate faculty-only drilldown. No visitor can load this
+     content, and real comments are NEVER embedded in the static HTML. -->
+<section id="projectFeedbackOverlay" class="project-feedback-overlay" hidden>
+  <div id="projectFeedbackBackdrop" class="project-feedback-backdrop" aria-hidden="true"></div>
+  <section id="projectFeedbackDialog" class="project-feedback-dialog" role="dialog"
+           aria-modal="true" aria-labelledby="projectFeedbackTitle" tabindex="-1">
+    <header class="project-feedback-header">
+      <div>
+        <p id="projectFeedbackEyebrow" class="kicker">FACULTY PROJECT FEEDBACK</p>
+        <h2 id="projectFeedbackTitle">Project feedback</h2>
+        <p id="projectFeedbackContext" class="project-feedback-context"></p>
+      </div>
+      <button id="projectFeedbackClose" class="project-feedback-close" type="button"
+              aria-label="Close project feedback">✕ Close</button>
+    </header>
+    <p id="projectFeedbackNote" class="project-feedback-note">
+      Real feedback is displayed only when a faculty presenter opens this panel.
+      Contact details may be masked. Please avoid projecting sensitive personal information.
+    </p>
+    <p id="projectFeedbackStatus" class="project-feedback-status" role="status" aria-live="polite"></p>
+    <div id="projectFeedbackList" class="project-feedback-list"></div>
+    <div class="project-feedback-actions">
+      <button id="projectFeedbackMore" type="button" hidden>Show more feedback</button>
+      <button id="projectFeedbackDone" type="button">Back to Live Results</button>
+    </div>
+  </section>
+</section>
 <div class="presenter-bar" id="presenterBar" aria-label="Presentation controls" hidden>
   <span><span class="pulse-dot"></span> <strong>SMART BOARD MODE</strong></span>
   <button id="autoplayToggle" type="button" aria-pressed="false">▶ Auto-rotate grades</button>
