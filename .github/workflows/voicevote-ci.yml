@@ -36,6 +36,7 @@ jobs:
           node --check results.js
           node --check scripts/verify-owner-demo.mjs
           node --check scripts/verify-admin-manager-ui.mjs
+          node --check scripts/verify-live-project-manager.mjs
           node --check scripts/verify-translation-preview.mjs
           node --check scripts/verify-live-translation-preview.mjs
           node --check scripts/verify-ios-translation-fallback.mjs
