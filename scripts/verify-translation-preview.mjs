@@ -42,7 +42,7 @@ try{
       if(req.method()==='GET' && action==='catalog' && cb) {
         return route.fulfill({status:200,contentType:'application/javascript',body:
           cb+'('+JSON.stringify({success:true,projects:[
-            {grade:'9',section:'Keats',project:'VoiceVote'}
+            {grade:'9',section:'Keats',project:'VoiceVote App'}
           ]})+');'});
       }
       if(req.method()==='GET' && action==='presenterVerify' && cb){
@@ -82,7 +82,7 @@ try{
       null,{timeout:20000});
     await page.locator('#studentClass').selectOption('9');
     await page.locator('#section').selectOption('Keats');
-    await page.locator('#project').selectOption('VoiceVote');
+    await page.locator('#project').selectOption('VoiceVote App');
     assert.equal(await page.locator('#englishTranslationPanel').isVisible(),false);
   };
 
