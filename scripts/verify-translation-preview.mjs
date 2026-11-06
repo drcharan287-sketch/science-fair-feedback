@@ -137,7 +137,9 @@ try{
   assert.equal(await page.locator('#englishTranslationText').textContent(),'');
   assert.equal(savedPOSTs,0,'Parent preview never sends a save POST');
 
-  await page.goto(site+'#presenter='+presenterTicket,{waitUntil:'domcontentloaded'});
+  // A fragment-only navigation would reuse the existing page rather than
+  // re-run the owner-ticket bootstrap; add a harmless test query to reload.
+  await page.goto(site+'?presenterSmoke=1#presenter='+presenterTicket,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>document.querySelector('#presenterBanner')?.textContent.includes('OWNER DEMONSTRATION'));
   await page.locator('#language').selectOption('te-IN');
   await page.locator('#feedback').fill('ఇది చాలా మంచి ఆలోచన');
