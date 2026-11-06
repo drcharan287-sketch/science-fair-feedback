@@ -16,7 +16,7 @@ const response=await fetch(url,{redirect:'follow',
   signal:AbortSignal.timeout(30000),headers:{Accept:'application/javascript'}});
 assert.ok(response.ok,'Public Results GET returned HTTP '+response.status);
 const source=(await response.text()).trim();
-const wrapper=new RegExp('^'+callback.replace(/[.*+?^\\$\{\}()|[\]\\]/g,'\\$&')+'\\(([\\s\\S]*)\\);?$');
+const wrapper=/^voiceVoteReadOnlyResultsProbe\\(([\\s\\S]*)\\);?$/;
 const matchPayload=wrapper.exec(source);
 assert.ok(matchPayload,'Public Results endpoint did not return expected JSONP');
 const data=JSON.parse(matchPayload[1]);
