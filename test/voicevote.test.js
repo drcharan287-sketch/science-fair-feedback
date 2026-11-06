@@ -513,7 +513,7 @@ test('in-flight vote rejected if the organizer deactivates a project under the s
     submissionId:'123e4567-e89b-42d3-a456-426614174000',
     deviceToken:'123e4567-e89b-42d3-a456-426614174001'
   }});
-  assert.match(result.html,/Project roster changed|select an active project/i);
+  assert.match(result.html,/Feedback not confirmed/i,'Public receipt deliberately hides private exception details');
   assert.equal(b.writes.length,0,'Deactivated project must not receive a late vote');
 });
 
