@@ -1,0 +1,43 @@
+name: Verify PR58 published event screens and Admin shell (no-save)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/verify-live-admin-design.mjs'
+      - '.github/workflows/verify-event-presentation-release.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-live-admin-design.mjs'
+      - '.github/workflows/verify-event-presentation-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-write-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out release sources
+        uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm exact published Pages source and styles (read-only)
+        run: node scripts/wait-for-pages.mjs
+      - name: Install isolated Chromium driver
+        run: npm install --no-save playwright-core
+      - name: Check live private board Top 10, colors, heading hierarchy and visitor privacy with mocked data
+        run: node scripts/verify-results-ui.mjs
+      - name: Check live visitor/owner Voting typography with all writes blocked
+        run: node scripts/verify-owner-demo.mjs
+      - name: Confirm the updated production Admin HTML shell without login
+        run: node scripts/verify-live-admin-design.mjs
+      - name: Check live Admin access still rejects invalid key
+        run: node scripts/verify-admin-access.mjs
+      - name: Confirm cross-origin POST connection without saving feedback
+        run: node scripts/verify-post-probe.mjs
