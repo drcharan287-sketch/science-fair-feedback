@@ -150,6 +150,7 @@
     function setCatalog(entries, preserveSelection) {
       const prior=preserveSelection?{grade:grade.value,section:section.value,
         project:project.value}:null;
+      let invalidated=!!(prior && prior.project);
       if (!Array.isArray(entries)) throw new Error('Project catalog must be an array.');
       catalog = entries.filter(function (entry) {
         return entry && ['grade', 'section', 'project'].every(function (key) {
@@ -178,8 +179,10 @@
           section.value=prior.section;
           updateProjects();
           const titles=Array.from(project.options).map(function(o){return o.value;});
-          if(titles.includes(prior.project))project.value=prior.project;
-          else if(prior.project)setStatus('The previously selected project was changed or deactivated. Choose an active project.');
+          if(titles.includes(prior.project)){
+            project.value=prior.project;
+            invalidated=false;
+          }
         }
       }
       if (search) {
@@ -188,6 +191,7 @@
         renderQuickSearch();
       }
       if (catalog.length === 0) setStatus('No active projects are listed yet.');
+      return {selectionInvalidated:invalidated};
     }
 
     function loadCatalog(apiUrl) {
@@ -322,8 +326,10 @@
     function refreshCatalog() {
       setStatus('Checking the latest live school project list…');
       return liveFirst().then(function(result){
-        setCatalog(result.entries,true);
-        if(result.source==='live'){
+        const check=setCatalog(result.entries,true);
+        if(check.selectionInvalidated){
+          setStatus('Your earlier project was changed or deactivated. Please choose an active project before submitting. Existing feedback text is preserved.');
+        } else if(result.source==='live'){
           setStatus('Current school project list verified · '+result.entries.length+' active projects. Recheck your selection.');
         } else {
           setStatus('BACKUP ONLY: Google project updates could not be checked. This list may be outdated. Retry when connected; the server will reject changed or deactivated projects.');
@@ -344,6 +350,8 @@
       setCatalog(result.entries);
       if(result.source==='backup')
         setStatus('BACKUP ONLY: live catalog could not be verified. Retry project refresh before voting.');
+      else if(result.source==='live')
+        setStatus('Live school roster verified · '+result.entries.length+' active projects.');
       return {setCatalog:setCatalog,loadCatalog:loadCatalog,
         getSelectedProjectId:getSelectedProjectId,refreshCatalog:refreshCatalog};
     }).catch(function(error){
