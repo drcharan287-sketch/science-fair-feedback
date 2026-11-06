@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | Parents / visitors | Common QR → public Voting | Choose exhibit, speak/type/edit in 23 selectable languages, rate, submit. No link to Results or Practice. |
 | Faculty / student presenters | Admin → **Faculty Presentation** → **Open Faculty Demo Screen** | Private page with clear example cards and an explanation of browser speech recognition, English translation, and numeric ranking. Example metrics are explicitly fictional; no real votes are cast. |
-| Faculty / architect on Senses smart board | Admin → **Faculty Presentation** → **Open Private Live Results** | Compact Curiosity Carnival · Trending Projects dashboard, with real read-only aggregate counts, language activity and grade-wise weighted rankings. Refreshes on load, after browser refresh, and approximately every 45 seconds while visible. No individual visitor comments. |
+| Faculty / architect on Senses smart board | Admin → **Faculty Presentation** → **Open Private Live Results** | Curiosity Carnival · Trending Projects dashboard with real aggregate counts, language activity, grade rankings and **on-demand, presenter-only View feedback** beside project ratings. Captured original-language comments and English translations open in a same-page panel when faculty intentionally selects a project. |
 | Faculty / students rehearsing visitor workflow | Admin → **Faculty Presentation** → **Open No-Save Voting Demo** | The exact same Voting UI as parents, using a temporary owner-verified no-write ticket. Repeat without consuming a real browser vote or saving to Google. |
 
 ### How to launch faculty screens
@@ -51,9 +51,17 @@ The **Curiosity Carnival** science-fair theme appears as a heading on both the p
 ## Reviews, results and approval policy
 - **Feedback is saved immediately** on successful POST (subject to project, token, valid rating and voting-open checks); there is **no manual comment approval queue** and no requirement for students to approve submitted feedback.
 - The Admin Console retains exceptional audited vote-exclusion/restore controls for integrity problems; they do not routinely approve or rewrite visitor text.
-- Individual original-language and English-translated reviews remain private in Admin on-demand review drill-down, not on the presenter Results screen.
+- The Admin Console retains complete original-language and translated reviews. **Private faculty Live Results** can now show only the selected project's valid feedback when the presenter clicks **View feedback**; the public QR and anonymous Results API never expose any reviews. Excluded/VOID reviews and individual timestamps/browser identifiers are not shown on the board.
 - Public `action=publicResults` is **DEMO-only**, regardless of legacy public setting. The Admin Console no longer offers LIVE/PUBLISHED public publication controls. Only ticket-validated `action=presenterResults` returns real aggregate standings.
 - Weighted result formula: `(valid rating stars + 17.5) / (valid votes + 5)`. These are *audience appreciation* rankings, not official school/jury awards.
+
+## Captured feedback on the faculty smart board
+
+- Every rated project card shows **View feedback** alongside its score and rating count. Selecting it opens a large, same-page, read-only detail panel, showing up to eight newest valid comments at a time with **Original feedback** and **English translation**, language and stars. **Show more feedback** pages further comments; **Close** returns to the board without changing grade rankings.
+- Reviews are fetched **only after a presenter intentionally clicks**, through a separate `presenterReviews` request. The backend revalidates the same short-lived faculty ticket on **each** page request and validates the project against active stable IDs, including legacy/renamed vote resolution. Public `publicResults`, normal presenter aggregate summaries and parent Voting **never** include review text. No vote, Sheet or approval state is modified.
+- This view is for a faculty-supervised display. Obvious contact emails/phone numbers are masked in the board response, although no automatic filter can catch every personal detail; faculty should avoid displaying sensitive or inappropriate free-text feedback to an audience. The Admin Console retains the complete unmodified records.
+- The **Demo** presentation uses clearly labeled fictional example feedback in multiple languages, so students can show AI multilingual feedback without exposing production comments or creating fake votes. The **Private Live** panel displays actual valid submitted feedback when available.
+- If the two-hour faculty ticket expires, the private detail is cleared and new requests fail closed. Presenter credentials or comments are never embedded in the public GitHub Pages source.
 
 ## Verification without consuming votes
 Use a reviewed PR, `node --test`, staging browser checks with every cross-origin save intercepted, then exact published GitHub Pages checks. Verify: common QR contains no Results link; direct `results.html` route is locked; invalid and expired presenter tickets deny content; authorized faculty Demo and private Live work at 1920×1080 and phone widths; Admin can create the three links; no original/review data enters the public response; iOS separate preview contains only `action=translatePreview` and never submits a vote.
