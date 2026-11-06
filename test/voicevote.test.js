@@ -499,6 +499,24 @@ test('snapshot service is not needed when the live Apps Script catalog succeeds'
   assert.deepEqual(a.elements.studentClass.options.map(o=>o.value),['','9']);
 });
 
+test('in-flight vote rejected if the organizer deactivates a project under the shared script lock',()=>{
+  const rows=[['Class/Grade','Section','Project Name','Active','Project ID'],
+    ['9','Keats','VoiceVote App','TRUE','VVP-EVENT-STABLE']];
+  const b=backend(rows);
+  b.context.LockService.getScriptLock=()=>({
+    waitLock(){rows[1][3]='FALSE';},releaseLock(){}
+  });
+  const result=b.context.doPost({parameter:{
+    action:'save',project:'VoiceVote App',projectId:'VVP-EVENT-STABLE',
+    studentClass:'9',section:'Keats',feedback:'A safe simulated comment',
+    rating:'5',language:'en-IN',
+    submissionId:'123e4567-e89b-42d3-a456-426614174000',
+    deviceToken:'123e4567-e89b-42d3-a456-426614174001'
+  }});
+  assert.match(result.html,/Project roster changed|select an active project/i);
+  assert.equal(b.writes.length,0,'Deactivated project must not receive a late vote');
+});
+
 test('secure POST probe makes no writes and duplicate POSTs append only once', () => {
   const b = backend([
     ['Class/Grade', 'Section', 'Project Name', 'Active'],
