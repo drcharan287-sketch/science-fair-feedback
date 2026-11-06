@@ -232,8 +232,14 @@ try {
     await page.locator('#syntheticReceipt').waitFor({ timeout: 10000 });
     assert.equal(a.count, 1);
     await page.locator('#receiptReturn').click();
+    // A rejection receipt clears the pending lock before the live-first
+    // Google catalog necessarily finishes loading. Wait for BOTH conditions:
+    // storage is unlocked AND the public form can actually be used again.
     await page.waitForFunction(() =>
-      localStorage.getItem('voicevote_pending_v1') === null, null, { timeout: 10000 });
+      localStorage.getItem('voicevote_pending_v1') === null &&
+      document.getElementById('submitBtn')?.disabled === false &&
+      document.getElementById('feedback')?.disabled === false,
+      null, { timeout: 25000 });
     assert.equal(await page.locator('#feedback').isEnabled(), true);
     assert.equal(await page.locator('#submitBtn').isEnabled(), true);
     assert.equal(a.count, 1, 'Receipt return should NOT auto-submit');
