@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | Parents / visitors | Common QR → public Voting | Choose exhibit, speak/type/edit in 23 selectable languages, rate, submit. No link to Results or Practice. |
 | Faculty / student presenters | Admin → **Faculty Presentation** → **Open Faculty Demo Screen** | Private page with clear example cards and an explanation of browser speech recognition, English translation, and numeric ranking. Example metrics are explicitly fictional; no real votes are cast. |
-| Faculty / architect on Senses smart board | Admin → **Faculty Presentation** → **Open Private Live Results** | The same authorized presentation shell opens the real, read-only aggregate dashboard, language/participation metrics and grade-wise weighted rankings, refreshed approximately once a minute. No individual visitor comments. |
+| Faculty / architect on Senses smart board | Admin → **Faculty Presentation** → **Open Private Live Results** | Compact Curiosity Carnival · Trending Projects dashboard, with real read-only aggregate counts, language activity and grade-wise weighted rankings. Refreshes on load, after browser refresh, and approximately every 45 seconds while visible. No individual visitor comments. |
 | Faculty / students rehearsing visitor workflow | Admin → **Faculty Presentation** → **Open No-Save Voting Demo** | The exact same Voting UI as parents, using a temporary owner-verified no-write ticket. Repeat without consuming a real browser vote or saving to Google. |
 
 ### How to launch faculty screens
@@ -30,9 +30,16 @@ The **Curiosity Carnival** science-fair theme appears as a heading on both the p
 `https://drcharan287-sketch.github.io/science-fair-feedback/?utm_source=chatgpt.com`
 
 - The QR launches **only Parent/Visitor Voting**; it never grants access to the faculty Results screen, Admin Console, presenter credentials or rankings. The original event QR destination is unchanged.
-- The QR is visible in **both authorized faculty Demo and Private Live Results**, even when no actual votes have arrived. Unauthenticated visitors cannot see the faculty page shell.
-- On a Senses board, show the QR in the initial hero when attendees need to participate. **Enlarge QR for the smart board** opens just the public QR image (without a presenter token) in a new tab for distance scanning. Return to the presenter tab for the live metrics. Use the bright-room switch if ambient light is strong.
+- The QR remains prominently visible in the authenticated **Faculty Demo** view. The compact **Private Live Results** view deliberately hides the introductory header, hero/QR and tutorial so only the Trending Projects banner, updated time, aggregate metric cards, rankings and language activity remain. The QR image asset and access policies are unchanged. Unauthenticated visitors cannot see either faculty view.
+- On a Senses board, use **Faculty Demo** to show the existing scan-to-vote QR, and **Private Live Results** to show only the evolving audience statistics. The QR image enlargement link is in Demo, never in visitor Voting. Use the Live banner's **Demo**, **Refresh**, **Brightness** and **Full screen** controls as needed.
 - The asset is a compact scan-tested rendering of the user-supplied QR with its school crest; never replace it with a QR pointing to Results. A phone should be used for one final physical scan at the actual board brightness/distance.
+
+## Live board refresh and access lifecycle
+
+- The authorized presenter page **already rechecks the backend when loaded, reloaded, when the tab returns to foreground, and on a 45-second interval while visible**. The backend caches computed aggregates for up to 45 seconds, so very rapid refreshes may return the same figures. The **Updated** timestamp is derived from the server aggregate payload rather than guessed locally.
+- The Live banner provides an explicit **Refresh** action. Switching Demo/Live updates the current URL fragment's `view`, so reloading a Live page stays in Live with the **same** faculty ticket; no new Admin session is needed for ordinary refreshes.
+- **Security exception:** the organizer-issued presenter ticket still expires after two hours. Once expired, reloading is denied and faculty must obtain a new ticket from the authenticated Admin Console. No permanent public ranking access or hidden long-lived admin password has been added.
+- The Admin Console **Project rankings** table now scrolls vertically within a capped area (up to 65vh / 640px) as well as horizontally. Headers stay sticky, and project search, filtering and private review links are unchanged.
 
 ## Speech and English translation on iOS Chrome / Safari
 - Web Speech is a browser/OS capability, **not guaranteed** for all 22 Eighth Schedule languages. Chrome on iPhone shares Apple's browser engine behavior and may stop recognition after one utterance. The UI uses a single-utterance lifecycle on iOS; press **Start** again if required, then review/edit the transcript.
