@@ -198,3 +198,76 @@ body.bright .live-banner-controls button {background:#e5f4fd;color:#0b3b57}
   body[data-results-mode="PUBLISHED"] .status-banner-meta .last-updated{display:block}
   .live-banner-controls button{font-size:.73rem;padding:7px 9px}
 }
+
+/* Private faculty-only, on-demand project feedback detail. No comment text is
+   part of static HTML or aggregate cards until an authorized user clicks. */
+body.project-feedback-open{overflow:hidden}
+.rank-score{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.feedback-open-btn{
+  margin-top:9px;min-height:37px;padding:7px 12px;border-radius:10px;
+  border:1px solid rgba(105,234,250,.55);color:#bcf5ff;
+  background:rgba(29,98,130,.42);font-size:.81rem;font-weight:850;
+}
+.feedback-open-btn:hover{background:rgba(65,158,190,.36)}
+.rank-score .feedback-open-btn{white-space:nowrap}
+.project-feedback-overlay{position:fixed;inset:0;z-index:30;display:grid;
+  place-items:center;padding:clamp(9px,3vw,28px);isolation:isolate}
+.project-feedback-backdrop{position:absolute;inset:0;background:rgba(1,9,24,.88);
+  backdrop-filter:blur(10px)}
+.project-feedback-dialog{position:relative;z-index:1;width:min(920px,100%);
+  max-height:calc(100vh - 26px);max-height:calc(100dvh - 26px);
+  overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;
+  border:1px solid rgba(112,218,246,.55);border-radius:23px;
+  background:linear-gradient(145deg,#153659,#0d2342);
+  padding:clamp(20px,3vw,36px);box-shadow:0 38px 110px #000b}
+.project-feedback-header{display:flex;align-items:flex-start;
+  justify-content:space-between;gap:17px}
+.project-feedback-header h2{font-size:clamp(1.65rem,3vw,2.5rem);
+  margin:7px 0;line-height:1.16;overflow-wrap:anywhere}
+.project-feedback-context{color:#bcdbef;margin:5px 0 0}
+.project-feedback-close,.project-feedback-actions button{
+  min-height:44px;padding:10px 16px;border-radius:12px;color:#f1fcff;
+  border:1px solid #5dcbdc77;background:#155574;font-weight:850;white-space:nowrap}
+.project-feedback-close:hover,.project-feedback-actions button:hover{background:#1e7190}
+.project-feedback-note{margin:17px 0;color:#bbd6e5;font-size:.89rem;
+  line-height:1.6;border-left:3px solid #72e7f1;padding:8px 12px;background:#102b49}
+.project-feedback-status{color:#a8eaf7;font-size:.92rem;min-height:1.4em}
+.project-feedback-list{display:grid;gap:15px;margin-top:16px}
+.project-feedback-card{border:1px solid #577f9b7d;border-radius:16px;
+  padding:clamp(15px,2vw,22px);background:#102d4c}
+.project-feedback-meta{display:flex;align-items:center;gap:13px;flex-wrap:wrap;
+  margin-bottom:13px;font-size:.86rem;font-weight:750;color:#bdd9eb}
+.project-feedback-meta .feedback-stars{color:#ffdf86;font-size:1rem}
+.project-feedback-meta .feedback-lang{color:#80ebf5}
+.project-feedback-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.project-feedback-text{padding:14px 15px;background:#0b2340;border-radius:12px;
+  min-width:0}
+.project-feedback-text strong{display:block;font-size:.72rem;letter-spacing:.08em;
+  text-transform:uppercase;color:#8eeafb;margin-bottom:10px}
+.project-feedback-text p{font-size:clamp(.98rem,1.6vw,1.1rem);line-height:1.55;
+  margin:0;color:#f1fbff;white-space:pre-wrap;overflow-wrap:anywhere}
+.project-feedback-text.translated{background:#123d53}
+.project-feedback-actions{display:flex;justify-content:space-between;
+  flex-wrap:wrap;gap:10px;margin-top:23px}
+body.bright .project-feedback-dialog{background:#f4fbff;color:#12354c}
+body.bright .project-feedback-dialog .project-feedback-card{background:#e3f0f9}
+body.bright .project-feedback-dialog .project-feedback-text{background:#fff}
+body.bright .project-feedback-dialog .project-feedback-text.translated{background:#daf1ed}
+body.bright .project-feedback-dialog .project-feedback-text p{color:#12354c}
+body.bright .project-feedback-dialog .project-feedback-context,
+body.bright .project-feedback-dialog .project-feedback-note,
+body.bright .project-feedback-dialog .project-feedback-meta{color:#2f4f65}
+body.bright .project-feedback-dialog .project-feedback-note{background:#e1eef6}
+body.bright .project-feedback-dialog .project-feedback-meta .feedback-lang,
+body.bright .project-feedback-dialog .project-feedback-status,
+body.bright .project-feedback-dialog .project-feedback-text strong{color:#005675}
+body.bright .feedback-open-btn{color:#0e4965;background:#cdeef8}
+@media(max-width:760px){
+  .rank-score{align-items:flex-start;grid-column:2;text-align:left}
+  .rank-score .feedback-open-btn{min-height:41px}
+  .project-feedback-dialog{padding:20px 15px}
+  .project-feedback-header{gap:8px}
+  .project-feedback-header h2{font-size:1.65rem}
+  .project-feedback-close{font-size:.82rem;padding:8px;min-height:39px}
+  .project-feedback-columns{grid-template-columns:1fr;gap:9px}
+}

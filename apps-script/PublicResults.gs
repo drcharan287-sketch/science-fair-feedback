@@ -2,7 +2,8 @@
  * VoiceVote presenter-only Results API.
  * Public/anonymous requests are ALWAYS DEMO and never read Feedback.
  * Authenticated short-lived presenter tickets unlock aggregate live results
- * without opening the admin key, individual reviews, or visitor identifiers.
+ * without opening the admin key or visitor identifiers. Individual feedback is
+ * available ONLY through a separate, explicit, ticket-validated project lookup.
  * No manual feedback approval queue exists.
  */
 const VOICEVOTE_PUBLIC_RESULTS_MODE_KEY = 'VOICEVOTE_PUBLIC_RESULTS_MODE';
@@ -129,6 +130,63 @@ function presenterSummary_(ticket) {
   // Deliberately do not expose an APPROVED/PUBLIC flag: this is a private view.
   return Object.assign({},payload,{mode:'PRESENTER_LIVE',
     message:'Private live audience aggregates. No individual visitor reviews.'});
+}
+
+/**
+ * PRIVATE READ-ONLY project feedback: a faculty presenter explicitly opens
+ * one rated project in the protected Live Results screen. Never bundle
+ * comments in presenterSummary_() or publicResults(). A public visitor URL,
+ * missing/expired presenter token, or unknown ID must fail BEFORE reading
+ * the Feedback sheet.
+ *
+ * Only valid rated votes are shown; excluded/VOID votes remain in the
+ * administrator-only audit/review tools. No device token, pass, submission ID,
+ * row number, voter identity, or admin credential is returned. Pagination
+ * limits accidental projection and response size on the smart board.
+ */
+// Mask obvious contact details for an event projector. This is a basic
+// guard, NOT a guarantee that arbitrary user-entered text contains no PII.
+// Full unmodified reviews remain available in the authenticated Admin Console.
+function presenterReviewDisplayText_(value, limit) {
+  return String(value || '').slice(0,limit)
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,'[email hidden]')
+    .replace(/(^|[^0-9])(?:\+91[ -]?)?[6-9][0-9]{9}(?=$|[^0-9])/g,
+      function(_matched,prefix) {return prefix+'[phone hidden]';});
+}
+function presenterProjectReviews_(ticket, projectId, offset) {
+  if (!publicVerifyPresenterSession_(ticket)) {
+    return {success:false,mode:'DENIED',
+      message:'Faculty presenter access is required or has expired.'};
+  }
+  const id = String(projectId || '').trim();
+  if (!id || id.length > 180) {
+    return {success:false,mode:'DENIED',message:'Select a known project.'};
+  }
+  const projects = readProjectCatalog_();
+  const known = projects.some(function(p) { return adminProjectId_(p) === id; });
+  if (!known) {
+    return {success:false,mode:'DENIED',message:'Select a known project.'};
+  }
+  // Read only after permission and project identity have both been validated.
+  const ss = adminSheet_();
+  const resolveVote = adminProjectLookup_(ss,projects);
+  const page = Math.max(0,Math.min(10000,Math.floor(Number(offset)||0)));
+  const size = 8;
+  const matches = adminRawVotes_(ss).filter(function(v) {
+    return v.status === 'VALID' && v.rating >= 1 && v.rating <= 5 &&
+      resolveVote(v) === id;
+  }).reverse();
+  return {
+    success:true,mode:'PRESENTER_REVIEWS',projectId:id,total:matches.length,
+    offset:page,hasMore:page+size<matches.length,
+    reviews:matches.slice(page,page+size).map(function(v) {
+      return {
+        rating:v.rating,language:v.language,
+        original:presenterReviewDisplayText_(v.original,2000),
+        translation:presenterReviewDisplayText_(v.translation,6000)
+      };
+    })
+  };
 }
 
 /** Legacy publication RPC kept only for explicitly returning to DEMO. */
