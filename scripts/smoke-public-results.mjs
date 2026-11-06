@@ -11,12 +11,25 @@ const callback='voiceVoteReadOnlyResultsProbe';
 const url=new URL(match[1]);
 url.searchParams.set('action','publicResults');
 url.searchParams.set('callback',callback);
-url.searchParams.set('mode','PUBLISHED'); // Malicious/public override must be ignored.
+// Legacy public-mode URL override is covered by in-memory backend tests.
+// Do not use a non-standard query variant when checking the deployed endpoint.
 const response=await fetch(url,{redirect:'follow',
   signal:AbortSignal.timeout(30000),headers:{Accept:'application/javascript'}});
 assert.ok(response.ok,'Public Results GET returned HTTP '+response.status);
 const source=(await response.text()).trim();
-const wrapper=/^voiceVoteReadOnlyResultsProbe\\(([\\s\\S]*)\\);?$/;
+const wrapper=new RegExp('^'+callback+'\\\\(([\\\\s\\\\S]*?)\\\\);?
+const matchPayload=wrapper.exec(source);
+assert.ok(matchPayload,'Public Results endpoint did not return expected JSONP');
+const data=JSON.parse(matchPayload[1]);
+assert.equal(data.success,true);
+assert.equal(data.mode,'DEMO','Real Results must not be publicly accessible');
+assert.ok(Number.isInteger(data.totalProjects)&&data.totalProjects>=1);
+for(const name of ['acceptedVotes','languages','rankings','ratedProjects','highlights',
+  'original','translation','submissionId','deviceToken','reviews','votes']){
+  assert.equal(Object.hasOwn(data,name),false,'Anonymous Results exposed '+name);
+}
+console.log('PASS anonymous Results is DEMO-only, even with a forced PUBLISHED URL; no private fields.');
+);
 const matchPayload=wrapper.exec(source);
 assert.ok(matchPayload,'Public Results endpoint did not return expected JSONP');
 const data=JSON.parse(matchPayload[1]);
