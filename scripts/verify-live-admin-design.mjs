@@ -27,20 +27,22 @@ try{
         const rank=document.getElementById('rankHeading');
         const loginHeading=document.querySelector('#loginPanel h1');
         const brand=document.querySelector('.top .brand');
-        const css=Array.from(document.querySelectorAll('style'))
-          .map(el=>el.textContent||'').join('\n');
+        const titleStyle=loginHeading?getComputedStyle(loginHeading):null;
         return {
           rankHeader:rank?.textContent||'',
-          headingSize:loginHeading?parseFloat(getComputedStyle(loginHeading).fontSize):0,
+          headingSize:titleStyle?parseFloat(titleStyle.fontSize):0,
+          headingColor:titleStyle?.color||'',
           brandSize:brand?parseFloat(getComputedStyle(brand).fontSize):0,
-          styleDeployed:css.includes('Console visual hierarchy'),
           adminHidden:document.getElementById('adminPanel')?.hidden
         };
       });
       assert.equal(result.rankHeader,'Overall rank','PR58 rank header not deployed');
-      assert.equal(result.styleDeployed,true,'PR58 Admin style not deployed');
-      assert.ok(result.headingSize>result.brandSize,
-        'Admin sign-in title must be larger than its header brand '+JSON.stringify(result));
+      // HtmlService may strip/minify CSS comments and move styles into an
+      // iframe. Test the actual rendered hierarchy instead of source markers.
+      assert.ok(result.headingSize>result.brandSize&&result.headingSize>=33,
+        'PR58 Admin login title hierarchy not deployed '+JSON.stringify(result));
+      assert.equal(result.headingColor,'rgb(248, 252, 255)',
+        'PR58 admin title treatment not deployed '+JSON.stringify(result));
       assert.equal(result.adminHidden,true,'Protected Admin controls must stay hidden');
       console.log('PASS production Apps Script public Admin login shell includes PR58 rank scope, heading hierarchy; private dashboard remains locked. No sign-in/data read.');
       verified=true;
