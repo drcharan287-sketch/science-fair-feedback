@@ -45,3 +45,4 @@ jobs:
           export VOICEVOTE_SITE_BASE=http://127.0.0.1:8787/
           node scripts/verify-owner-demo.mjs
           node scripts/verify-results-ui.mjs
+          node scripts/verify-translation-preview.mjs
