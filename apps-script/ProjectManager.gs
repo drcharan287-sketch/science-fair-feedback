@@ -67,10 +67,22 @@ function voiceVoteManagerVotes_(ss,item) {
 function adminGetManagedProjects(key) {
   adminRequireKey_(key);
   const ss=adminSheet_(),source=voiceVoteManagerRows_(ss);
+  // Read Feedback just once, even when the event has hundreds of projects.
+  const idCounts=Object.create(null),legacyCounts=Object.create(null);
+  adminRawVotes_(ss).forEach(function(v){
+    if(v.status==='VOID')return;
+    if(v.projectId)idCounts[v.projectId]=(idCounts[v.projectId]||0)+1;
+    else {
+      const k=adminProjectLegacyKey_(v);
+      legacyCounts[k]=(legacyCounts[k]||0)+1;
+    }
+  });
   return {
     projects:source.items.map(function(item){
-      const tally=voiceVoteManagerVotes_(ss,item);
-      return Object.assign({},item,{votes:tally.count,legacyVotes:tally.legacy});
+      const legacy=legacyCounts[adminProjectLegacyKey_(item)]||0;
+      return Object.assign({},item,{
+        votes:(idCounts[item.id]||0)+legacy,legacyVotes:legacy>0
+      });
     }),
     total:source.items.length,
     active:source.items.filter(function(item){return item.active}).length,
