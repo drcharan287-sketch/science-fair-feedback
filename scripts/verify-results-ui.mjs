@@ -101,6 +101,12 @@ try{
     assert.match(await page.locator('#modeTitle').innerText(),/DEMO/);
     assert.match(await page.locator('#modeDetails').innerText(),/fictional/i);
     assert.match(await page.locator('#heroTitle').innerText(),/Curiosity Carnival/);
+    const demoType=await page.evaluate(()=>({
+      heading:parseFloat(getComputedStyle(document.querySelector('#heroTitle')).fontSize),
+      subheading:parseFloat(getComputedStyle(document.querySelector('.hero-idea-title')).fontSize)
+    }));
+    assert.ok(demoType.heading>demoType.subheading,
+      'Demo page main event heading must be larger than its subtitle: '+JSON.stringify(demoType));
     const boardQR=page.locator('.board-qr-image');
     assert.equal(await boardQR.isVisible(),true,'Presenter board QR is visible after authorization');
     assert.equal(await boardQR.evaluate(img=>img.complete && img.naturalWidth>0),true,
@@ -136,6 +142,13 @@ try{
     await page.locator('#presenterShowLive').click();
     assert.match(await page.locator('#modeTitle').innerText(),/Curiosity Carnival/i);
     assert.match(await page.locator('#modeDetails').innerText(),/Trending Projects/i);
+    const liveType=await page.evaluate(()=>({
+      heading:parseFloat(getComputedStyle(document.querySelector('#modeTitle')).fontSize),
+      section:parseFloat(getComputedStyle(document.querySelector('#rankingsHeading')).fontSize),
+      subtitle:parseFloat(getComputedStyle(document.querySelector('#modeDetails')).fontSize)
+    }));
+    assert.ok(liveType.heading>liveType.section&&liveType.section>liveType.subtitle,
+      'Smart-board title > section heading > subtitle: '+JSON.stringify(liveType));
     for(const selector of ['.topbar','.hero','.board-qr-card','#feedbackJourney','.story-strip','.page-footer']){
       assert.equal(await page.locator(selector).isVisible(),false,
         'Private Live must hide its introductory/teaching section: '+selector);
@@ -202,6 +215,10 @@ try{
     for(const [n,medal] of ['medal-gold','medal-silver','medal-bronze','medal-standard'].entries()){
       assert.ok(classes[n].includes(medal),'Rank '+(n+1)+' must have its own medal tier');
     }
+    const badgeColors=await page.locator('#leaderboardCards .rank-number')
+      .evaluateAll(nodes=>nodes.slice(0,4).map(n=>getComputedStyle(n).color));
+    assert.equal(new Set(badgeColors).size,4,
+      'First, second, third and remaining placement badges must have distinct displayed colors');
     const rank1=page.locator('#leaderboardCards .rank-number').first();
     assert.match(await rank1.getAttribute('aria-label'),/Overall rank 1/);
     await page.locator('#gradeFilter').selectOption('9');
