@@ -562,3 +562,81 @@ test('only authenticated owner can issue a temporary, no-write demonstration tic
   assert.match(expired.text,/"success":false/);
   assert.equal(a.context.publicVerifyPresenterSession_(session.token.replace(/.$/,'0')),false);
 });
+
+test('presenter project feedback requires a live ticket and never leaks via public summary',()=>{
+  const a=setup();
+  const id=JSON.stringify(['6','Heidelberg','XenoChat']);
+  const denied=a.context.doGet({parameter:{action:'presenterReviews',
+    projectId:id,callback:'cb',ticket:'a'.repeat(64)}});
+  assert.match(denied.text,/"mode":"DENIED"/);
+  assert.doesNotMatch(denied.text,/ఈ ప్రాజెక్టు|translation|original|rowProof/);
+  assert.equal(a.opens(),0,'Invalid tickets must not even open a Sheet');
+
+  let counter=0;
+  a.context.Utilities.getUuid=()=>++counter===1?
+    '123e4567-e89b-42d3-a456-426614174001':
+    '123e4567-e89b-42d3-a456-426614174002';
+  const ticket=a.context.adminCreatePresenterSession(DEMO_KEY).token;
+  const unknown=a.context.doGet({parameter:{action:'presenterReviews',
+    projectId:'a fake project',ticket,callback:'cb'}});
+  assert.match(unknown.text,/"mode":"DENIED"/);
+  const result=a.context.doGet({parameter:{action:'presenterReviews',
+    projectId:id,ticket,offset:'0',callback:'cb'}});
+  const data=JSON.parse(result.text.replace(/^cb\(/,'').replace(/\);$/,''));
+  assert.equal(data.success,true);
+  assert.equal(data.mode,'PRESENTER_REVIEWS');
+  assert.equal(data.projectId,id);
+  assert.equal(data.total,1);
+  assert.equal(data.reviews[0].language,'te-IN');
+  assert.match(data.reviews[0].original,/ఈ ప్రాజెక్టు/);
+  assert.match(data.reviews[0].translation,/very good/);
+  for(const forbidden of ['row','rowProof','deviceHash','submissionId','protected','pass','time','status']){
+    assert.equal(Object.hasOwn(data.reviews[0],forbidden),false,
+      'Presenter review must not expose '+forbidden);
+  }
+  const publicResult=a.context.doGet({parameter:{action:'publicResults',callback:'cb',
+    mode:'PUBLISHED',ticket}});
+  assert.doesNotMatch(publicResult.text,/ఈ ప్రాజెక్టు|PRESENTER_REVIEWS|original|translation/);
+  const aggregate=a.context.doGet({parameter:{action:'presenterResults',ticket,callback:'cb'}});
+  assert.doesNotMatch(aggregate.text,/ఈ ప్రాజెక్టు|original|translation/);
+  a.ticketCache.clear();
+  const expired=a.context.doGet({parameter:{action:'presenterReviews',ticket,
+    projectId:id,callback:'cb'}});
+  assert.match(expired.text,/"mode":"DENIED"/);
+  assert.equal(a.feedbackRows.length,3,'Read-only requests must not append feedback');
+});
+
+test('presenter review pagination excludes VOID votes and masks basic contact details',()=>{
+  const a=setup();
+  for(let i=0;i<12;i++){
+    const original=i===0?
+      'Contact me at visitor@example.org or +91 9876543210':
+      'Feedback '+i;
+    a.feedbackRows.push([
+      new Date('2026-11-06T12:00:00Z'),'XenoChat','6','Heidelberg',
+      original,5,'en-IN',original,'','',i===11?'VOID':''
+    ]);
+  }
+  let counter=0;
+  a.context.Utilities.getUuid=()=>++counter===1?
+    '123e4567-e89b-42d3-a456-426614174001':
+    '123e4567-e89b-42d3-a456-426614174002';
+  const ticket=a.context.adminCreatePresenterSession(DEMO_KEY).token;
+  const id=JSON.stringify(['6','Heidelberg','XenoChat']);
+  const fetch=offset=>JSON.parse(a.context.doGet({parameter:{action:'presenterReviews',
+    projectId:id,ticket,offset:String(offset),callback:'cb'}}).text
+    .replace(/^cb\(/,'').replace(/\);$/,''));
+  const first=fetch(0),second=fetch(8);
+  assert.equal(first.total,12,'11 new valid + 1 existing; VOID removed');
+  assert.equal(first.reviews.length,8);
+  assert.equal(first.hasMore,true);
+  assert.equal(second.reviews.length,4);
+  assert.equal(second.hasMore,false);
+  const all=[...first.reviews,...second.reviews];
+  const redacted=all.find(x=>x.original.includes('[email hidden]'));
+  assert.ok(redacted,'Contact details should be masked when projected');
+  assert.match(redacted.original,/\[phone hidden\]/);
+  assert.ok(!JSON.stringify(all).includes('visitor@example.org'));
+  assert.ok(!JSON.stringify(all).includes('9876543210'));
+  assert.equal(a.feedbackRows.length,15,'No feedback record was modified');
+});
