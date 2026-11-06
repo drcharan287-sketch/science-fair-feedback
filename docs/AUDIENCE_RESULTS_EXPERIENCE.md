@@ -56,6 +56,11 @@ The **Curiosity Carnival** science-fair theme appears as a heading on both the p
 - Weighted result formula: `(valid rating stars + 17.5) / (valid votes + 5)`. These are *audience appreciation* rankings, not official school/jury awards.
 - **Top 10 semantics (PR #58):** The private Live board's **All grades** view numbers the ten highest rated projects `01`–`10` across the fair, ordered by weighted score. Selecting a grade switches to that grade's own rated Top 10 and renumbers the visible positions within the grade. The backend's grade-local rank remains in place and is never mistaken for a global badge. Gold/silver/bronze/cyan placements are visual aids, not jury awards. The Admin Console still shows its full catalog and differentiates overall vs class-specific rank labels.
 
+## Private Live language participation order
+- The **Every language counts** panel is a *frequency display*, not a judgment of languages. It uses the existing protected aggregate language counts, sorts highest count first, uses alphabetical language-name/code tie-breaks, then displays the top five.
+- Participation position chips show `01` through `05` in gold/silver/bronze/cyan tiers. For English 6, Hindi 1, Tamil 1 and Telugu 4, the correct order is **English 6 → Telugu 4 → Hindi 1 → Tamil 1**.
+- In the full faculty Demo, the **VoiceVote** header is intentionally visually more prominent than the **Curiosity Carnival** event heading, which is more prominent than the supporting slogan.
+
 ## Captured feedback on the faculty smart board
 
 - Every rated project card shows **View feedback** alongside its score and rating count. Selecting it opens a large, same-page, read-only detail panel, showing up to eight newest valid comments at a time with **Original feedback** and **English translation**, language and stars. **Show more feedback** pages further comments; **Close** returns to the board without changing grade rankings.
