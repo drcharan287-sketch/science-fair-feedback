@@ -36,7 +36,12 @@ try{
         assert.equal(params.has('submissionId'),false);
         return route.continue();
       }
-      savePosts++;return route.abort('blockedbyclient');
+      // Google HtmlService may issue internal iframe requests without an
+      // action field. They are NOT VoiceVote votes, and are blocked safely.
+      // Count ONLY action=save as a potential real feedback submission.
+      if(params.get('action')==='save')savePosts++;
+      else unexpected++;
+      return route.abort('blockedbyclient');
     }
     // Apps Script HtmlService redirects its safe response into a Google-hosted
     // document. Allow GETs for that response, never external POSTs or saves.
