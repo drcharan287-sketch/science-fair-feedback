@@ -20,6 +20,8 @@ try {
       }, null, { timeout: 25000 });
       // Event-day Admin additions and deactivations legitimately change the
       // catalog; do not hardcode a specific project's presence.
+      assert.match(await page.locator('#catalogStatus').innerText(),/Live school roster verified/i,
+        'Event-day Voting must load the actual Google roster, not silently use the static backup');
       const grades=await page.locator('#studentClass option').evaluateAll(nodes=>
         nodes.map(n=>n.value).filter(Boolean));
       assert.ok(grades.length>0,'A live project grade must exist');
