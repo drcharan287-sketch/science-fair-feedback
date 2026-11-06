@@ -112,7 +112,7 @@ try{
     // viewport. Position the project action in the safe center first.
     await page.locator('.feedback-open-btn').first().evaluate(el=>
       el.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'}));
-    const hit=await page.locator('.feedback-open-btn').first().evaluate(el=>{
+    var hit=await page.locator('.feedback-open-btn').first().evaluate(el=>{
       const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();
       const top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
       return {viewport:[innerWidth,innerHeight],scrollY,button:[r.left,r.top,r.width,r.height],
@@ -152,7 +152,7 @@ try{
     // viewport. Position the project action in the safe center first.
     await page.locator('.feedback-open-btn').first().evaluate(el=>
       el.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'}));
-    const hit=await page.locator('.feedback-open-btn').first().evaluate(el=>{
+    var hit=await page.locator('.feedback-open-btn').first().evaluate(el=>{
       const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();
       const top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
       return {viewport:[innerWidth,innerHeight],scrollY,button:[r.left,r.top,r.width,r.height],
