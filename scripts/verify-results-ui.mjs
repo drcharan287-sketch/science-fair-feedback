@@ -111,7 +111,15 @@ try{
     // The existing fixed presenter toolbar can cover the bottom of a small
     // viewport. Position the project action in the safe center first.
     await page.locator('.feedback-open-btn').first().evaluate(el=>
-      el.scrollIntoView({block:'center',inline:'nearest'}));
+      el.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'}));
+    const hit=await page.locator('.feedback-open-btn').first().evaluate(el=>{
+      const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();
+      const top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+      return {viewport:[innerWidth,innerHeight],scrollY,button:[r.left,r.top,r.width,r.height],
+        parent:[p.left,p.top,p.width,p.height],atCenter:top?.outerHTML?.slice(0,155),
+        pointer:getComputedStyle(el).pointerEvents};
+    });
+    console.log('Feedback click diagnostics',size.name,JSON.stringify(hit));
     await page.locator('.feedback-open-btn').first().click();
     assert.equal(await page.locator('#projectFeedbackOverlay').isVisible(),true);
     assert.match(await page.locator('#projectFeedbackEyebrow').innerText(),/FICTIONAL/);
@@ -143,7 +151,15 @@ try{
     // The existing fixed presenter toolbar can cover the bottom of a small
     // viewport. Position the project action in the safe center first.
     await page.locator('.feedback-open-btn').first().evaluate(el=>
-      el.scrollIntoView({block:'center',inline:'nearest'}));
+      el.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'}));
+    const hit=await page.locator('.feedback-open-btn').first().evaluate(el=>{
+      const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();
+      const top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+      return {viewport:[innerWidth,innerHeight],scrollY,button:[r.left,r.top,r.width,r.height],
+        parent:[p.left,p.top,p.width,p.height],atCenter:top?.outerHTML?.slice(0,155),
+        pointer:getComputedStyle(el).pointerEvents};
+    });
+    console.log('Feedback click diagnostics',size.name,JSON.stringify(hit));
     await page.locator('.feedback-open-btn').first().click();
     await page.waitForFunction(()=>document.querySelectorAll('.project-feedback-card').length===8,
       null,{timeout:12000});
