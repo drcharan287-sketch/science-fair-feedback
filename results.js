@@ -108,6 +108,7 @@
     put('totalVotes',fmt(data.acceptedVotes));put('ratedProjects',fmt(data.ratedProjects));
     put('languageCount',demo?'—':fmt((data.languages||[]).filter(x=>x.count>0).length));
     put('voteMetricHint',demo?'Real vote totals are not published in preview':'Valid anonymous ratings');
+    put('languageSummary',demo?'Real language counts appear in the private Live Results.':'Most-used feedback languages · Highest response count first.');
     put('rankingsHeading',demo?'Sample audience favourites.':live?'Discoveries in motion.':'Top 10 audience favourites.');
     put('rankingsSubheading',demo?'Illustrative project cards, not actual rankings.':
       live?'Project rankings remain private until the organizers approve publication.':
