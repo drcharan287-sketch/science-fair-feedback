@@ -178,6 +178,43 @@ try{
     await page.locator('#gradeFilter').selectOption('9');
     assert.equal(await page.locator('#leaderboardCards .rank-card').count(),1);
     assert.match(await page.locator('#leaderboardCards').innerText(),/Synthetic Rain Harvest/);
+    // Same API payload can contain grade-local duplicate #1s. On "All grades",
+    // the presenter must show one overall ordinal 01..10 without repeats.
+    const originalRankings=privatePayload.rankings;
+    privatePayload.rankings=[
+      ...originalRankings,
+      ...Array.from({length:12},(_,i)=>({
+        id:'SYN-EXTRA-'+i,grade:i%2===0?'6':'9',section:'Test Section',
+        project:'Synthetic Display Project '+String(i+1).padStart(2,'0'),
+        votes:5,weighted:4.1-i*.01,rank:Math.floor(i/2)+2
+      }))
+    ];
+    await page.locator('#gradeFilter').selectOption('all');
+    await page.locator('#liveRefreshButton').click();
+    await page.waitForFunction(()=>document.querySelectorAll('#leaderboardCards .rank-card').length===10,
+      null,{timeout:12000});
+    const globalBadges=await page.locator('#leaderboardCards .rank-number').allTextContents();
+    assert.deepEqual(globalBadges,Array.from({length:10},(_,i)=>String(i+1).padStart(2,'0')),
+      'All grades must rank 01..10 continuously, not repeat grade-specific #1');
+    assert.match(await page.locator('#rankingCount').innerText(),/10 of 14 rated projects.*Overall Top 10/);
+    const classes=await page.locator('#leaderboardCards .rank-number')
+      .evaluateAll(nodes=>nodes.slice(0,4).map(n=>n.className));
+    for(const [n,medal] of ['medal-gold','medal-silver','medal-bronze','medal-standard'].entries()){
+      assert.ok(classes[n].includes(medal),'Rank '+(n+1)+' must have its own medal tier');
+    }
+    const rank1=page.locator('#leaderboardCards .rank-number').first();
+    assert.match(await rank1.getAttribute('aria-label'),/Overall rank 1/);
+    await page.locator('#gradeFilter').selectOption('9');
+    const gradeBadges=await page.locator('#leaderboardCards .rank-number').allTextContents();
+    assert.equal(gradeBadges[0],'01','Grade-specific ranking restarts at first place');
+    assert.match(await page.locator('#rankingsHeading').innerText(),/Grade 9.*Top 10/);
+    assert.match(await page.locator('#rankingCount').innerText(),/Grade 9 Top 10/);
+    privatePayload.rankings=originalRankings;
+    await page.locator('#gradeFilter').selectOption('all');
+    await page.locator('#liveRefreshButton').click();
+    await page.waitForFunction(()=>document.querySelectorAll('#leaderboardCards .rank-card').length===2,
+      null,{timeout:12000});
+
     await page.locator('#liveBrightnessButton').click();
     assert.equal(await page.evaluate(()=>document.body.classList.contains('bright')),true);
     assert.equal(await page.locator('#liveFullScreenButton').isVisible(),true);
