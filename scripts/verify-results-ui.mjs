@@ -59,6 +59,8 @@ try{
     // faculty screen, and never asks the backend for private aggregates.
     await visit('#leaderboard');
     assert.equal(await page.locator('#pageShell').isVisible(),false);
+    assert.equal(await page.locator('.board-qr-card').isVisible(),false,
+      'Visitor QR display belongs only in authenticated faculty shell');
     assert.equal(await page.locator('#presenterBar').isVisible(),false);
     assert.equal(await page.locator('#presenterAccessGate').isVisible(),true);
     assert.match(await page.locator('#presenterAccessMessage').innerText(),/reserved for faculty/i);
@@ -75,6 +77,14 @@ try{
       !document.querySelector('#pageShell').hidden,null,{timeout:12000});
     assert.match(await page.locator('#modeTitle').innerText(),/DEMO/);
     assert.match(await page.locator('#modeDetails').innerText(),/fictional/i);
+    assert.match(await page.locator('#heroTitle').innerText(),/Curiosity Carnival/);
+    const boardQR=page.locator('.board-qr-image');
+    assert.equal(await boardQR.isVisible(),true,'Presenter board QR is visible after authorization');
+    assert.equal(await boardQR.evaluate(img=>img.complete && img.naturalWidth>0),true,
+      'The school QR asset must load on the published screen');
+    assert.match(await page.locator('.board-qr-expand').getAttribute('href'),
+      /assets\/curiosity-carnival-voting-qr\.png$/,
+      'QR enlarge link must point to the same public scan image');
     assert.ok(await page.locator('#leaderboardCards .rank-card').count()>0);
     assert.equal(await page.locator('#totalVotes').innerText(),'—',
       'Demo must not show genuine live vote totals');
@@ -83,6 +93,8 @@ try{
       'Faculty demo must point to the verified no-save Voting UI');
     await page.locator('#presenterShowLive').click();
     assert.match(await page.locator('#modeTitle').innerText(),/PRIVATE LIVE/i);
+    assert.equal(await page.locator('.board-qr-card').isVisible(),true,
+      'Faculty Live Results must retain the visitor QR');
     assert.equal(await page.locator('#totalVotes').innerText(),'15');
     assert.equal(await page.locator('#leaderboardCards .rank-card').count(),2);
     await page.locator('#gradeFilter').selectOption('9');
