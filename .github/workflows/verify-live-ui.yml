@@ -55,5 +55,5 @@ jobs:
         run: node scripts/verify-translation-preview.mjs
       - name: Verify top-level no-vote iPhone Chrome-like translation fallback (emulated, not native iOS)
         run: node scripts/verify-ios-translation-fallback.mjs
-      - name: Verify actual Google English translation in no-write preview (synthetic Hindi only)
+      - name: Verify actual Google English translation for Telugu Hindi Tamil Kannada and fallback (no-save)
         run: node scripts/verify-live-translation-preview.mjs

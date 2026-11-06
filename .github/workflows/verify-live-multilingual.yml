@@ -1,0 +1,35 @@
+name: Verify live VoiceVote multilingual translation (no-save)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/verify-live-translation-preview.mjs'
+      - '.github/workflows/verify-live-multilingual.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-live-translation-preview.mjs'
+      - '.github/workflows/verify-live-multilingual.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-translation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout reviewed code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify exact published VoiceVote and Results assets (GET only)
+        run: node scripts/wait-for-pages.mjs
+      - name: Install isolated browser driver
+        run: npm install --no-save playwright-core
+      - name: Check no-save English translation for Telugu Hindi Tamil Kannada and PR56 fallback
+        run: node scripts/verify-live-translation-preview.mjs
