@@ -104,6 +104,25 @@
     #managerForm .actions{margin-top:18px}
     #managerProject{min-width:0}
     #managerStatus{overflow-wrap:anywhere}
+    .project-confirm-dialog{
+      width:min(92vw,530px);max-height:min(88vh,800px);
+      overflow:auto;padding:0;color:#f4fbff;
+      border:1px solid #5a8caa;border-radius:21px;
+      background:linear-gradient(145deg,#183c5b,#0c203a 75%);
+      box-shadow:0 28px 75px #010915bd;
+    }
+    .project-confirm-dialog::backdrop{background:#010b20c9;backdrop-filter:blur(4px)}
+    .project-confirm-inner{padding:clamp(20px,4vw,29px)}
+    .project-confirm-eyebrow{color:#8eeafb;text-transform:uppercase;letter-spacing:.11em;font-size:12px;font-weight:850}
+    .project-confirm-dialog h2{font-size:clamp(22px,3vw,28px);color:#fff;margin:9px 0 17px;line-height:1.2}
+    .project-confirm-fields{margin:0 0 17px;border:1px solid #446b87;background:#112d4a;border-radius:13px;padding:13px 15px}
+    .project-confirm-fields dt{color:#a8cae3;font-size:12px;font-weight:750;text-transform:uppercase;letter-spacing:.04em;margin:8px 0 3px}
+    .project-confirm-fields dt:first-child{margin-top:0}
+    .project-confirm-fields dd{margin:0;overflow-wrap:anywhere;font-weight:680}
+    .project-confirm-risk{background:#4a2933;border:1px solid #d58f88;color:#ffe2d8;padding:12px;border-radius:10px;line-height:1.5;margin-bottom:16px}
+    .project-confirm-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:20px}
+    .project-confirm-actions button{min-width:130px}
+    @media(max-width:500px){.project-confirm-actions button{flex:1;min-width:100px}}
     @media(max-width:690px){.project-editor-grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -317,6 +336,26 @@
     </section>
   </main>
 
+  <dialog id="managerConfirmDialog" class="project-confirm-dialog"
+          aria-labelledby="managerConfirmTitle" aria-describedby="managerConfirmHelp">
+    <div class="project-confirm-inner">
+      <p class="project-confirm-eyebrow">VoiceVote · Project Manager</p>
+      <h2 id="managerConfirmTitle">Review project change</h2>
+      <p class="help" id="managerConfirmHelp">Check the details before applying this audited change.</p>
+      <dl class="project-confirm-fields">
+        <dt>Grade and section</dt><dd id="managerConfirmLocation"></dd>
+        <dt>Project</dt><dd id="managerConfirmProject"></dd>
+        <dt>Reason</dt><dd id="managerConfirmReason"></dd>
+      </dl>
+      <p id="managerConfirmRisk" class="project-confirm-risk" hidden></p>
+      <p class="help">Existing feedback records and permanent project IDs are preserved.</p>
+      <div class="project-confirm-actions">
+        <button type="button" id="managerConfirmCancel" class="muted-btn">Cancel</button>
+        <button type="button" id="managerConfirmProceed">Confirm change</button>
+      </div>
+    </div>
+  </dialog>
+
   <script>
   (() => {
     'use strict';
@@ -329,6 +368,7 @@
     let managerData = null;
     let managerSelectedId = '';
     let managerBusy = false;
+    let managerConfirmPending = null;
     // A sign-out or new login attempt invalidates all outstanding admin RPCs.
     // Google Apps Script calls cannot be cancelled after dispatch, but stale
     // responses must never repopulate private DOM or in-memory dashboard data.
@@ -371,6 +411,10 @@
       // not merely the visible login state, when an organizer signs out.
       ['rankingRows', 'voterRows', 'passesRows'].forEach(id => $(id).replaceChildren());
       managerData=null;managerSelectedId='';managerBusy=false;
+      managerConfirmPending=null;
+      if($('managerConfirmDialog').open)$('managerConfirmDialog').close();
+      ['managerConfirmLocation','managerConfirmProject','managerConfirmReason','managerConfirmRisk']
+        .forEach(id=>text($(id),''));
       $('managerProject').replaceChildren(new Option('Choose a project to edit',''));
       $('managerGrade').replaceChildren();
       $('managerSection').replaceChildren();
@@ -575,28 +619,8 @@
             : 'Select a project, or choose Add a new project.'));
       },err=>{text($('managerStatus'),'Could not load projects: '+(err.message||String(err)));});
     }
-    function managerAction(action) {
-      if(managerBusy || !managerData)return;
-      const current=managerData.projects.find(p=>p.id===managerSelectedId);
-      if(action!=='ADD'&&!current)return;
-      const reason=$('managerReason').value.trim();
-      if(reason.length<8) {
-        text($('managerStatus'),'Enter an explanation of at least eight characters.');
-        return;
-      }
-      const data={action,reason,grade:$('managerGrade').value,
-        section:$('managerSection').value,project:$('managerName').value.trim(),
-        id:current?.id||'',expectedVersion:current?.version||'',
-        confirmAffectedVotes:action==='DEACTIVATE'};
-      const description=action==='ADD'?'ADD new project':
-        action==='EDIT'?'UPDATE existing project':
-        action==='DEACTIVATE'?'DEACTIVATE existing project':'REACTIVATE existing project';
-      const summary='Class '+(data.grade||(current&&current.grade)||'—')+' · '+
-        (data.section||(current&&current.section)||'—')+' · '+
-        (data.project||(current&&current.project)||'—');
-      const impact=action==='DEACTIVATE'?'\nThis will hide '+(current.votes||0)+
-        ' valid vote(s) from active rankings until restored. No feedback is deleted.':'';
-      if(!confirm(description+'?\n'+summary+impact+'\n\nReason: '+reason))return;
+    function managerSubmit(action,data) {
+      if(managerBusy || !key)return;
       managerBusy=true;
       ['managerAdd','managerSave','managerDeactivate','managerReactivate']
         .forEach(id=>$(id).disabled=true);
@@ -616,6 +640,55 @@
         text($('managerStatus'),'Not confirmed: '+(err.message||String(err))+
           ' Refresh the list before retrying. Do not blindly repeat an uncertain write.');
       });
+    }
+    function managerAction(action) {
+      if(managerBusy || !managerData || managerConfirmPending)return;
+      const current=managerData.projects.find(p=>p.id===managerSelectedId);
+      if(action!=='ADD'&&!current)return;
+      const reason=$('managerReason').value.trim();
+      if(reason.length<8) {
+        text($('managerStatus'),'Enter an explanation of at least eight characters.');
+        return;
+      }
+      const data={action,reason,grade:$('managerGrade').value,
+        section:$('managerSection').value,project:$('managerName').value.trim(),
+        id:current?.id||'',expectedVersion:current?.version||'',
+        confirmAffectedVotes:action==='DEACTIVATE'};
+      if((action==='ADD'||action==='EDIT') &&
+         (!data.grade || !data.section || !data.project)){
+        text($('managerStatus'),'Select the grade and section, and enter a project name.');
+        return;
+      }
+      const label={ADD:'Add new project',EDIT:'Save project corrections',
+        DEACTIVATE:'Deactivate project',REACTIVATE:'Reactivate project'}[action];
+      const grade=data.grade||(current&&current.grade)||'—';
+      const section=data.section||(current&&current.section)||'—';
+      const project=data.project||(current&&current.project)||'—';
+      text($('managerConfirmTitle'),label);
+      text($('managerConfirmProceed'),action==='ADD'?'Add project':
+        action==='EDIT'?'Save corrections':label);
+      text($('managerConfirmLocation'),'Grade '+grade+' · '+section);
+      text($('managerConfirmProject'),project);
+      text($('managerConfirmReason'),reason);
+      const risk=action==='DEACTIVATE'?
+        'This will hide '+(current.votes||0)+
+        ' valid vote(s) from active rankings until restored. No feedback is deleted.':
+        action==='EDIT'?
+        'Permanent project ID stays '+current.id+'. Existing ID-linked ratings are preserved.':
+        '';
+      text($('managerConfirmRisk'),risk);
+      $('managerConfirmRisk').hidden=!risk;
+      $('managerConfirmProceed').classList.toggle('warn-btn',action==='DEACTIVATE');
+      const dialog=$('managerConfirmDialog');
+      if(typeof dialog.showModal!=='function'){
+        // Legacy fallback only. Modern browsers show the in-app branded dialog.
+        if(confirm(label+'?\nGrade '+grade+' · '+section+' · '+project+'\nReason: '+reason))
+          managerSubmit(action,data);
+        return;
+      }
+      managerConfirmPending={action,data};
+      dialog.showModal();
+      $('managerConfirmCancel').focus();
     }
     function changeTab(tab) {
       $('rankingsPanel').hidden = tab!=='rankings';
@@ -835,6 +908,19 @@
     $('managerSave').addEventListener('click',()=>managerAction('EDIT'));
     $('managerDeactivate').addEventListener('click',()=>managerAction('DEACTIVATE'));
     $('managerReactivate').addEventListener('click',()=>managerAction('REACTIVATE'));
+    $('managerConfirmCancel').addEventListener('click',()=>{
+      managerConfirmPending=null;
+      $('managerConfirmDialog').close();
+    });
+    $('managerConfirmProceed').addEventListener('click',()=>{
+      const approved=managerConfirmPending;
+      managerConfirmPending=null;
+      $('managerConfirmDialog').close();
+      if(approved)managerSubmit(approved.action,approved.data);
+    });
+    $('managerConfirmDialog').addEventListener('close',()=>{
+      managerConfirmPending=null;
+    });
     $('closeReviews').addEventListener('click',noReviews);
     $('moreReviews').addEventListener('click',fetchReviews);
     $('reloadVoters').addEventListener('click',refreshVoters);
