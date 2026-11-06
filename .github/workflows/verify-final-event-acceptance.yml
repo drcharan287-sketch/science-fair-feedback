@@ -27,7 +27,7 @@ jobs:
         run: node scripts/verify-authoritative-catalog.mjs
       - name: Compare real Apps Script GET catalog to all authoritative project IDs and titles
         run: node scripts/verify-live-final-catalog.mjs
-      - name: Wait for exactly published Pages HTML CSS JS and 424-project snapshot (GET only)
+      - name: Wait for exact published Pages assets plus versioned 424-project snapshot (GET only)
         run: node scripts/wait-for-pages.mjs
       - name: Install isolated browser driver
         run: npm install --no-save playwright-core
