@@ -110,17 +110,17 @@ try{
     const beforeDemoReviews=reviewCalls;
     // The existing fixed presenter toolbar can cover the bottom of a small
     // viewport. Position the project action in the safe center first.
-    await page.locator('.feedback-open-btn').first().evaluate(el=>
-      el.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'}));
-    var hit=await page.locator('.feedback-open-btn').first().evaluate(el=>{
-      const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();
-      const top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
-      return {viewport:[innerWidth,innerHeight],scrollY,button:[r.left,r.top,r.width,r.height],
-        parent:[p.left,p.top,p.width,p.height],atCenter:top?.outerHTML?.slice(0,155),
-        pointer:getComputedStyle(el).pointerEvents};
+    // Clicking the real viewport coordinates avoids Playwright's extra auto-
+    // scroll, which can move small-screen targets behind the fixed toolbar.
+    var center=await page.locator('.feedback-open-btn').first().evaluate(el=>{
+      el.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'});
+      const r=el.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+      if(document.elementFromPoint(x,y)!==el){
+        throw Error('The on-screen feedback button is obstructed');
+      }
+      return {x,y};
     });
-    console.log('Feedback click diagnostics',size.name,JSON.stringify(hit));
-    await page.locator('.feedback-open-btn').first().click();
+    await page.mouse.click(center.x,center.y);
     assert.equal(await page.locator('#projectFeedbackOverlay').isVisible(),true);
     assert.match(await page.locator('#projectFeedbackEyebrow').innerText(),/FICTIONAL/);
     assert.match(await page.locator('#projectFeedbackList').innerText(),/Original feedback/i);
@@ -150,17 +150,17 @@ try{
     assert.equal(reviewCalls,0,'Live aggregate refresh must never include individual comments');
     // The existing fixed presenter toolbar can cover the bottom of a small
     // viewport. Position the project action in the safe center first.
-    await page.locator('.feedback-open-btn').first().evaluate(el=>
-      el.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'}));
-    var hit=await page.locator('.feedback-open-btn').first().evaluate(el=>{
-      const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();
-      const top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
-      return {viewport:[innerWidth,innerHeight],scrollY,button:[r.left,r.top,r.width,r.height],
-        parent:[p.left,p.top,p.width,p.height],atCenter:top?.outerHTML?.slice(0,155),
-        pointer:getComputedStyle(el).pointerEvents};
+    // Clicking the real viewport coordinates avoids Playwright's extra auto-
+    // scroll, which can move small-screen targets behind the fixed toolbar.
+    var center=await page.locator('.feedback-open-btn').first().evaluate(el=>{
+      el.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'});
+      const r=el.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+      if(document.elementFromPoint(x,y)!==el){
+        throw Error('The on-screen feedback button is obstructed');
+      }
+      return {x,y};
     });
-    console.log('Feedback click diagnostics',size.name,JSON.stringify(hit));
-    await page.locator('.feedback-open-btn').first().click();
+    await page.mouse.click(center.x,center.y);
     await page.waitForFunction(()=>document.querySelectorAll('.project-feedback-card').length===8,
       null,{timeout:12000});
     assert.equal(reviewCalls,1,'Only one explicit project review request');
