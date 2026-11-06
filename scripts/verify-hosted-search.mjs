@@ -20,12 +20,12 @@ try {
     return search && !search.disabled;
   }, null, {timeout: 20000});
 
-  await page.locator('#projectSearch').fill('XenoChat');
+  await page.locator('#projectSearch').fill('Xeno Chat App');
   await page.locator('#projectSearchResults button').first().click();
   assert.equal(await page.locator('#studentClass').inputValue(), '6');
   assert.equal(await page.locator('#section').inputValue(), 'Heidelberg');
-  assert.equal(await page.locator('#project').inputValue(), 'XenoChat');
-  assert.match(await page.locator('#projectSearchSelected').innerText(), /XenoChat/);
+  assert.equal(await page.locator('#project').inputValue(), 'Xeno Chat App');
+  assert.match(await page.locator('#projectSearchSelected').innerText(), /Xeno Chat App/);
 
   // Simulate an already STARTED submission in this disposable browser only.
   // Do not click Submit and do not call action=save.
