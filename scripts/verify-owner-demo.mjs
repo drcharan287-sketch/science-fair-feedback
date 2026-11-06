@@ -42,7 +42,7 @@ try{
       if(url.searchParams.get('action')==='catalog'&&callback){
         return route.fulfill({status:200,contentType:'application/javascript',
           body:callback+'('+JSON.stringify({success:true,projects:[
-            {grade:'9',section:'Keats',project:'VoiceVote',id:'LEG-9-KEATS-VOICEVOTE'}
+            {grade:'9',section:'Keats',project:'VoiceVote App',id:'VVP-IX_KEATS-G7-S1'}
           ]})+');'});
       }
     }
@@ -83,7 +83,7 @@ try{
   assert.ok(view.scroll<=view.width+2,screen.label+' overflow '+JSON.stringify(view));
   await page.locator('#studentClass').selectOption('9');
   await page.locator('#section').selectOption('Keats');
-  await page.locator('#project').selectOption('VoiceVote');
+  await page.locator('#project').selectOption('VoiceVote App');
   for(const [lang,phrase] of [['en-IN','Great science idea'],['te-IN','చాలా మంచి ప్రాజెక్టు'],['hi-IN','बढ़िया विज्ञान परियोजना']]){
     await page.locator('#feedback').fill('');
     await page.locator('#language').selectOption(lang);
