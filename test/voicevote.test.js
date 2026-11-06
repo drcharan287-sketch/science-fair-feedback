@@ -24,7 +24,7 @@ function app(fetchProjects, search = '', stored = new Map(), hash = '') {
   }
   const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn', 'stopBtn', 'projectSearch', 'projectSearchResults', 'projectSearchStatus', 'projectSearchSelected', 'visitorPass', 'newVisitorBtn', 'visitorPassFeature', 'networkStatus', 'presenterBanner', 'presenterReceipt',
     'presenterReceiptProject', 'presenterReceiptStars', 'presenterReceiptFeedback',
-    'presenterTryAgain', 'englishTranslationPanel', 'englishTranslationStatus',
+    'presenterTryAgain', 'presenterClose', 'englishTranslationPanel', 'englishTranslationStatus',
     'englishTranslationText', 'refreshTranslationBtn'].map(id => [id, new Element()]));
   elements.language.value = 'hi-IN';
   elements.submitBtn.disabled = true;
@@ -919,4 +919,79 @@ test('successful and already-voted receipts offer Close; unsuccessful receipts p
   assert.match(failed,/id="receiptRetry"/);
   assert.match(failed,/\?vote=retry/);
   assert.doesNotMatch(failed,/id="receiptClose"/);
+});
+
+test('Voting offers all 22 scheduled Indian languages plus English in one selector', () => {
+  const html=fs.readFileSync('index.html','utf8');
+  const selector=html.match(/<select id="language"[^>]*>([\s\S]*?)<\/select>/);
+  assert.ok(selector,'the Voting language dropdown must exist');
+  const actual=Array.from(selector[1].matchAll(/<option value="([^"]+)">/g),m=>m[1]);
+  const expected=['en-IN','as-IN','bn-IN','brx-IN','doi-IN','gu-IN','hi-IN','kn-IN','ks-IN',
+    'gom-IN','mai-IN','ml-IN','mni-Mtei-IN','mr-IN','ne-IN','or-IN','pa-IN','sa-IN',
+    'sat-Olck-IN','sd-IN','ta-IN','te-IN','ur-IN'];
+  assert.equal(actual.length,23);
+  assert.deepEqual(actual.slice().sort(),expected.slice().sort());
+  assert.match(html,/Microphone recognition varies by browser and language/);
+});
+
+test('language switch clears original and translated text, refuses stale translation and preserves vote state', async () => {
+  const stored=new Map([['voicevote_device_token_v1','123e4567-e89b-42d3-a456-426614174000']]);
+  const a=app(null,'',stored);
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  a.elements.language.value='hi-IN';
+  a.elements.feedback.value='यह प्रयोग अच्छा है';
+  a.context.scheduleEnglishTranslation(true);
+  await new Promise(resolve=>setTimeout(resolve,15));
+  const preview=a.forms.find(f=>f.method==='POST' && f.children.some(x=>x.name==='action' && x.value==='translatePreview'));
+  assert.ok(preview);
+  const requestId=preview.children.find(x=>x.name==='requestId').value;
+  a.elements.language.value='te-IN';
+  a.elements.language.dispatchEvent(new a.context.Event('change'));
+  assert.equal(a.elements.feedback.value,'','old-language feedback must be cleared immediately');
+  assert.equal(a.elements.feedback.lang,'te-IN','textarea language must follow selection');
+  assert.equal(a.elements.englishTranslationText.textContent,'');
+  assert.match(a.elements.status.textContent,/Previous feedback was cleared/);
+  a.context.dispatchWindowEvent('message',{
+    origin:'https://script.google.com',
+    data:{type:'voicevote-translation-preview',requestId,success:true,translation:'STALE OLD LANGUAGE'}
+  });
+  assert.equal(a.elements.englishTranslationText.textContent,'','late response must stay hidden');
+  a.elements.feedback.value='కొత్త అభిప్రాయం';
+  a.elements.feedback.dispatchEvent(new a.context.Event('input'));
+  a.elements.language.value='ur-IN';
+  a.elements.language.dispatchEvent(new a.context.Event('change'));
+  assert.equal(a.elements.feedback.value,'','typed text is cleared on next switch too');
+  assert.equal(a.elements.englishTranslationText.textContent,'');
+  assert.deepEqual(Array.from(stored),[
+    ['voicevote_device_token_v1','123e4567-e89b-42d3-a456-426614174000']
+  ],'switching languages must not reset or mutate browser voting state');
+  assert.ok(a.forms.every(f=>!f.children.some(x=>x.name==='action' && x.value==='save')),'no votes sent');
+});
+
+test('owner demo shares the same language reset and Close behavior without saving', async () => {
+  const locked=new Map([['voicevote_voted_v1','1']]);
+  const a=app(null,'',locked,'#presenter='+'a'.repeat(64));
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  a.context.voiceVotePresenterVerify({success:true});
+  a.elements.language.value='hi-IN';
+  a.elements.feedback.value='हिन्दी प्रतिक्रिया';
+  a.elements.language.value='bn-IN';
+  a.elements.language.dispatchEvent(new a.context.Event('change'));
+  assert.equal(a.elements.feedback.value,'');
+  a.elements.studentClass.value='9';
+  a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value='Keats';
+  a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value='VoiceVote';
+  a.elements.feedback.value='ভালো';
+  a.stars[4].dispatchEvent(new a.context.Event('click'));
+  a.context.submitFeedback();
+  assert.equal(a.elements.presenterReceipt.hidden,false);
+  a.elements.presenterClose.dispatchEvent(new a.context.Event('click'));
+  assert.equal(a.elements.presenterReceipt.hidden,true);
+  assert.match(a.elements.status.textContent,/close this tab/i);
+  assert.equal(a.forms.length,0);
+  assert.equal(locked.get('voicevote_voted_v1'),'1');
 });
