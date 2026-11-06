@@ -828,7 +828,10 @@
     $('managerNew').addEventListener('click',()=>managerMode(''));
     $('managerProject').addEventListener('change',()=>managerMode($('managerProject').value));
     $('managerGrade').addEventListener('change',()=>managerSections(''));
-    $('managerForm').addEventListener('submit',e=>{e.preventDefault();managerAction('ADD');});
+    $('managerForm').addEventListener('submit',e=>{
+      e.preventDefault();
+      managerAction(managerSelectedId?'EDIT':'ADD');
+    });
     $('managerSave').addEventListener('click',()=>managerAction('EDIT'));
     $('managerDeactivate').addEventListener('click',()=>managerAction('DEACTIVATE'));
     $('managerReactivate').addEventListener('click',()=>managerAction('REACTIVATE'));
