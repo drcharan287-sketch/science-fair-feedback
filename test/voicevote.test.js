@@ -882,3 +882,41 @@ test('read-only translation backend validates Telugu/Hindi/Tamil/Kannada, escape
   }
   assert.equal(b.writes.length,0,'Translation preview may never create a Feedback row or header');
 });
+
+test('all 22 Eighth Schedule languages plus English are accepted; previews never save', () => {
+  const b=backend([['Class/Grade','Section','Project Name','Active'],['9','Keats','VoiceVote','TRUE']]);
+  const expected=[
+    'as-IN','bn-IN','brx-IN','doi-IN','gu-IN','hi-IN','kn-IN','ks-IN',
+    'gom-IN','mai-IN','ml-IN','mni-Mtei-IN','mr-IN','ne-IN','or-IN',
+    'pa-IN','sa-IN','sat-Olck-IN','sd-IN','ta-IN','te-IN','ur-IN','en-IN'
+  ];
+  assert.deepEqual(
+    Array.from(vm.runInContext('Object.keys(VOICEVOTE_FEEDBACK_LANGUAGE_CODES)',b.context)).sort(),
+    expected.slice().sort()
+  );
+  const id='123e4567-e89b-42d3-a456-426614174000';
+  for (const language of expected.filter(x=>x!=='en-IN')) {
+    const preview=b.context.doPost({parameter:{action:'translatePreview',requestId:id,language,feedback:'A great model'}});
+    assert.match(preview.html,/"success":true/,language+' should be accepted for best-effort preview');
+    assert.match(preview.html,/voicevote-translation-preview/);
+  }
+  assert.equal(b.writes.length,0,'previews must never save feedback');
+  const invalid=b.context.doPost({parameter:{action:'translatePreview',requestId:id,language:'xx-IN',feedback:'Hi'}});
+  assert.match(invalid.html,/"success":false/);
+});
+
+test('successful and already-voted receipts offer Close; unsuccessful receipts preserve retry', () => {
+  const b=backend([]);
+  for (const result of [{success:true},{success:false,alreadyVoted:true}]) {
+    const html=b.context.voiceVoteReceipt_(result).html;
+    assert.match(html,/id="receiptClose"[^>]+>Close<\/button>/);
+    assert.doesNotMatch(html,/Return to VoiceVote/);
+    assert.match(html,/max-width:640px/);
+    assert.match(html,/min-height:60px/);
+    assert.match(html,/You can safely close this browser tab/);
+  }
+  const failed=b.context.voiceVoteReceipt_({success:false}).html;
+  assert.match(failed,/id="receiptRetry"/);
+  assert.match(failed,/\?vote=retry/);
+  assert.doesNotMatch(failed,/id="receiptClose"/);
+});
