@@ -37,6 +37,14 @@ Continue the existing school VoiceVote app as technical lead, developer, QA/rele
 - Staged iOS UI: a `service-not-allowed` or `not-allowed` error is not definitive proof microphone access is disabled; the browser may reject a language-specific recognizer. Guide iPhone visitors to native keyboard Dictation (where installed and available) or typing, and preserve the independent English preview and separate-tab fallback.
 - Source/browser CI and verified backend/Pages release must pass before claiming deployment. Neither Web Speech API nor JavaScript can guarantee voice dictation across all 22 Indian languages on iOS; physical device sign-off remains outstanding.
 
+
+## Real Google four-language translation acceptance — 6 November, PR #57
+- PR #56's translation fallback is deployed: *published Pages* matched the exact checked-out HTML/CSS/JS in a GET-only release gate, and production Apps Script actually translated synthetic Telugu, Hindi, Tamil and Kannada into readable English.
+- A fifth **English-selected Telugu** test returned English, proving the new PR #56 Indian-script auto-detection is live on the deployed backend (not just in repository tests).
+- **Evidence:** [GitHub Actions no-save run 42218517269](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42218517269) PASS (all five), and [source/browser tests 42218517197](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42218517197) PASS.
+- Verification sent only five `action=translatePreview` Google POSTs, with local synthetic sentences; **zero** `action=save` requests or browser vote-lock changes. No production records were created, modified or deleted.
+- This checks typed text translation and deployed Google Apps Script, **not** real iPhone microphone capture, Web Speech language support, or a real saved receipt. Native iPhone/Android speech acceptance remains P0; do not mislabel a speech engine error as a translation failure.
+
 ## Release evidence
 - [PR #46](https://github.com/drcharan287-sketch/science-fair-feedback/pull/46): fail-closed public DEMO-only API, protected short-lived presenter Results; [Apps Script deploy PASS](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42156478167).
 - [PR #47](https://github.com/drcharan287-sketch/science-fair-feedback/pull/47): visitor heading/nav simplification, presenter Demo/Live board and Admin links, iOS top-level English preview; [backend production deploy PASS](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42157890315), [hosted browser suite PASS](https://github.com/drcharan287-sketch/science-fair-feedback/actions/runs/42157890344), including phone/board and iOS-like Chromium, **not actual iOS**.
