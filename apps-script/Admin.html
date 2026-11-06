@@ -79,6 +79,27 @@
       .controls {grid-template-columns:1fr}
       .brand {font-size:25px}
     }
+
+    /* Console visual hierarchy — the page title is the primary landmark,
+       section titles and descriptions are clearly subordinate. */
+    #loginPanel h1,#adminPanel h1{
+      color:#f8fcff;font-size:clamp(2.1rem,3.2vw,2.85rem);
+      font-weight:900;line-height:1.12;letter-spacing:-.045em
+    }
+    #adminPanel .section-heading h2,#adminPanel .drawer h2{
+      color:#f5fcff;font-size:clamp(1.35rem,2.1vw,1.7rem);
+      font-weight:850;letter-spacing:-.025em;line-height:1.2
+    }
+    #adminPanel .section-heading h2{border-left:4px solid #74e6f4;padding-left:12px}
+    #adminPanel h3{color:#ffe2a5;font-size:1.12rem;font-weight:820}
+    #adminPanel .help,#loginPanel .help{color:#c5d7e6;line-height:1.6}
+    #adminPanel .metric strong{color:#8beafa;font-size:clamp(1.7rem,2.4vw,2.15rem)}
+    #adminPanel .metric:nth-child(2) strong{color:#dfc4ff}
+    #adminPanel .metric:nth-child(3) strong{color:#ffdc8b}
+    #adminPanel .metric:nth-child(4) strong{color:#90eed6}
+    #adminPanel .tab.active{background:linear-gradient(110deg,#0c7394,#19577b)}
+    .brand{color:#a8ecf9}
+    .tagline{color:#c4d6e6}
   </style>
 </head>
 <body>
