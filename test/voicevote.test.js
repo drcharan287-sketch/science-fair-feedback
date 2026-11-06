@@ -42,7 +42,7 @@ function app(fetchProjects, search = '', stored = new Map(), hash = '') {
     setTimeout: (fn,ms)=>{const t=setTimeout(fn,ms);t.unref();return t;}, clearTimeout,
     navigator: { onLine: true },
     addEventListener: (name, fn) => { (windowListeners[name] ||= []).push(fn); },
-    dispatchWindowEvent: name => (windowListeners[name] || []).forEach(fn => fn()),
+    dispatchWindowEvent: (name,detail) => (windowListeners[name] || []).forEach(fn => fn(detail)),
     crypto: { randomUUID: () => '123e4567-e89b-42d3-a456-426614174000', getRandomValues: a => a.fill(7) },
     localStorage: { getItem: key => stored.get(key) || null, setItem: (key,val) => {stored.set(key, String(val));}, removeItem: key => stored.delete(key) } };
   context.window = context;
