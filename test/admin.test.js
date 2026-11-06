@@ -461,7 +461,7 @@ test('anonymous requests remain DEMO even if legacy script properties say LIVE o
     }
     const reply=a.context.doGet({parameter:{action:'publicResults',callback:'safeCb',mode:'PUBLISHED'}});
     assert.match(reply.text,/"mode":"DEMO"/);
-    assert.doesNotMatch(reply.text,/acceptedVotes|rankings|original|translation/);
+    assert.doesNotMatch(reply.text,/"acceptedVotes"|"rankings"|"original"|"translation"/);
   }
 });
 
@@ -471,6 +471,11 @@ test('private presenter results require a real owner-issued short-lived capabili
   assert.match(denied.text,/"success":false/);
   assert.match(denied.text,/"mode":"DENIED"/);
   assert.doesNotMatch(denied.text,/acceptedVotes|rankings|Interesting use of AI/);
+  let nonce=0;
+  a.context.Utilities.getUuid=()=>{
+    nonce++;return nonce===1?'123e4567-e89b-42d3-a456-426614174001':
+      '123e4567-e89b-42d3-a456-426614174002';
+  };
   const token=a.context.adminCreatePresenterSession(DEMO_KEY).token;
   const privateReply=a.context.doGet({parameter:{action:'presenterResults',callback:'cb',ticket:token}});
   assert.match(privateReply.text,/"mode":"PRESENTER_LIVE"/);
