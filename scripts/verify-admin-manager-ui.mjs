@@ -57,12 +57,28 @@ try{
     await page.locator('#managerName').fill('New Solar Purifier');
     await page.locator('#managerReason').fill('Teacher added a new project today');
     await page.locator('#managerAdd').click();
+    assert.equal(await page.locator('#managerConfirmDialog').isVisible(),true);
+    assert.equal(await page.locator('#managerConfirmTitle').innerText(),'Add new project');
+    assert.match(await page.locator('#managerConfirmLocation').innerText(),/Grade 9 · Keats/);
+    assert.equal(await page.locator('#managerConfirmProject').innerText(),'New Solar Purifier');
+    assert.match(await page.locator('#managerConfirmReason').innerText(),/Teacher added/);
+    assert.equal(await page.evaluate(()=>window.__adminCalls.filter(x=>x.name==='adminChangeProject').length),0,
+      'Showing the confirmation must not write');
+    await page.locator('#managerConfirmCancel').click();
+    assert.equal(await page.locator('#managerConfirmDialog').isVisible(),false);
+    assert.equal(await page.evaluate(()=>window.__adminCalls.filter(x=>x.name==='adminChangeProject').length),0,
+      'Cancelling must not send an Admin change');
+    await page.locator('#managerAdd').click();
+    await page.locator('#managerConfirmProceed').click();
     const added=await page.evaluate(()=>window.__adminCalls.filter(x=>x.name==='adminChangeProject').at(-1));
     assert.equal(added.args[1].action,'ADD');
     assert.equal(added.args[1].project,'New Solar Purifier');
     await page.locator('#managerProject').selectOption('VVP-STAGED');
     await page.locator('#managerReason').fill('Teacher temporarily withdrew this exhibit');
     await page.locator('#managerDeactivate').click();
+    assert.equal(await page.locator('#managerConfirmDialog').isVisible(),true);
+    assert.match(await page.locator('#managerConfirmRisk').innerText(),/hide 3 valid vote/);
+    await page.locator('#managerConfirmProceed').click();
     const deactivated=await page.evaluate(()=>window.__adminCalls.filter(x=>x.name==='adminChangeProject').at(-1));
     assert.equal(deactivated.args[1].action,'DEACTIVATE');
     assert.equal(deactivated.args[1].expectedVersion,'STAGED-VERSION-1');
@@ -71,6 +87,7 @@ try{
     assert.equal(await page.locator('#adminPanel').isVisible(),false);
     assert.equal(await page.locator('#managerProject option').count(),1);
     assert.equal(await page.locator('#managerSelectionInfo').innerText(),'');
+    assert.equal(await page.locator('#managerConfirmProject').innerText(),'');
     assert.equal(writes,0,'No actual POST is allowed by this browser rehearsal');
     assert.deepEqual(errors,[],'No uncaught Admin JS errors');
     console.log('PASS staged '+viewport.width+'px Admin Add/Deactivate, secure signout, no Google writes');
