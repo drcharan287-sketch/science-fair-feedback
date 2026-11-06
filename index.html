@@ -354,13 +354,32 @@ button:disabled, textarea:disabled, input:disabled {
   <section class="step-section step-speak" aria-labelledby="speakHeading">
     <div class="step-topline"><span class="step-num">02</span><div><span class="step-caption">SHARE YOUR THOUGHTS</span><h3 id="speakHeading">Tell us what you loved.</h3></div></div>
     <label for="language">Feedback Language</label>
-  <select id="language">
+  <select id="language" aria-describedby="languageHelp">
     <option value="en-IN">English</option>
-    <option value="te-IN">Telugu</option>
-    <option value="hi-IN">Hindi</option>
-    <option value="ta-IN">Tamil</option>
-    <option value="kn-IN">Kannada</option>
+    <option value="te-IN">Telugu · తెలుగు</option>
+    <option value="hi-IN">Hindi · हिन्दी</option>
+    <option value="ta-IN">Tamil · தமிழ்</option>
+    <option value="kn-IN">Kannada · ಕನ್ನಡ</option>
+    <option value="as-IN">Assamese · অসমীয়া</option>
+    <option value="bn-IN">Bengali · বাংলা</option>
+    <option value="brx-IN">Bodo</option>
+    <option value="doi-IN">Dogri</option>
+    <option value="gu-IN">Gujarati · ગુજરાતી</option>
+    <option value="ks-IN">Kashmiri</option>
+    <option value="gom-IN">Konkani</option>
+    <option value="mai-IN">Maithili</option>
+    <option value="ml-IN">Malayalam · മലയാളം</option>
+    <option value="mni-Mtei-IN">Manipuri (Meitei)</option>
+    <option value="mr-IN">Marathi · मराठी</option>
+    <option value="ne-IN">Nepali · नेपाली</option>
+    <option value="or-IN">Odia · ଓଡ଼ିଆ</option>
+    <option value="pa-IN">Punjabi · ਪੰਜਾਬੀ</option>
+    <option value="sa-IN">Sanskrit · संस्कृतम्</option>
+    <option value="sat-Olck-IN">Santali</option>
+    <option value="sd-IN">Sindhi</option>
+    <option value="ur-IN">Urdu · اردو</option>
   </select>
+  <p id="languageHelp" class="search-help">22 Indian Eighth Schedule languages plus English. Changing language clears the previous transcript. Microphone recognition varies by browser and language; typing is always available.</p>
 
   <label>Voice Feedback</label>
 
@@ -371,7 +390,7 @@ button:disabled, textarea:disabled, input:disabled {
   <p class="search-help" id="recordingHelp">Speak in your selected language, then tap Stop and review or edit the transcript before submitting. You can always type instead.</p>
 
   <label for="feedback">Your Feedback</label>
-  <textarea id="feedback" maxlength="2000" placeholder="Speak or type your feedback here..."></textarea>
+  <textarea id="feedback" maxlength="2000" dir="auto" lang="en-IN" placeholder="Speak or type your feedback here..."></textarea>
   <section id="englishTranslationPanel" class="translation-panel" aria-label="English translation preview" hidden>
     <div class="translation-heading">
       <div>
@@ -382,7 +401,7 @@ button:disabled, textarea:disabled, input:disabled {
     </div>
     <p id="englishTranslationStatus" class="translation-status" role="status" aria-live="polite">Finish speaking or typing to see the English translation.</p>
     <p id="englishTranslationText" class="translation-output" lang="en" aria-live="polite"></p>
-    <p class="translation-note">Preview only. The original feedback is submitted in its chosen language; the final English translation is created when a real vote is saved.</p>
+    <p class="translation-note">Preview only. Original feedback is preserved in its chosen language. English translation is attempted using Google where available; it may be unavailable for some languages. A real vote makes its own translation attempt when saved.</p>
   </section>
   </section>
 
@@ -413,7 +432,10 @@ button:disabled, textarea:disabled, input:disabled {
     <p id="presenterReceiptStars"></p>
     <p id="presenterReceiptFeedback"></p>
     <p class="owner-receipt-note">This is a local example, not a Google confirmation. The rating is not counted and browser voting eligibility is unchanged. Any English translation shown above is a preview only, not saved feedback.</p>
-    <button id="presenterTryAgain" type="button">↻ Demonstrate Again</button>
+    <div class="buttons owner-receipt-actions">
+      <button id="presenterTryAgain" type="button">↻ Demonstrate Again</button>
+      <button id="presenterClose" type="button">Close</button>
+    </div>
   </section>
   <div class="footer">
     <strong>VoiceVote ✦ Made for curious minds</strong>
@@ -919,9 +941,15 @@ document.getElementById('feedback').addEventListener('input',function() {
   scheduleEnglishTranslation(false);
 });
 document.getElementById('language').addEventListener('change',function() {
-  translationLastKey='';
-  translationLastResult='';
-  scheduleEnglishTranslation(false);
+  // The old text belongs to the previous language. Never submit it under a
+  // different language or translate a stale in-flight preview as the new one.
+  // Both public visitors and verified owner demos use this same change handler.
+  const feedbackBox=document.getElementById('feedback');
+  feedbackBox.value='';
+  feedbackBox.lang=this.value;
+  feedbackBox.dir='auto';
+  invalidateTranslationPreview('Speak or type fresh feedback in the newly selected language.');
+  statusElement.textContent='Language changed. Previous feedback was cleared; speak or type again.';
 });
 document.getElementById('refreshTranslationBtn').addEventListener('click',function() {
   translationLastKey='';
@@ -965,6 +993,8 @@ function startRecording() {
       ? "No speech detected. Try recording again or type your feedback."
       : code === "network"
       ? "Voice recognition could not connect. Check your connection or type your feedback."
+      : code === "language-not-supported"
+      ? "Microphone recognition is unavailable for this language in your browser. Type your feedback instead."
       : "Voice recognition stopped (" + code + "). You can type or try again.";
     statusElement.textContent = help;
     isRecording = false;
@@ -1036,6 +1066,12 @@ function showPresenterReceipt(data) {
   statusElement.textContent='Owner demo complete. NOTHING has been submitted or saved.';
   document.getElementById('presenterReceipt').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
+document.getElementById('presenterClose').addEventListener('click',function() {
+  if (!presenterVerified) return;
+  try { window.close(); } catch (_) {}
+  document.getElementById('presenterReceipt').hidden=true;
+  statusElement.textContent='Owner demonstration finished. You can close this tab when ready.';
+});
 document.getElementById('presenterTryAgain').addEventListener('click',function() {
   if (!presenterVerified) return;
   rating=0;
