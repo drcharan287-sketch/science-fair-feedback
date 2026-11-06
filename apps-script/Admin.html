@@ -375,7 +375,8 @@
       $('managerGrade').replaceChildren();
       $('managerSection').replaceChildren();
       $('managerSearch').value='';$('managerName').value='';$('managerReason').value='';
-      text($('managerStatus'),'');
+      ['managerStatus','managerSelectionInfo','managerImpact','managerModeTitle']
+        .forEach(id=>text($(id),''));
       ['projectCount','voteCount','ratedCount','langCount','protectedCount',
         'legacyCount','excludedCount','rankingCount','reviewsTitle',
         'reviewsStatus','adminStatus','votingState','passesAvailable',
