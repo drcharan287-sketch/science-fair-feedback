@@ -354,3 +354,90 @@ body.bright .insights-panel .kicker,body.bright .insights-panel .title-dot{color
   .rank-number{width:48px;height:48px;font-size:1.43rem}
   .presenter-bar{right:10px;bottom:10px}
 }
+
+/* Final Demo hierarchy: product identity is the primary presenter heading,
+   Curiosity Carnival is the event title and the editorial line remains third. */
+body[data-results-mode="DEMO"] .topbar{
+  min-height:125px;padding:14px 0;gap:18px;
+}
+body[data-results-mode="DEMO"] .topbar .brand{
+  font-size:clamp(3.1rem,3.45vw,4.15rem);line-height:1;
+  letter-spacing:-.075em;flex:none;
+}
+body[data-results-mode="DEMO"] .topbar .brand .brand-mark{
+  width:65px;height:65px;border-radius:19px;
+}
+body[data-results-mode="DEMO"] .topbar .brand .brand-mark svg{width:49px;height:49px}
+body[data-results-mode="DEMO"] .topbar .brand small{
+  font-size:clamp(.64rem,.76vw,.82rem);letter-spacing:.18em;
+  margin-top:10px;color:#b6d2e9;line-height:1.25;
+}
+body[data-results-mode="DEMO"] .hero h1.carnival-hero-heading{
+  font-size:clamp(2.2rem,2.8vw,3.4rem);line-height:1.08;
+  letter-spacing:-.055em;color:#ffe2a0;
+}
+body[data-results-mode="DEMO"] .hero h2.hero-idea-title{
+  font-size:clamp(1.45rem,2vw,2.5rem);line-height:1.18;
+}
+body.bright[data-results-mode="DEMO"] .hero h1.carnival-hero-heading{color:#79500b}
+body.bright[data-results-mode="DEMO"] .topbar .brand small{color:#315871}
+@media(max-width:1250px){
+  body[data-results-mode="DEMO"] .topbar{flex-wrap:wrap}
+  body[data-results-mode="DEMO"] .topbar .brand{font-size:clamp(2.8rem,4.1vw,3.3rem)}
+  body[data-results-mode="DEMO"] .hero h1.carnival-hero-heading{
+    font-size:clamp(2.15rem,3.1vw,2.8rem)
+  }
+}
+@media(max-width:760px){
+  body[data-results-mode="DEMO"] .topbar{padding:12px 0;min-height:0}
+  body[data-results-mode="DEMO"] .topbar .brand{font-size:clamp(2.32rem,8.1vw,2.7rem)}
+  body[data-results-mode="DEMO"] .topbar .brand .brand-mark{
+    width:48px;height:48px;border-radius:15px
+  }
+  body[data-results-mode="DEMO"] .topbar .brand .brand-mark svg{width:36px;height:36px}
+  body[data-results-mode="DEMO"] .topbar .brand small{font-size:.58rem;letter-spacing:.09em}
+  body[data-results-mode="DEMO"] .hero h1.carnival-hero-heading{
+    font-size:clamp(2rem,6.6vw,2.3rem)
+  }
+  body[data-results-mode="DEMO"] .hero h2.hero-idea-title{
+    font-size:clamp(1.33rem,4.9vw,1.8rem)
+  }
+}
+html:fullscreen body[data-results-mode="DEMO"] .topbar{min-height:86px;padding:7px 0}
+html:fullscreen body[data-results-mode="DEMO"] .topbar .brand{
+  font-size:clamp(2.6rem,2.8vw,3.2rem)
+}
+html:fullscreen body[data-results-mode="DEMO"] .hero h1.carnival-hero-heading{
+  font-size:clamp(2rem,2.25vw,2.7rem)
+}
+
+/* Ranked participation, not a judgment of languages. Matches the project's
+   placement palette while preserving a compact, high-contrast sidebar. */
+.language-bars{gap:16px;margin-top:23px}
+.language-row{gap:9px}
+.language-meta{align-items:center;font-size:.95rem}
+.language-name{display:inline-flex;align-items:center;min-width:0;gap:12px}
+.language-label{overflow-wrap:anywhere;font-weight:820;color:var(--ink)}
+.language-count{font-variant-numeric:tabular-nums;color:var(--soft);font-weight:850}
+.language-position{
+  display:grid;place-items:center;flex:none;width:36px;height:33px;
+  border-radius:10px;border:1px solid transparent;
+  font-size:.83rem;letter-spacing:-.035em;font-weight:950;
+}
+.language-position.medal-gold{color:#ffdc88;background:#624b35;border-color:#d9ae6188}
+.language-position.medal-silver{color:#e8f1ff;background:#3c5271;border-color:#a4bddf88}
+.language-position.medal-bronze{color:#ffd0ac;background:#634439;border-color:#d4a17a80}
+.language-position.medal-standard{color:#8ce8f6;background:#1a4b62;border-color:#6dc6dc72}
+.language-row.language-place-gold .track-inner{background:linear-gradient(90deg,#ffd36f,#f5ad6c)}
+.language-row.language-place-silver .track-inner{background:linear-gradient(90deg,#b4c9e7,#8faef1)}
+.language-row.language-place-bronze .track-inner{background:linear-gradient(90deg,#f0bc9c,#da9b80)}
+.language-row.language-place-standard .track-inner{background:linear-gradient(90deg,#6dd9e8,#83a8f4)}
+body.bright .language-label{color:#143950}
+body.bright .language-count{color:#234d65}
+body.bright .language-position.medal-gold{color:#6c4209;background:#ffecbd;border-color:#bd9553}
+body.bright .language-position.medal-silver{color:#314c66;background:#e0ecfa;border-color:#92b0d3}
+body.bright .language-position.medal-bronze{color:#734020;background:#f9dcc6;border-color:#bb8e6b}
+body.bright .language-position.medal-standard{color:#0a5674;background:#dcf3fa;border-color:#86c5db}
+@media(max-width:420px){
+  .language-name{gap:9px}.language-position{width:32px;height:31px}
+}
