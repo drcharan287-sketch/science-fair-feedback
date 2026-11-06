@@ -108,6 +108,7 @@
     put('totalVotes',fmt(data.acceptedVotes));put('ratedProjects',fmt(data.ratedProjects));
     put('languageCount',demo?'—':fmt((data.languages||[]).filter(x=>x.count>0).length));
     put('voteMetricHint',demo?'Real vote totals are not published in preview':'Valid anonymous ratings');
+    put('languageSummary',demo?'Real language counts appear in the private Live Results.':'Most-used feedback languages · Highest response count first.');
     put('rankingsHeading',demo?'Sample audience favourites.':live?'Discoveries in motion.':'Top 10 audience favourites.');
     put('rankingsSubheading',demo?'Illustrative project cards, not actual rankings.':
       live?'Project rankings remain private until the organizers approve publication.':
@@ -301,14 +302,31 @@
   }
   function renderLanguages(data) {
     const host=$('languageBars');host.replaceChildren();
-    const list=(data.languages||[]).filter(r=>r.count>0).slice(0,5);
+    // The presenter API returns language codes alphabetically, NOT ordered by
+    // audience participation. Rank by actual response count before taking the
+    // five most-used languages; ties use a stable language-name/code order.
+    // This is participation frequency, never a judgment of languages.
+    const list=(data.languages||[])
+      .map(r=>({code:String(r.code||''),count:Number(r.count)}))
+      .filter(r=>Number.isFinite(r.count)&&r.count>0)
+      .sort((a,b)=>b.count-a.count ||
+        (LANGUAGES[a.code]||a.code).localeCompare(LANGUAGES[b.code]||b.code,'en',{sensitivity:'base'}) ||
+        a.code.localeCompare(b.code))
+      .slice(0,5);
     if(!list.length){host.appendChild(make('p','empty-collection','Language activity will appear here once feedback is received.'));return;}
-    const max=Math.max(1,...list.map(r=>Number(r.count)||0));
-    list.forEach(entry=>{
-      const row=make('div','language-row'), meta=make('div','language-meta');
-      meta.append(make('span','',LANGUAGES[entry.code]||'Other'),make('span','',fmt(entry.count)+(mode==='DEMO'?' sample':'')));
+    const max=Math.max(1,...list.map(r=>r.count));
+    list.forEach((entry,index)=>{
+      const position=index+1;
+      const tier=position===1?'gold':position===2?'silver':position===3?'bronze':'standard';
+      const row=make('div','language-row language-place-'+tier);
+      const meta=make('div','language-meta');
+      const name=make('span','language-name');
+      const number=make('span','language-position medal-'+tier,String(position).padStart(2,'0'));
+      number.setAttribute('aria-label','Language participation position '+position);
+      name.append(number,make('span','language-label',LANGUAGES[entry.code]||entry.code||'Other'));
+      meta.append(name,make('span','language-count',fmt(entry.count)+(mode==='DEMO'?' sample':'')));
       const track=make('div','track');const inner=make('div','track-inner');
-      inner.style.width=escapeLess((Number(entry.count)||0)/max*100)+'%';
+      inner.style.width=escapeLess(entry.count/max*100)+'%';
       track.appendChild(inner);row.append(meta,track);host.appendChild(row);
     });
   }
