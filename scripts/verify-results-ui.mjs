@@ -35,8 +35,10 @@ try{
     let approved=false,postCount=0,unexpected=0,privateCalls=0,reviewCalls=0;
     const privateReviews=Array.from({length:9},(_,i)=>({
       rating:5,language:i===0?'hi-IN':'en-IN',
-      original:i===0?'यह मॉडल बहुत अच्छा है <img src=x onerror=alert(1)>':'Helpful feedback '+i,
-      translation:i===0?'This model is very good.':'Helpful feedback '+i
+      original:i===0?'यह मॉडल बहुत अच्छा है <img src=x onerror=alert(1)>':
+        i===1?'ప్రాజెక్ట్ చాలా బాగుంది':'Helpful feedback '+i,
+      translation:i===0?'This model is very good.':
+        i===1?'ప్రాజెక్ట్ చాలా బాగుంది':'Helpful feedback '+i
     }));
     let liveVoteCount=15,serverUpdatedAt='2026-11-06T07:39:00.000Z';
     const errors=[];
@@ -165,6 +167,8 @@ try{
     assert.equal(await page.locator('#projectFeedbackList img').count(),0,
       'Review text must never become executable markup');
     assert.match(await page.locator('#projectFeedbackList').innerText(),/This model is very good/);
+    assert.match(await page.locator('#projectFeedbackList').innerText(),/English translation unavailable for this feedback/,
+      'Legacy Indian-script feedback must not be mislabeled English');
     await page.locator('#projectFeedbackMore').click();
     await page.waitForFunction(()=>document.querySelectorAll('.project-feedback-card').length===9,
       null,{timeout:12000});

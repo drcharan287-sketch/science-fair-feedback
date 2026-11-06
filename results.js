@@ -185,9 +185,13 @@
     const english=make('section','project-feedback-text translated');
     english.append(make('strong','','English translation'));
     const translation=String(r.translation||'');
-    const label=r.language==='en-IN'?'Original submitted in English.':
-      (!translation||translation.startsWith('Translation unavailable:')?
-        'Translation unavailable; original text preserved.':translation);
+    const source=String(r.original||'');
+    const indianScript=/[\u0600-\u06FF\u0900-\u0D7F\u1C50-\u1C7F\uA800-\uA82F\uABC0-\uABFF]/.test(source);
+    const unavailable=!translation || translation.startsWith('Translation unavailable:') ||
+      (indianScript && translation===source);
+    const label=unavailable?'English translation unavailable for this feedback.':
+      (r.language==='en-IN' && translation===source ?
+        'Original submitted in English.':translation);
     english.append(make('p','',label));cols.append(english);
     card.append(cols);$('projectFeedbackList').append(card);
   }

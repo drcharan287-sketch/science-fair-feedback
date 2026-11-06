@@ -549,7 +549,7 @@ test('microphone permission errors survive onend and permit typed feedback', asy
   assert.equal(a.elements.startBtn.disabled,true);
   recognizer.onerror({error:'not-allowed'});
   recognizer.onend();
-  assert.match(a.elements.status.textContent,/Microphone permission was denied/);
+  assert.match(a.elements.status.textContent,/microphone permission OR unavailable recognition/i);
   assert.equal(a.elements.feedback.disabled,false);
   assert.equal(a.elements.startBtn.disabled,false);
   assert.equal(a.elements.stopBtn.disabled,true);
@@ -881,6 +881,70 @@ test('read-only translation backend validates Telugu/Hindi/Tamil/Kannada, escape
     assert.match(reply.html,/"success":false/);
   }
   assert.equal(b.writes.length,0,'Translation preview may never create a Feedback row or header');
+});
+
+
+test('Indian-script feedback selected as English is translated on preview and save',()=>{
+  const b=backend([['Class/Grade','Section','Project Name','Active'],
+    ['9','Keats','VoiceVote','TRUE']]);
+  const id='123e4567-e89b-42d3-a456-426614174000';
+  const original='ప్రాజెక్ట్ చాలా బాగుంది प्रोजेक्ट अच्छा है';
+  const preview=b.context.doPost({parameter:{
+    action:'translatePreview',requestId:id,language:'en-IN',feedback:original
+  }});
+  assert.match(preview.html,/"success":true/);
+  assert.match(preview.html,/:en:/,'empty source code requests language auto-detection');
+  assert.equal(b.writes.length,0);
+  const result=b.context.doPost({parameter:{
+    action:'save',submissionId:id,deviceToken:id,project:'VoiceVote',
+    studentClass:'9',section:'Keats',feedback:original,rating:'4',language:'en-IN'
+  }});
+  assert.match(result.html,/Feedback saved/i);
+  assert.equal(b.writes[1][6],'en-IN');
+  assert.match(b.writes[1][7],/^:en:/);
+});
+test('translation retries Google auto-detection if selected language service fails',()=>{
+  const b=backend([['Class/Grade','Section','Project Name','Active'],
+    ['9','Keats','VoiceVote','TRUE']]);
+  const sources=[];
+  b.context.LanguageApp.translate=(text,source)=>{
+    sources.push(source);
+    if(source==='te')throw new Error('synthetic unsupported source');
+    return 'This project is good';
+  };
+  const preview=b.context.doPost({parameter:{
+    action:'translatePreview',requestId:'123e4567-e89b-42d3-a456-426614174000',
+    language:'te-IN',feedback:'ఈ ప్రాజెక్టు చాలా బాగుంది'
+  }});
+  assert.match(preview.html,/"success":true/);
+  assert.match(preview.html,/This project is good/);
+  assert.deepEqual(sources,['te','']);
+  assert.equal(b.writes.length,0);
+});
+test('iPhone language-specific speech rejection keeps keyboard/typing translation fallback',async()=>{
+  const a=app(undefined,'',new Map(),'', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X)');
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  let recog;
+  a.context.webkitSpeechRecognition=class{
+    constructor(){recog=this;}
+    start(){} stop(){}
+  };
+  a.elements.language.value='te-IN';
+  a.context.startRecording();
+  recog.onerror({error:'service-not-allowed'});
+  recog.onend();
+  assert.match(a.elements.status.textContent,/unavailable recognition for this language/i);
+  assert.match(a.elements.status.textContent,/keyboard Dictation/i);
+  assert.equal(a.elements.feedback.disabled,false);
+  a.elements.feedback.value='ఈ ప్రాజెక్టు చాలా బాగుంది';
+  a.elements.feedback.dispatchEvent(new a.context.Event('input'));
+  assert.equal(a.elements.englishTranslationPanel.hidden,false,'translation is independent of speech');
+  a.elements.language.value='en-IN';
+  a.elements.feedback.value='प्रोजेक्ट अच्छा है';
+  a.elements.feedback.dispatchEvent(new a.context.Event('input'));
+  assert.equal(a.elements.englishTranslationPanel.hidden,false,
+    'English-labeled Indian script also receives a preview');
 });
 
 test('all 22 Eighth Schedule languages plus English are accepted; previews never save', () => {
