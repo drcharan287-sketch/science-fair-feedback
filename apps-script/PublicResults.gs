@@ -2,7 +2,8 @@
  * VoiceVote presenter-only Results API.
  * Public/anonymous requests are ALWAYS DEMO and never read Feedback.
  * Authenticated short-lived presenter tickets unlock aggregate live results
- * without opening the admin key, individual reviews, or visitor identifiers.
+ * without opening the admin key or visitor identifiers. Individual feedback is
+ * available ONLY through a separate, explicit, ticket-validated project lookup.
  * No manual feedback approval queue exists.
  */
 const VOICEVOTE_PUBLIC_RESULTS_MODE_KEY = 'VOICEVOTE_PUBLIC_RESULTS_MODE';
