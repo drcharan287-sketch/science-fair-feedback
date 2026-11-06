@@ -313,6 +313,16 @@ function saveFeedback_(params) {
     const lock = LockService.getScriptLock();
     lock.waitLock(15000);
     try {
+      // Admin roster edits use the SAME script lock. Recheck the live project
+      // under lock: a visitor who opened the page before deactivation/rename
+      // may not complete a stale in-flight vote after that change.
+      const activeAtCommit = readProjectCatalog_().find(function(item) {
+        return item.grade===studentClass && item.section===section &&
+          item.project===project && (item.id||'')===(selectedProject.id||'');
+      });
+      if(!activeAtCommit) {
+        throw new Error('Project roster changed. Reload VoiceVote and select an active project.');
+      }
       // The submission ID is the cross-network retry identity, even when an
       // earlier save succeeded but the browser never displayed its receipt.
       const existing = sheet.getLastRow();

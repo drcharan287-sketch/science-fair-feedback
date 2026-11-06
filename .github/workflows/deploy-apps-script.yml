@@ -115,6 +115,18 @@ jobs:
           }
           fs.writeFileSync('.voicevote-live/AdminApi.js', adminSource);
           fs.writeFileSync('.voicevote-live/Admin.html', adminPage);
+          // VV-30 is a separate private source file; clasp must receive it.
+          // Reject an accidental deployment that omits the key gate,
+          // serialized write/audit path, or the Admin Console's new tab.
+          const managerSource = fs.readFileSync('apps-script/ProjectManager.gs','utf8');
+          if(!/function adminGetManagedProjects\(key\)/.test(managerSource) ||
+             !/function adminChangeProject\(key,payload\)/.test(managerSource) ||
+             !/adminRequireKey_\(key\)/.test(managerSource) ||
+             !/adminAuditedChange_\(/.test(managerSource) ||
+             !/id="projectsTab"/.test(adminPage)){
+            throw Error('Protected event-day Project Manager not present; refusing deployment');
+          }
+          fs.writeFileSync('.voicevote-live/ProjectManager.js',managerSource);
           const passSource = fs.readFileSync('apps-script/VisitorPasses.gs', 'utf8');
           if (!/function visitorPassValidateForVote_\(/.test(passSource) ||
               !/function adminIssueVisitorPasses\(/.test(passSource) ||
@@ -154,6 +166,9 @@ jobs:
       - name: Verify admin shell denies invalid credentials (no private reads)
         if: github.event_name == 'push' || inputs.mode == 'deploy'
         run: node scripts/verify-admin-access.mjs
+      - name: Verify protected Event-Day Project Manager is present in production Admin shell
+        if: github.event_name == 'push' || inputs.mode == 'deploy'
+        run: node scripts/verify-live-project-manager.mjs
       - name: Restore previous live deployment if smoke test fails
         if: failure() && (github.event_name == 'push' || inputs.mode == 'deploy')
         env:

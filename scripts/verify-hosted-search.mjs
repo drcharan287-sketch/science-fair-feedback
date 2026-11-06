@@ -20,12 +20,23 @@ try {
     return search && !search.disabled;
   }, null, {timeout: 20000});
 
-  await page.locator('#projectSearch').fill('Xeno Chat App');
+  const grade=(await page.locator('#studentClass option').evaluateAll(nodes=>
+    nodes.map(n=>n.value).filter(Boolean)))[0];
+  assert.ok(grade,'At least one grade is required');
+  await page.selectOption('#studentClass',grade);
+  const section=(await page.locator('#section option').evaluateAll(nodes=>
+    nodes.map(n=>n.value).filter(Boolean)))[0];
+  assert.ok(section,'At least one active section is required');
+  await page.selectOption('#section',section);
+  const title=(await page.locator('#project option').evaluateAll(nodes=>
+    nodes.map(n=>n.value).filter(Boolean)))[0];
+  assert.ok(title,'At least one active project is required');
+  await page.locator('#projectSearch').fill(title);
   await page.locator('#projectSearchResults button').first().click();
-  assert.equal(await page.locator('#studentClass').inputValue(), '6');
-  assert.equal(await page.locator('#section').inputValue(), 'Heidelberg');
-  assert.equal(await page.locator('#project').inputValue(), 'Xeno Chat App');
-  assert.match(await page.locator('#projectSearchSelected').innerText(), /Xeno Chat App/);
+  assert.ok(await page.locator('#studentClass').inputValue());
+  assert.ok(await page.locator('#section').inputValue());
+  assert.equal(await page.locator('#project').inputValue(),title);
+  assert.ok((await page.locator('#projectSearchSelected').innerText()).includes(title));
 
   // Simulate an already STARTED submission in this disposable browser only.
   // Do not click Submit and do not call action=save.

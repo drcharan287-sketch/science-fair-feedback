@@ -413,62 +413,108 @@ test('actual backend reports catalog and save errors through JSONP', async () =>
   assert.match(invalid.text, /^voiceVoteResponse\(/);
 });
 
-// The live GitHub Pages site has fetch(); it should load the same-origin public
-// catalog without issuing a cross-origin Google JSONP request.
-test('same-origin projects.json populates class and section without contacting Google', async () => {
-  const seen = [];
-  const a = app(async (url, options) => {
-    seen.push({ url, options });
-    return { ok: true, json: async () => ({ success: true, catalogVersion: '2026-11-06-aa7f4dd3-424', projects: [
-      {grade:'6', section:'Heidelberg', project:'XenoChat'},
-      {grade:'9', section:'Keats', project:'VoiceVote'}
-    ] }) };
+// The public voting form now prefers the current Apps Script catalog over
+// its static Pages snapshot: event-day additions/deactivations need no redeploy.
+test('live Google catalog is authoritative even when a valid snapshot exists',async()=>{
+  const seen=[];
+  const a=app(async (url,options)=>{
+    seen.push({url,options});
+    return {ok:true,json:async()=>({success:true,catalogVersion:'2026-11-06-aa7f4dd3-424',
+      projects:[{grade:'6',section:'Heidelberg',project:'Retired Static Name'}]})};
   });
-  await tick();
-  assert.equal(seen.length, 1);
-  assert.equal(seen[0].url, './projects.json?roster=2026-11-06-aa7f4dd3-424');
-  assert.equal(seen[0].options.credentials, 'same-origin');
-  assert.equal(a.scripts.length, 0);
-  assert.deepEqual(a.elements.studentClass.options.map(o => o.value), ['', '6', '9']);
-  a.elements.studentClass.value = '6'; a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
-  assert.deepEqual(a.elements.section.options.map(o => o.value), ['', 'Heidelberg']);
-  a.elements.section.value = 'Heidelberg'; a.elements.section.dispatchEvent(new a.context.Event('change'));
-  assert.deepEqual(a.elements.project.options.map(o => o.value), ['', 'XenoChat']);
-  assert.equal(a.elements.catalogStatus.textContent, '1 project(s) available');
-});
-
-
-test('stale published 407-project snapshot is rejected and live Google catalog is loaded',async()=>{
-  const a=app(async()=>({ok:true,json:async()=>({
-    success:true,catalogVersion:'legacy-roster-407',
-    projects:[{grade:'6',section:'Heidelberg',project:'XenoChat',id:'LEG-6-HEIDELBERG-XENOCHAT'}]
-  })}));
-  await tick();
-  assert.equal(a.scripts.length,1,'Snapshot version mismatch must request Google catalog');
+  assert.equal(a.scripts.length,1,'Google catalog request should start before static fallback');
   const {url}=respond(a,{success:true,projects:[
-    {grade:'6',section:'Heidelberg',project:'Xeno Chat App',id:'VVP-VI_HEIDELBERG-G5-S1'},
-    {grade:'9',section:'Keats',project:'VoiceVote App',id:'VVP-IX_KEATS-G7-S1'}
+    {grade:'6',section:'Heidelberg',project:'Xeno Chat App',id:'VVP-ONE'},
+    {grade:'9',section:'Keats',project:'VoiceVote App',id:'VVP-TWO'}
   ]});
   await tick();
   assert.equal(url.searchParams.get('action'),'catalog');
+  assert.equal(seen.length,0,'Static snapshot must not supersede a successful live catalog');
+  assert.deepEqual(a.elements.studentClass.options.map(x=>x.value),['','6','9']);
   a.elements.studentClass.value='6';
   a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
   a.elements.section.value='Heidelberg';
   a.elements.section.dispatchEvent(new a.context.Event('change'));
   assert.deepEqual(a.elements.project.options.map(x=>x.value),['','Xeno Chat App']);
-  assert.equal(a.elements.project.options.some(x=>x.value==='XenoChat'),false);
+  assert.equal(a.elements.retryCatalogBtn.hidden,false,'Manual refresh must stay available');
+});
+test('when live endpoint fails, a versioned backup is visibly labeled as potentially stale',async()=>{
+  const seen=[];
+  const a=app(async (url,opts)=>{
+    seen.push(url);
+    return {ok:true,json:async()=>({success:true,catalogVersion:'2026-11-06-aa7f4dd3-424',
+      projects:[{grade:'6',section:'Heidelberg',project:'Offline Backup'}]})};
+  });
+  a.scripts[0].onerror();
+  await tick();
+  assert.equal(seen.length,1);
+  assert.match(seen[0],/projects\.json/);
+  assert.deepEqual(a.elements.studentClass.options.map(x=>x.value),['','6']);
+  assert.match(a.elements.catalogStatus.textContent,/BACKUP ONLY/i);
+  assert.equal(a.elements.retryCatalogBtn.hidden,false);
+});
+test('a stale backup is rejected if the live school catalog cannot be read',async()=>{
+  const a=app(async()=>({ok:true,json:async()=>({
+    success:true,catalogVersion:'legacy-roster-407',
+    projects:[{grade:'6',section:'Heidelberg',project:'XenoChat'}]
+  })}));
+  a.scripts[0].onerror();
+  await tick();
+  assert.equal(a.elements.studentClass.disabled,true);
+  assert.equal(a.elements.retryCatalogBtn.hidden,false);
+  assert.match(a.elements.catalogStatus.textContent,/Unable to load projects/i);
+});
+test('manual live refresh adds projects, preserves feedback and clears deactivated selection',async()=>{
+  const a=app();
+  respond(a,{success:true,projects:[
+    {grade:'9',section:'Keats',project:'VoiceVote App',id:'VVP-OLD'}
+  ]});
+  await tick();
+  a.elements.studentClass.value='9';
+  a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value='Keats';
+  a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value='VoiceVote App';
+  a.elements.feedback.value='This is an unsent user transcript';
+  const pending=a.scripts.length;
+  a.elements.retryCatalogBtn.click();
+  assert.equal(a.scripts.length,pending+1,'Manual refresh requests current Google catalog');
+  respond(a,{success:true,projects:[
+    {grade:'9',section:'Keats',project:'New Solar Purifier',id:'VVP-NEW'},
+    {grade:'9',section:'Keats',project:'Second Team',id:'VVP-TWO'}
+  ]});
+  await tick();
+  assert.equal(a.elements.studentClass.value,'9','Grade selection survives refresh');
+  assert.equal(a.elements.section.value,'Keats','Section survives refresh');
+  assert.equal(a.elements.project.value,'','Deactivated project must not stay selected');
+  assert.ok(a.elements.project.options.some(x=>x.value==='New Solar Purifier'));
+  assert.equal(a.elements.feedback.value,'This is an unsent user transcript',
+    'Refreshing the catalog must never discard visitor feedback');
+  assert.equal(a.forms.length,0,'Refresh must never send action=save');
+});
+test('snapshot service is not needed when the live Apps Script catalog succeeds',async()=>{
+  const a=app(async()=>{throw new Error('Offline snapshot');});
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote App'}]});
+  await tick();
+  assert.deepEqual(a.elements.studentClass.options.map(o=>o.value),['','9']);
 });
 
-test('snapshot unavailable falls back to real Google JSONP catalog', async () => {
-  const a = app(async () => { throw new Error('Snapshot unavailable'); });
-  await tick();
-  assert.equal(a.scripts.length, 1);
-  const { url } = respond(a, { success: true, projects: [
-    {grade:'9', section:'Keats', project:'VoiceVote'}
-  ] });
-  await tick();
-  assert.equal(url.searchParams.get('action'), 'catalog');
-  assert.deepEqual(a.elements.studentClass.options.map(o => o.value), ['', '9']);
+test('in-flight vote rejected if the organizer deactivates a project under the shared script lock',()=>{
+  const rows=[['Class/Grade','Section','Project Name','Active','Project ID'],
+    ['9','Keats','VoiceVote App','TRUE','VVP-EVENT-STABLE']];
+  const b=backend(rows);
+  b.context.LockService.getScriptLock=()=>({
+    waitLock(){rows[1][3]='FALSE';},releaseLock(){}
+  });
+  const result=b.context.doPost({parameter:{
+    action:'save',project:'VoiceVote App',projectId:'VVP-EVENT-STABLE',
+    studentClass:'9',section:'Keats',feedback:'A safe simulated comment',
+    rating:'5',language:'en-IN',
+    submissionId:'123e4567-e89b-42d3-a456-426614174000',
+    deviceToken:'123e4567-e89b-42d3-a456-426614174001'
+  }});
+  assert.match(result.html,/Feedback not confirmed/i,'Public receipt deliberately hides private exception details');
+  assert.equal(b.writes.length,0,'Deactivated project must not receive a late vote');
 });
 
 test('secure POST probe makes no writes and duplicate POSTs append only once', () => {

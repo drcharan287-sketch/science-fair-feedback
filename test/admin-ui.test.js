@@ -221,3 +221,72 @@ test('Admin overall and class-specific ranks are scoped correctly and unrated re
   assert.deepEqual(displayedRanks(),['2'],
     'Searching must not promote an existing grade #2 to #1');
 });
+
+
+test('event-day project tab uses authenticated RPCs and preserves immutable IDs on correction',()=>{
+  const a=harness();
+  a.login(overview());
+  a.dispatch('projectsTab');
+  const listing=a.requests.at(-1);
+  assert.equal(listing.name,'adminGetManagedProjects');
+  const projects=[
+    {id:'VVP-SIX',grade:'6',section:'Heidelberg',project:'Xeno Chat App',
+      active:true,sourceKey:'VI_HEIDELBERG|5|1',version:'immutable-version-six',votes:0},
+    {id:'VVP-NINE',grade:'9',section:'Keats',project:'VoiceVote App',
+      active:true,sourceKey:'IX_KEATS|7|1',version:'immutable-version-nine',votes:4}
+  ];
+  listing.success({projects,total:2,active:2,pendingAuditActions:0});
+  assert.equal(a.elements.projectsPanel.hidden,false);
+  a.elements.managerProject.value='VVP-NINE';
+  a.dispatch('managerProject','change');
+  assert.equal(a.elements.managerName.value,'VoiceVote App');
+  assert.match(a.elements.managerImpact.textContent,/4 valid vote/);
+  a.elements.managerName.value='VoiceVote AI Project';
+  a.elements.managerReason.value='Teacher approved spelling correction';
+  a.dispatch('managerSave');
+  const edit=a.requests.at(-1);
+  assert.equal(edit.name,'adminChangeProject');
+  assert.equal(edit.args[1].action,'EDIT');
+  assert.equal(edit.args[1].id,'VVP-NINE');
+  assert.equal(edit.args[1].expectedVersion,'immutable-version-nine');
+  assert.equal(edit.args[1].project,'VoiceVote AI Project');
+  assert.equal(edit.args[1].reason,'Teacher approved spelling correction');
+  edit.success({changed:true,id:'VVP-NINE',project:'VoiceVote AI Project'});
+  assert.ok(a.requests.some(r=>r.name==='adminGetOverview'));
+  assert.equal(a.requests.at(-1).name,'adminGetManagedProjects');
+});
+
+test('event-day Admin can stage add, deactivation and reactivate with no browser vote',()=>{
+  const a=harness();
+  a.login(overview());
+  a.dispatch('projectsTab');
+  a.requests.at(-1).success({projects:[
+    {id:'VVP-NINE',grade:'9',section:'Keats',project:'VoiceVote App',
+      active:true,sourceKey:'IX_KEATS|7|1',version:'digest',votes:2}
+  ],total:1,active:1,pendingAuditActions:0});
+  a.elements.managerGrade.value='9';
+  a.dispatch('managerGrade','change');
+  a.elements.managerSection.value='Keats';
+  a.elements.managerName.value='Solar Purifier';
+  a.elements.managerReason.value='Approved after morning roll call';
+  a.dispatch('managerForm','submit');
+  const add=a.requests.at(-1);
+  assert.equal(add.name,'adminChangeProject');
+  assert.equal(add.args[1].action,'ADD');
+  assert.equal(add.args[1].id,'');
+  assert.equal(add.args[1].grade,'9');
+  assert.equal(add.args[1].section,'Keats');
+  assert.equal(add.args[1].project,'Solar Purifier');
+  assert.doesNotMatch(JSON.stringify(add.args),/action=save/);
+  add.failure(new Error('Synthetic rejection — no mutation'));
+  a.elements.managerProject.value='VVP-NINE';
+  a.dispatch('managerProject','change');
+  a.elements.managerReason.value='Project temporarily withdrawn by teacher';
+  a.dispatch('managerDeactivate');
+  const deactivate=a.requests.at(-1);
+  assert.equal(deactivate.args[1].action,'DEACTIVATE');
+  assert.equal(deactivate.args[1].expectedVersion,'digest');
+  assert.equal(deactivate.args[1].confirmAffectedVotes,true);
+  assert.equal(a.elements.managerDeactivate.disabled,true);
+  assert.ok(!a.requests.some(r=>r.name==='doPost'||r.name==='saveFeedback'));
+});
