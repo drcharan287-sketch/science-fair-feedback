@@ -5,6 +5,17 @@
  * Replace the placeholder with the ID of your own spreadsheet before deployment.
  */
 const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID';
+// India's 22 Eighth Schedule languages, plus English for visitors.
+// Translation-service codes do not guarantee browser speech or Google coverage;
+// when a translation is unavailable the original is preserved in Feedback.
+const VOICEVOTE_FEEDBACK_LANGUAGE_CODES = Object.freeze({
+  'en-IN':'en', 'as-IN':'as', 'bn-IN':'bn', 'brx-IN':'brx',
+  'doi-IN':'doi', 'gu-IN':'gu', 'hi-IN':'hi', 'kn-IN':'kn',
+  'ks-IN':'ks', 'gom-IN':'gom', 'mai-IN':'mai', 'ml-IN':'ml',
+  'mni-Mtei-IN':'mni-Mtei', 'mr-IN':'mr', 'ne-IN':'ne',
+  'or-IN':'or', 'pa-IN':'pa', 'sa-IN':'sa', 'sat-Olck-IN':'sat',
+  'sd-IN':'sd', 'ta-IN':'ta', 'te-IN':'te', 'ur-IN':'ur'
+});
 function doGet(e) {
   const params = (e && e.parameter) || {};
   if (params.action === 'test') {
@@ -87,10 +98,10 @@ function voiceVoteTranslationPreview_(params) {
   const requestId = String(params.requestId || '').trim().toLowerCase();
   const language = String(params.language || '').trim();
   const feedback = String(params.feedback || '').trim();
-  const languages = {'te-IN':'te','hi-IN':'hi','ta-IN':'ta','kn-IN':'kn'};
+  const languages = VOICEVOTE_FEEDBACK_LANGUAGE_CODES;
   const result = {type:'voicevote-translation-preview',requestId:requestId,success:false};
   if (!/^[a-f0-9-]{36}$/.test(requestId) ||
-      !Object.prototype.hasOwnProperty.call(languages,language) ||
+      (!Object.prototype.hasOwnProperty.call(languages,language) || language === 'en-IN') ||
       !feedback || feedback.length > 2000) {
     result.message = 'English translation preview is unavailable for this request.';
   } else {
@@ -134,21 +145,37 @@ function voiceVoteReceipt_(result) {
       : passDenied
         ? 'An unused visitor voting pass is required, or the supplied pass cannot be accepted. Check your code with an organizer. No new feedback was recorded.'
         : 'The save could not be confirmed. Do not resubmit immediately; ask the science fair organizer to check the Feedback sheet.';
-  const pageUrl = 'https://drcharan287-sketch.github.io/science-fair-feedback/' +
-    (success || alreadyVoted ? '?vote=success' : '?vote=retry');
+  // Success/duplicate receipts no longer send visitors to a second voting form.
+  // Failure keeps its explicit ?vote=retry recovery path.
+  const retryUrl = 'https://drcharan287-sketch.github.io/science-fair-feedback/?vote=retry';
+  const action = success || alreadyVoted
+    ? '<button type="button" id="receiptClose" onclick="try{window.close()}catch(e){}document.getElementById(&quot;receiptCloseHelp&quot;).hidden=false">Close</button>' +
+      '<p id="receiptCloseHelp" class="close-help" hidden>You can safely close this browser tab. No further submission is needed.</p>'
+    : '<a id="receiptRetry" href="' + retryUrl +
+      '" target="_top" rel="noopener">Return to VoiceVote to review the error</a>';
   const html = '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
-    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<meta name="theme-color" content="#102b50">' +
     '<title>VoiceVote feedback receipt</title><style>' +
-    'body{box-sizing:border-box;min-height:100vh;margin:0;padding:32px 15px;' +
-    'background:linear-gradient(135deg,#08152e,#102b50,#075985);font:16px Arial,sans-serif;color:white;}' +
-    'main{max-width:560px;margin:10vh auto;padding:36px;border-radius:22px;' +
-    'background:#203857;border:1px solid #ffffff30;text-align:center;}' +
-    'h1{font-size:26px;color:#67e8f9;}p{line-height:1.6}a{display:inline-block;' +
-    'margin-top:20px;padding:14px 22px;border-radius:10px;color:white;' +
-    'background:#0891b2;text-decoration:none;font-weight:bold}</style></head>' +
-    '<body><main><h1 id="voiceVoteReceipt">' + title + '</h1><p>' + explanation + '</p>' +
-    '<a href="' + pageUrl + '" target="_top" rel="noopener">Return to VoiceVote</a>' +
-    '</main></body></html>';
+    '*{box-sizing:border-box}html{min-height:100%}body{min-height:100vh;min-height:100dvh;margin:0;' +
+    'padding:28px 18px;display:flex;align-items:center;justify-content:center;' +
+    'background:linear-gradient(135deg,#08152e,#102b50);' +
+    'font:18px/1.55 Arial,sans-serif;color:white}' +
+    'main{width:100%;max-width:640px;padding:clamp(34px,6vw,54px);border-radius:24px;' +
+    'background:#203857;border:1px solid #ffffff40;text-align:center;' +
+    'box-shadow:0 24px 70px #0005}' +
+    'h1{font-size:clamp(27px,5vw,36px);line-height:1.22;color:#67e8f9;margin:0 0 24px}' +
+    'p{font-size:clamp(18px,3.8vw,21px);line-height:1.55;margin:0 0 20px}' +
+    'button,a{display:inline-flex;align-items:center;justify-content:center;min-width:180px;' +
+    'min-height:56px;margin-top:18px;padding:14px 26px;border:0;border-radius:12px;' +
+    'color:white;background:#0891b2;font-size:19px;font-weight:700;text-decoration:none;cursor:pointer}' +
+    'button:focus-visible,a:focus-visible{outline:3px solid #facc15;outline-offset:4px}' +
+    '.close-help{margin:22px auto 0;font-size:17px;color:#e0f2fe}' +
+    '[hidden]{display:none!important}' +
+    '@media(max-width:480px){body{padding:18px 14px}main{padding:36px 22px;border-radius:22px}' +
+    'h1{font-size:29px}p{font-size:19px}button,a{width:100%;font-size:20px;min-height:60px}}' +
+    '</style></head><body><main><h1 id="voiceVoteReceipt">' +
+    title + '</h1><p>' + explanation + '</p>' + action + '</main></body></html>';
   return HtmlService.createHtmlOutput(html).setTitle('VoiceVote feedback receipt');
 }
 
@@ -173,7 +200,7 @@ function saveFeedback_(params) {
     if (!uuid.test(submissionId) || !uuid.test(deviceToken)) {
       throw new Error('A valid browser voting token is required. Reload the updated VoiceVote page.');
     }
-    if (!['en-IN', 'te-IN', 'hi-IN', 'ta-IN', 'kn-IN'].includes(language)) {
+    if (!Object.prototype.hasOwnProperty.call(VOICEVOTE_FEEDBACK_LANGUAGE_CODES, language)) {
       throw new Error('Unsupported feedback language.');
     }
     const selectedProject = readProjectCatalog_().find(function(item) {
@@ -241,10 +268,7 @@ function saveFeedback_(params) {
         'Device hash', 'Vote status', 'Visitor pass serial', 'Project ID'
       ];
       if (sheet.getLastRow() === 0) sheet.appendRow(headers);
-      const languages = {
-        'te-IN': 'te', 'hi-IN': 'hi', 'ta-IN': 'ta',
-        'kn-IN': 'kn', 'en-IN': 'en'
-      };
+      const languages = VOICEVOTE_FEEDBACK_LANGUAGE_CODES;
       let translation = feedback;
       const sourceLanguage = Object.prototype.hasOwnProperty.call(languages, language)
         ? languages[language] : '';
