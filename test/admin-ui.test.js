@@ -160,3 +160,25 @@ test('unresolved audit warning is visible only during an authenticated admin ses
   assert.equal(a.elements.auditAlert.hidden,true);
   assert.equal(a.elements.auditAlert.textContent,'');
 });
+
+test('faculty presenter session creates three private links and no public publication controls',()=>{
+  const a=harness();
+  a.login(overview());
+  a.dispatch('createPresenterLink');
+  const pending=a.requests.at(-1);
+  assert.equal(pending.name,'adminCreatePresenterSession');
+  const ticket='a'.repeat(64);
+  pending.success({token:ticket,expiresInSeconds:7200});
+  for(const id of ['ownerPresenterLink','ownerResultsDemoLink','ownerResultsLiveLink']){
+    assert.equal(a.elements[id].hidden,false);
+    assert.ok(a.elements[id].href.includes('#presenter='+ticket));
+    assert.ok(!a.elements[id].href.includes('THIS-IS-A-FAKE-LOCAL-KEY'));
+  }
+  assert.ok(a.elements.ownerResultsDemoLink.href.includes('results.html'));
+  assert.ok(a.elements.ownerResultsDemoLink.href.includes('view=demo'));
+  assert.ok(a.elements.ownerResultsLiveLink.href.includes('view=live'));
+  assert.ok(a.elements.ownerPresenterLink.href.endsWith('#presenter='+ticket));
+  assert.equal(a.elements.publicDisplaySettings,undefined,
+    'Old public results publication controls must be absent');
+  assert.equal(a.elements.savePublicDisplayMode,undefined);
+});
