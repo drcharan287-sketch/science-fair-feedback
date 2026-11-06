@@ -37,7 +37,12 @@ try{
           projectManagerTab:document.getElementById('projectsTab')?.textContent.trim()||'',
           projectManagerHidden:document.getElementById('projectsPanel')?.hidden,
           projectManagerControls:['managerForm','managerNew','managerSave','managerDeactivate',
-            'managerReactivate','managerRefresh'].every(id=>!!document.getElementById(id))
+            'managerReactivate','managerRefresh'].every(id=>!!document.getElementById(id)),
+          confirmDialogPresent:!!document.getElementById('managerConfirmDialog'),
+          confirmDialogClosed:document.getElementById('managerConfirmDialog')?.open===false,
+          confirmControls:['managerConfirmCancel','managerConfirmProceed',
+            'managerConfirmProject','managerConfirmReason','managerConfirmRisk']
+              .every(id=>!!document.getElementById(id))
         };
       });
       assert.equal(result.rankHeader,'Overall rank','PR58 rank header not deployed');
@@ -51,6 +56,9 @@ try{
       assert.equal(result.projectManagerTab,'Manage projects','VV-30 tab not deployed');
       assert.equal(result.projectManagerHidden,true,'Manager must remain hidden before sign-in');
       assert.equal(result.projectManagerControls,true,'Add/Edit/Deactivate controls absent');
+      assert.equal(result.confirmDialogPresent,true,'Styled project confirmation dialog not deployed');
+      assert.equal(result.confirmDialogClosed,true,'Confirmation dialog must be closed before Admin sign-in');
+      assert.equal(result.confirmControls,true,'Project confirmation details or buttons are missing');
       console.log('PASS production Apps Script public Admin login shell includes VV30 project manager, rank scope and heading hierarchy; private dashboard remains locked. No sign-in/data read.');
       verified=true;
     }catch(error){
