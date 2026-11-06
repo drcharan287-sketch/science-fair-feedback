@@ -54,6 +54,7 @@ The **Curiosity Carnival** science-fair theme appears as a heading on both the p
 - The Admin Console retains complete original-language and translated reviews. **Private faculty Live Results** can now show only the selected project's valid feedback when the presenter clicks **View feedback**; the public QR and anonymous Results API never expose any reviews. Excluded/VOID reviews and individual timestamps/browser identifiers are not shown on the board.
 - Public `action=publicResults` is **DEMO-only**, regardless of legacy public setting. The Admin Console no longer offers LIVE/PUBLISHED public publication controls. Only ticket-validated `action=presenterResults` returns real aggregate standings.
 - Weighted result formula: `(valid rating stars + 17.5) / (valid votes + 5)`. These are *audience appreciation* rankings, not official school/jury awards.
+- **Top 10 semantics (PR #58):** The private Live board's **All grades** view numbers the ten highest rated projects `01`–`10` across the fair, ordered by weighted score. Selecting a grade switches to that grade's own rated Top 10 and renumbers the visible positions within the grade. The backend's grade-local rank remains in place and is never mistaken for a global badge. Gold/silver/bronze/cyan placements are visual aids, not jury awards. The Admin Console still shows its full catalog and differentiates overall vs class-specific rank labels.
 
 ## Captured feedback on the faculty smart board
 

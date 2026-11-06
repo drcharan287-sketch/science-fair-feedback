@@ -192,3 +192,32 @@ test('project rankings table scrolls vertically and horizontally with sticky hea
   // The other Admin lists do not acquire a new restrictive max-height.
   assert.match(html, /<section id="votersPanel"[^>]*>[\s\S]*?<div class="table-wrap">/);
 });
+
+
+test('Admin overall and class-specific ranks are scoped correctly and unrated remain unranked',()=>{
+  const a=harness();
+  const data=overview();
+  data.projects=[
+    {...data.projects[0],rank:1,weighted:4.1,grade:'6',votes:3},
+    {...data.projects[1],rank:2,weighted:4.0,grade:'9',votes:2},
+    {id:'three',rank:3,grade:'9',section:'B',project:'Model Three',
+      votes:1,average:5,weighted:3.9},
+    {id:'four',rank:4,grade:'9',section:'C',project:'Unrated Model',
+      votes:0,average:0,weighted:0}
+  ];
+  data.totalProjects=4;data.ratedProjects=3;data.acceptedVotes=6;
+  a.login(data);
+  const displayedRanks=()=>a.elements.rankingRows.children.map(tr=>tr.children[0].textContent);
+  assert.deepEqual(displayedRanks(),['1','2','3','—'],
+    'All classes has global rank without awards for unrated projects');
+  assert.equal(a.elements.rankHeading.textContent,'Overall rank');
+  a.elements.classFilter.value='9';
+  a.dispatch('classFilter','change');
+  assert.deepEqual(displayedRanks(),['1','2','—'],
+    'Class 9 starts at 1, unlike the global positions 2 and 3');
+  assert.equal(a.elements.rankHeading.textContent,'Grade rank');
+  a.elements.rankSearch.value='Model Three';
+  a.dispatch('rankSearch','input');
+  assert.deepEqual(displayedRanks(),['2'],
+    'Searching must not promote an existing grade #2 to #1');
+});

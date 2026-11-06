@@ -103,3 +103,30 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;op
 @media(max-width:560px){
   .header .carnival-heading{font-size:clamp(1.5rem,6.5vw,2rem);margin-bottom:12px}
 }
+
+
+/* Shared presentation hierarchy: event title > editorial line > secondary text.
+   Distinct accents help visitors scan the form without overwhelming controls. */
+.header .carnival-heading{
+  font-size:clamp(2.65rem,5vw,3.55rem);line-height:1.08;
+  max-width:680px;letter-spacing:-.065em;
+  background:linear-gradient(105deg,#ffe69f,#f7d47a 56%,#b9f5fb);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.header .logo{
+  font-size:clamp(1.55rem,3vw,2.05rem);font-weight:830;
+  line-height:1.22;color:#f3fbff;letter-spacing:-.035em;
+}
+.header h2{color:#9eeafa;font-size:clamp(.98rem,2.1vw,1.2rem);letter-spacing:.005em}
+.header p{color:#c0d5e7}
+.step-section.step-speak .step-caption{color:#c3b8ff}
+.step-section.step-rate .step-caption{color:#ffe09b}
+.step-section.step-speak .step-topline h3{color:#ece8ff}
+.step-section.step-rate .step-topline h3{color:#fff2c4}
+.step-section.step-choose .step-topline h3{color:#effbff}
+.ai-explainer summary{color:#b1eefb}
+@media(max-width:560px){
+  .header .carnival-heading{font-size:clamp(2.25rem,8.5vw,2.65rem)}
+  .header .logo{font-size:clamp(1.45rem,5.5vw,1.85rem)}
+  .header h2{font-size:clamp(.98rem,3.8vw,1.12rem)}
+}
