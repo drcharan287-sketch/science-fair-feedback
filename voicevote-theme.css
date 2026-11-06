@@ -92,3 +92,14 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;op
   .header .logo{font-size:clamp(1.5rem,6.3vw,1.8rem)}
   .translation-fallback{width:100%;font-size:.87rem;min-height:50px}
 }
+
+/* Curiosity Carnival: the event theme is visible on every public Voting visit.
+   VoiceVote remains the dominant centered product brand above it. */
+.header .carnival-heading{
+  margin:0 0 13px;font-size:clamp(1.65rem,3.6vw,2.35rem);
+  line-height:1.16;font-weight:900;letter-spacing:-.045em;
+  color:#ffe19b;text-shadow:0 5px 25px #07192f88;
+}
+@media(max-width:560px){
+  .header .carnival-heading{font-size:clamp(1.5rem,6.5vw,2rem);margin-bottom:12px}
+}

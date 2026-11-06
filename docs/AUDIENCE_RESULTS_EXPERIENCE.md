@@ -23,6 +23,17 @@
 
 **Important technical boundary:** GitHub Pages hosts static HTML publicly, so the `results.html` file can be fetched by anyone. The UI is locked/hidden until authorization, and the **backend** denies access to actual aggregates without a valid organizer-issued token. Direct visits such as `results.html#leaderboard`, forged fragments, expired tokens and public mode parameters cannot expose results. Presenter links are bearer capabilities: anyone possessing one can access the permitted aggregate screen until it expires, so restrict their distribution.
 
+## Curiosity Carnival on the faculty board
+
+The **Curiosity Carnival** science-fair theme appears as a heading on both the public Parent/Visitor Voting UI and the private faculty Demo/Live Results screen. The Results hero now has a prominent white-backed **VISITORS · SCAN TO VOTE** card using the supplied Delhi Public School crest QR image. It decodes to the **existing public Voting destination**:
+
+`https://drcharan287-sketch.github.io/science-fair-feedback/?utm_source=chatgpt.com`
+
+- The QR launches **only Parent/Visitor Voting**; it never grants access to the faculty Results screen, Admin Console, presenter credentials or rankings. The original event QR destination is unchanged.
+- The QR is visible in **both authorized faculty Demo and Private Live Results**, even when no actual votes have arrived. Unauthenticated visitors cannot see the faculty page shell.
+- On a Senses board, show the QR in the initial hero when attendees need to participate. **Enlarge QR for the smart board** opens just the public QR image (without a presenter token) in a new tab for distance scanning. Return to the presenter tab for the live metrics. Use the bright-room switch if ambient light is strong.
+- The asset is a compact scan-tested rendering of the user-supplied QR with its school crest; never replace it with a QR pointing to Results. A phone should be used for one final physical scan at the actual board brightness/distance.
+
 ## Speech and English translation on iOS Chrome / Safari
 - Web Speech is a browser/OS capability, **not guaranteed** for all 22 Eighth Schedule languages. Chrome on iPhone shares Apple's browser engine behavior and may stop recognition after one utterance. The UI uses a single-utterance lifecycle on iOS; press **Start** again if required, then review/edit the transcript.
 - The normal English preview is a separate `action=translatePreview` HTML POST into a hidden frame. Some iOS/browser configurations can block that embedded response; this may look like a translation error even when the recognized original text exists.
