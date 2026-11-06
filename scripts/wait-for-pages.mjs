@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
 const site='https://drcharan287-sketch.github.io/science-fair-feedback/';
-const files=["index.html","results.html","results.css","results.js","voicevote-theme.css"];
+const files=["index.html","results.html","results.css","results.js","voicevote-theme.css","voicevote-catalog.js","projects.json"];
 const digest = s => createHash('sha256')
   .update(String(s).replace(/\r\n/g,'\n').trim()).digest('hex');
 const expected={};
@@ -24,7 +24,7 @@ for(let attempt=1;attempt<=retries;attempt++){
         miss=file;throw Error(file+' has not reached this checkout');
       }
     }
-    console.log('PASS: published HTML, Results scripts and design assets all match the exact checked-out source. Read-only smoke may proceed.');
+    console.log('PASS: published HTML, scripts, styles and authoritative projects.json all match exact checked-out source. Read-only smoke may proceed.');
     process.exit(0);
   }catch(e){lastError=String(e?.message||e);}
   if(attempt%5===0)console.log('Waiting for Pages (attempt '+attempt+'/'+retries+'): '+lastError);
