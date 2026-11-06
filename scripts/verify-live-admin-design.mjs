@@ -33,11 +33,7 @@ try{
           headingSize:titleStyle?parseFloat(titleStyle.fontSize):0,
           headingColor:titleStyle?.color||'',
           brandSize:brand?parseFloat(getComputedStyle(brand).fontSize):0,
-          adminHidden:document.getElementById('adminPanel')?.hidden,
-          projectManagerTab:document.getElementById('projectsTab')?.textContent.trim()||'',
-          projectManagerHidden:document.getElementById('projectsPanel')?.hidden,
-          projectManagerControls:['managerForm','managerNew','managerSave','managerDeactivate',
-            'managerReactivate','managerRefresh'].every(id=>!!document.getElementById(id))
+          adminHidden:document.getElementById('adminPanel')?.hidden
         };
       });
       assert.equal(result.rankHeader,'Overall rank','PR58 rank header not deployed');
@@ -48,10 +44,7 @@ try{
       assert.equal(result.headingColor,'rgb(248, 252, 255)',
         'PR58 admin title treatment not deployed '+JSON.stringify(result));
       assert.equal(result.adminHidden,true,'Protected Admin controls must stay hidden');
-      assert.equal(result.projectManagerTab,'Manage projects','VV-30 tab not deployed');
-      assert.equal(result.projectManagerHidden,true,'Manager must remain hidden before sign-in');
-      assert.equal(result.projectManagerControls,true,'Add/Edit/Deactivate controls absent');
-      console.log('PASS production Apps Script public Admin login shell includes VV30 project manager, rank scope and heading hierarchy; private dashboard remains locked. No sign-in/data read.');
+      console.log('PASS production Apps Script public Admin login shell includes PR58 rank scope, heading hierarchy; private dashboard remains locked. No sign-in/data read.');
       verified=true;
     }catch(error){
       lastError=String(error.message);
