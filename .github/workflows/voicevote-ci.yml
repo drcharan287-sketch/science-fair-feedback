@@ -36,6 +36,7 @@ jobs:
           node --check results.js
           node --check scripts/verify-owner-demo.mjs
           node --check scripts/verify-translation-preview.mjs
+          node --check scripts/verify-live-translation-preview.mjs
           node --check scripts/smoke-public-results.mjs
           node -e "const p=require('./projects.json'); if(!p.success || !Array.isArray(p.projects) || !p.projects.length) process.exit(1)"
       - name: Verify staged Voting owner demo and Results in isolated Chromium before deployment
