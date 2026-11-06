@@ -48,6 +48,7 @@ try{
        u.hostname.endsWith('.gstatic.com')))return route.continue();
     unexpected++;return route.abort('blockedbyclient');
   });
+  let verified=false;
   for(let attempt=1;attempt<=2;attempt++){
     await page.goto(site+'?translationPreviewCheck='+attempt,{
       waitUntil:'domcontentloaded',timeout:30000
@@ -77,7 +78,8 @@ try{
       assert.deepEqual(errors,[],'No uncaught app JavaScript errors');
       console.log('PASS ACTUAL Google read-only English translation preview; '+previewPosts+
         ' preview POST(s); zero real vote POSTs; no browser vote lock.');
-      process.exit(0);
+      verified=true;
+      break;
     }catch(err){
       const status=await page.locator('#englishTranslationStatus').textContent().catch(()=>'(missing)');
       console.error('Live preview attempt '+attempt+' did not complete. UI status: '+status+
@@ -86,4 +88,5 @@ try{
       await new Promise(r=>setTimeout(r,5000));
     }
   }
+  assert.equal(verified,true,'Actual Google translation preview never completed.');
 }finally{await browser.close();}
