@@ -231,6 +231,12 @@
           if (!payload || payload.success !== true || !Array.isArray(payload.projects) || !payload.projects.length) {
             throw new Error('Project snapshot is missing or empty.');
           }
+          // The website can publish before GitHub Pages expires a cached
+          // projects.json. Never show a stale roster that the live backend
+          // will reject. Refetch from the authoritative Google catalog.
+          if (config.snapshotVersion && payload.catalogVersion !== config.snapshotVersion) {
+            throw new Error('Project snapshot version does not match the final school roster.');
+          }
           return payload.projects;
         });
     }
