@@ -120,8 +120,20 @@ try{
       }
       return {x,y};
     });
+    await page.evaluate(()=>{
+      window.__feedbackTapLog=[];
+      document.addEventListener('click',e=>{
+        window.__feedbackTapLog.push({target:e.target?.outerHTML?.slice(0,140),
+          x:e.clientX,y:e.clientY,scrollY:window.scrollY});
+      },true);
+    });
     if(size.hasTouch) await page.touchscreen.tap(center.x,center.y);
     else await page.mouse.click(center.x,center.y);
+    const tapResult=await page.evaluate(()=>({
+      clicks:window.__feedbackTapLog,overlay:document.querySelector('#projectFeedbackOverlay').hidden,
+      feedbackMode:document.body.dataset.resultsMode,scrollY:window.scrollY
+    }));
+    console.log('Feedback tap diagnostic',size.name,JSON.stringify(tapResult));
     assert.equal(await page.locator('#projectFeedbackOverlay').isVisible(),true);
     assert.match(await page.locator('#projectFeedbackEyebrow').innerText(),/FICTIONAL/);
     assert.match(await page.locator('#projectFeedbackList').innerText(),/Original feedback/i);
