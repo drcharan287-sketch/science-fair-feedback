@@ -12,15 +12,22 @@
 </head>
 <body>
 <div class="ambient ambient-one" aria-hidden="true"></div><div class="ambient ambient-two" aria-hidden="true"></div>
-<div class="page-shell" id="pageShell">
+<section id="presenterAccessGate" class="presenter-access-gate" aria-live="polite">
+  <span class="gate-mark" aria-hidden="true">◈</span>
+  <h1>Voice<span>Vote</span></h1>
+  <h2>Private faculty &amp; student presentation</h2>
+  <p id="presenterAccessMessage">Open this screen using a temporary presenter link from the authenticated VoiceVote Admin Console. The visitor QR opens only the Voting page.</p>
+  <p class="gate-help">Access is time-limited. No individual visitor reviews are displayed here.</p>
+</section>
+<div class="page-shell" id="pageShell" hidden>
   <header class="topbar">
-    <a class="brand" href="./" aria-label="VoiceVote voting page">
+    <div class="brand" aria-label="VoiceVote presenter display">
       <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 44 44" fill="none"><path d="M9 24c5-2 5-13 10-13s5 22 10 22 5-13 8-13" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="8" cy="24" r="3" fill="currentColor"/></svg></span>
       <span>Voice<span class="brand-accent">Vote</span><small>SCIENCE FAIR EXPERIENCE</small></span>
-    </a>
-    <nav class="main-nav" aria-label="VoiceVote navigation">
-      <a href="./" class="nav-link">Give feedback</a>
-      <a href="./results.html" aria-current="page" class="nav-link active">Explore insights</a>
+    </div>
+    <nav class="main-nav" aria-label="Private presenter views">
+      <button type="button" id="presenterShowDemo" class="nav-link active" aria-pressed="true">Demo · How it works</button>
+      <button type="button" id="presenterShowLive" class="nav-link" aria-pressed="false">Live Results · Smart Board</button>
     </nav>
     <div class="top-actions">
       <button id="brightToggle" class="icon-btn" type="button" aria-label="Switch to bright-room display" title="Bright room / dark room">◐ <span>Brightness</span></button>
@@ -36,7 +43,7 @@
         <p class="hero-description">Explore the ideas, voices and discoveries from our science fair. See how multilingual feedback becomes meaningful audience insights.</p>
         <div class="hero-tags" aria-label="Capabilities"><span>🎙 Speech recognition</span><span>文 AI translation</span><span>✦ Audience insights</span></div>
         <div class="hero-ctas">
-          <a class="primary-btn" href="./">Share your feedback <span aria-hidden="true">↗</span></a>
+          <a id="presenterVotingLink" class="primary-btn" href="#" rel="noopener">Open no-save Voting demonstration <span aria-hidden="true">↗</span></a>
           <a class="secondary-btn" href="#leaderboard">Explore the display <span aria-hidden="true">↓</span></a>
         </div>
       </div>
@@ -115,7 +122,7 @@
           <small>03 · TRANSPARENT INSIGHTS</small>
         </article>
       </div>
-      <p class="ranking-footnote">Individual original and translated reviews remain available privately in the Admin Console. The public screen never auto-publishes visitor comments.</p>
+      <p class="ranking-footnote">Individual original and translated reviews remain private in the Admin Console. This presenter screen shows aggregate trends only and never requires manual comment approval.</p>
     </section>
 
     <section class="story-strip" aria-label="How VoiceVote works">
@@ -128,7 +135,7 @@
     <span>Audience appreciation is not the official jury result.</span>
   </footer>
 </div>
-<div class="presenter-bar" id="presenterBar" aria-label="Presentation controls">
+<div class="presenter-bar" id="presenterBar" aria-label="Presentation controls" hidden>
   <span><span class="pulse-dot"></span> <strong>SMART BOARD MODE</strong></span>
   <button id="autoplayToggle" type="button" aria-pressed="false">▶ Auto-rotate grades</button>
   <button id="resetView" type="button">↺ Reset</button>
