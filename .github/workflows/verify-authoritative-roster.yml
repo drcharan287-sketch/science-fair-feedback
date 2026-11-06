@@ -1,0 +1,32 @@
+name: Verify authoritative school project roster
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'projects.json'
+      - 'docs/authoritative-roster-2026-11-06.json'
+      - 'scripts/verify-authoritative-catalog.mjs'
+      - '.github/workflows/verify-authoritative-roster.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'projects.json'
+      - 'docs/authoritative-roster-2026-11-06.json'
+      - 'scripts/verify-authoritative-catalog.mjs'
+      - '.github/workflows/verify-authoritative-roster.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Cross-check 424 named entries and stable IDs against authoritative Excel manifest
+        run: node scripts/verify-authoritative-catalog.mjs

@@ -1186,14 +1186,8 @@
     {
       "grade": "6",
       "section": "Heidelberg",
-      "project": "Xeno chat App",
+      "project": "Xeno Chat App",
       "id": "VVP-VI_HEIDELBERG-G5-S1"
-    },
-    {
-      "grade": "6",
-      "section": "Heidelberg",
-      "project": "XenoChat",
-      "id": "LEG-6-HEIDELBERG-XENOCHAT"
     },
     {
       "grade": "6",
@@ -1708,74 +1702,44 @@
     {
       "grade": "8",
       "section": "Dalton",
-      "project": "Designing an effective water filtration using natural materials",
-      "id": "VVP-VIII_DALTON-G9-S1"
-    },
-    {
-      "grade": "8",
-      "section": "Dalton",
-      "project": "Electrolysis of water, Volacano Eruption simulation",
-      "id": "VVP-VIII_DALTON-G8-S1"
-    },
-    {
-      "grade": "8",
-      "section": "Dalton",
-      "project": "Human Sensor",
-      "id": "VVP-VIII_DALTON-G2-S1"
-    },
-    {
-      "grade": "8",
-      "section": "Dalton",
-      "project": "Hydraulic arm",
-      "id": "VVP-VIII_DALTON-G1-S1"
-    },
-    {
-      "grade": "8",
-      "section": "Dalton",
-      "project": "Lungs Model- demonstration of the breathing machanism",
-      "id": "VVP-VIII_DALTON-G4-S1"
-    },
-    {
-      "grade": "8",
-      "section": "Dalton",
-      "project": "Oblelex Fluid",
-      "id": "VVP-VIII_DALTON-G6-S1"
-    },
-    {
-      "grade": "8",
-      "section": "Dalton",
-      "project": "Smart Staircase water Purifier",
-      "id": "VVP-VIII_DALTON-G11-S1"
-    },
-    {
-      "grade": "8",
-      "section": "Dalton",
-      "project": "Solar Lift",
-      "id": "VVP-VIII_DALTON-G5-S1"
-    },
-    {
-      "grade": "8",
-      "section": "Dalton",
-      "project": "testing antacids, Testing acid and base",
-      "id": "VVP-VIII_DALTON-G12-S1"
-    },
-    {
-      "grade": "8",
-      "section": "Dalton",
-      "project": "The Newton's Disc",
+      "project": "Automated Fire Extinguisher",
       "id": "VVP-VIII_DALTON-G7-S1"
     },
     {
       "grade": "8",
       "section": "Dalton",
-      "project": "Water Level Indicator",
+      "project": "Drip Irrigation System",
+      "id": "VVP-VIII_DALTON-G6-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "How do intense video game affect the heart rate",
+      "id": "VVP-VIII_DALTON-G2-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "LPG Gas Leakage detector",
+      "id": "VVP-VIII_DALTON-G5-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "Smart Flood Early Warning System",
+      "id": "VVP-VIII_DALTON-G1-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Dalton",
+      "project": "Smart projector and mini theater",
       "id": "VVP-VIII_DALTON-G3-S1"
     },
     {
       "grade": "8",
       "section": "Dalton",
-      "project": "Wi-Fi Controlled car",
-      "id": "VVP-VIII_DALTON-G10-S1"
+      "project": "Water Purifier",
+      "id": "VVP-VIII_DALTON-G4-S1"
     },
     {
       "grade": "8",
@@ -1876,38 +1840,50 @@
     {
       "grade": "8",
       "section": "Einstein",
+      "project": "4th Dimension",
+      "id": "VVP-VIII_EINSTEIN-G5-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Einstein",
       "project": "Activity to find the plant cell in onion peel",
       "id": "VVP-VIII_EINSTEIN-G2-S1"
     },
     {
       "grade": "8",
       "section": "Einstein",
-      "project": "Buzzer game",
-      "id": "VVP-VIII_EINSTEIN-G11-S1"
+      "project": "Automatic Street light",
+      "id": "VVP-VIII_EINSTEIN-G3-S2"
     },
     {
       "grade": "8",
       "section": "Einstein",
-      "project": "Periscope",
-      "id": "VVP-VIII_EINSTEIN-G10-S1"
-    },
-    {
-      "grade": "8",
-      "section": "Einstein",
-      "project": "Smart Agriculture",
-      "id": "VVP-VIII_EINSTEIN-G1-S1"
-    },
-    {
-      "grade": "8",
-      "section": "Einstein",
-      "project": "Volcano",
+      "project": "Hologram",
       "id": "VVP-VIII_EINSTEIN-G3-S1"
     },
     {
       "grade": "8",
       "section": "Einstein",
-      "project": "Water filtration",
-      "id": "VVP-VIII_EINSTEIN-G12-S1"
+      "project": "Hydrolic Pressure",
+      "id": "VVP-VIII_EINSTEIN-G8-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Einstein",
+      "project": "Mini Theater",
+      "id": "VVP-VIII_EINSTEIN-G1-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Einstein",
+      "project": "Reflection of light",
+      "id": "VVP-VIII_EINSTEIN-G6-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Einstein",
+      "project": "Solar Cooker",
+      "id": "VVP-VIII_EINSTEIN-G7-S1"
     },
     {
       "grade": "8",
@@ -1920,6 +1896,12 @@
       "section": "IIT-A Hawking",
       "project": "Human following",
       "id": "VVP-VIII_IIT_AHawking-G4-S1"
+    },
+    {
+      "grade": "8",
+      "section": "IIT-A Hawking",
+      "project": "Lightning Conductor",
+      "id": "VVP-VIII_IIT_AHawking-G8-S1"
     },
     {
       "grade": "8",
@@ -1972,14 +1954,14 @@
     {
       "grade": "8",
       "section": "Newton",
-      "project": "Green fuel for the future",
-      "id": "VVP-VIII_NEWTON-G10-S1"
+      "project": "How Wind energy produces Electricity",
+      "id": "VVP-VIII_NEWTON-G7-S1"
     },
     {
       "grade": "8",
       "section": "Newton",
-      "project": "How Wind energy produces Electricity",
-      "id": "VVP-VIII_NEWTON-G7-S1"
+      "project": "Hydrogen energy clean and green fuel for the future.",
+      "id": "VVP-VIII_NEWTON-G10-S1"
     },
     {
       "grade": "8",
@@ -1996,7 +1978,7 @@
     {
       "grade": "8",
       "section": "Newton",
-      "project": "Smart irrigation",
+      "project": "Smart irrigation system",
       "id": "VVP-VIII_NEWTON-G4-S1"
     },
     {
@@ -2010,6 +1992,66 @@
       "section": "Newton",
       "project": "Weather monitoring station",
       "id": "VVP-VIII_NEWTON-G6-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Raman",
+      "project": "Automatic Food Spoilage Monitor",
+      "id": "VVP-VIII_RAMAN-G2-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Raman",
+      "project": "DIY Wind Turbine",
+      "id": "VVP-VIII_RAMAN-G4-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Raman",
+      "project": "Hydraulic Alarm",
+      "id": "VVP-VIII_RAMAN-G8-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Raman",
+      "project": "Hydraulic Lift Working model",
+      "id": "VVP-VIII_RAMAN-G5-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Raman",
+      "project": "Robotic Arm",
+      "id": "VVP-VIII_RAMAN-G6-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Raman",
+      "project": "Robotic Armed Rover",
+      "id": "VVP-VIII_RAMAN-G7-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Raman",
+      "project": "Self Healing Concrete",
+      "id": "VVP-VIII_RAMAN-G1-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Raman",
+      "project": "Smart Danger gas detection",
+      "id": "VVP-VIII_RAMAN-G10-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Raman",
+      "project": "Smart House hold microgrid allocator",
+      "id": "VVP-VIII_RAMAN-G9-S1"
+    },
+    {
+      "grade": "8",
+      "section": "Raman",
+      "project": "Volume bot",
+      "id": "VVP-VIII_RAMAN-G3-S1"
     },
     {
       "grade": "8",
@@ -2230,14 +2272,74 @@
     {
       "grade": "9",
       "section": "Keats",
-      "project": "VoiceVote",
-      "id": "LEG-9-KEATS-VOICEVOTE"
+      "project": "Earthquake resistant building",
+      "id": "VVP-IX_KEATS-G5-S1"
+    },
+    {
+      "grade": "9",
+      "section": "Keats",
+      "project": "Eyecare TV",
+      "id": "VVP-IX_KEATS-G4-S1"
+    },
+    {
+      "grade": "9",
+      "section": "Keats",
+      "project": "Game",
+      "id": "VVP-IX_KEATS-G11-S1"
+    },
+    {
+      "grade": "9",
+      "section": "Keats",
+      "project": "How does music effect heart",
+      "id": "VVP-IX_KEATS-G10-S1"
+    },
+    {
+      "grade": "9",
+      "section": "Keats",
+      "project": "Hydraulic Lift",
+      "id": "VVP-IX_KEATS-G1-S1"
+    },
+    {
+      "grade": "9",
+      "section": "Keats",
+      "project": "Inside the brain: Human Brain and Its parts",
+      "id": "VVP-IX_KEATS-G9-S1"
+    },
+    {
+      "grade": "9",
+      "section": "Keats",
+      "project": "Neo old paper, puzzle game",
+      "id": "VVP-IX_KEATS-G6-S1"
+    },
+    {
+      "grade": "9",
+      "section": "Keats",
+      "project": "Non-Newtonian: oobleck fluid",
+      "id": "VVP-IX_KEATS-G8-S1"
+    },
+    {
+      "grade": "9",
+      "section": "Keats",
+      "project": "The Human Brain Model",
+      "id": "VVP-IX_KEATS-G3-S1"
+    },
+    {
+      "grade": "9",
+      "section": "Keats",
+      "project": "The human nervous system",
+      "id": "VVP-IX_KEATS-G2-S1"
+    },
+    {
+      "grade": "9",
+      "section": "Keats",
+      "project": "VoiceVote App",
+      "id": "VVP-IX_KEATS-G7-S1"
     },
     {
       "grade": "9",
       "section": "Kipling",
-      "project": "A Safe look into atomic energy",
-      "id": "VVP-IX_KIPLING-G1-S1"
+      "project": "Boo Bubble",
+      "id": "VVP-IX_KIPLING-G6-S1"
     },
     {
       "grade": "9",
@@ -2254,14 +2356,14 @@
     {
       "grade": "9",
       "section": "Kipling",
-      "project": "Iodine clock reaction",
+      "project": "Memory Game",
       "id": "VVP-IX_KIPLING-G4-S1"
     },
     {
       "grade": "9",
       "section": "Kipling",
-      "project": "Rainbow fire",
-      "id": "VVP-IX_KIPLING-G6-S1"
+      "project": "Water level alarm",
+      "id": "VVP-IX_KIPLING-G1-S1"
     },
     {
       "grade": "9",

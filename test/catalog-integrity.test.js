@@ -68,8 +68,11 @@ test('published snapshot remains valid under the same identity rules', async () 
   const liveSnapshot = JSON.parse(await readFile(new URL('../projects.json',import.meta.url),'utf8'));
   assert.equal(liveSnapshot.success,true);
   const entries=validateProjectEntries(liveSnapshot.projects);
-  assert.ok(entries.some(x=>x.grade==='6'&&x.section==='Heidelberg'&&x.project==='XenoChat'));
-  assert.ok(entries.some(x=>x.grade==='9'&&x.section==='Keats'&&x.project==='VoiceVote'));
+  assert.equal(entries.length,424,'6 November authoritative school roster has 424 named projects');
+  assert.ok(entries.some(x=>x.grade==='6'&&x.section==='Heidelberg'&&x.project==='Xeno Chat App'));
+  assert.ok(entries.some(x=>x.grade==='9'&&x.section==='Keats'&&x.project==='VoiceVote App'));
+  assert.equal(entries.some(x=>x.project==='XenoChat'||x.project==='VoiceVote'),false,
+    'Legacy demo-only projects do not belong in final catalog');
 });
 
 

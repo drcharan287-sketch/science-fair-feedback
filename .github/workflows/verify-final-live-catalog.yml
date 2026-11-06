@@ -1,0 +1,33 @@
+name: Verify final school roster on live Apps Script (GET only)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'projects.json'
+      - 'scripts/verify-live-final-catalog.mjs'
+      - '.github/workflows/verify-final-live-catalog.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'projects.json'
+      - 'scripts/verify-live-final-catalog.mjs'
+      - '.github/workflows/verify-final-live-catalog.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check authoritative manifest-to-snapshot
+        run: node scripts/verify-authoritative-catalog.mjs
+      - name: Read only deployed Apps Script project catalog; compare all stable IDs and titles
+        run: node scripts/verify-live-final-catalog.mjs

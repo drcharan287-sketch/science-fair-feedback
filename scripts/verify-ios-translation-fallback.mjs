@@ -22,7 +22,7 @@ try {
       if(u.searchParams.get('action')==='catalog'){
         return route.fulfill({status:200,contentType:'application/javascript',body:
           cb+'('+JSON.stringify({success:true,projects:[
-            {grade:'9',section:'Keats',project:'VoiceVote',id:'SYN-VOICE'}
+            {grade:'9',section:'Keats',project:'VoiceVote App',id:'VVP-IX_KEATS-G7-S1'}
           ]})+');'});
       }
       if(u.searchParams.get('action')==='presenterVerify'){
