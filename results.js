@@ -33,6 +33,7 @@
     if(intervalId){clearInterval(intervalId);intervalId=null;}
     $('pageShell').hidden=true;
     $('presenterBar').hidden=true;
+    $('liveBannerControls').hidden=true;
     $('presenterAccessGate').hidden=false;
     put('presenterAccessMessage',message ||
       'Access has expired. Create a new presenter link from the authenticated Admin Console.');
@@ -44,7 +45,24 @@
     $('presenterShowLive').setAttribute('aria-pressed',String(presenterView==='LIVE'));
     $('presenterShowDemo').classList.toggle('active',presenterView==='DEMO');
     $('presenterShowLive').classList.toggle('active',presenterView==='LIVE');
+    $('liveBannerControls').hidden=presenterView!=='LIVE';
     render();
+  }
+  function setPresenterView(view) {
+    if(!presenterVerified)return;
+    presenterView=view==='LIVE'?'LIVE':'DEMO';
+    selectedGrade='all';
+    if(presenterView==='DEMO')setAuto(false);
+    // Refreshing the authorized page must reopen the CURRENT view, using
+    // the SAME temporary faculty token; there is no new Admin issuance.
+    // The presenter capability remains in the URL fragment only.
+    const params=new URLSearchParams(String(window.location.hash||'').replace(/^#/,''));
+    if(params.get('presenter')===presenterToken){
+      params.set('view',presenterView.toLowerCase());
+      try { history.replaceState(null,'',location.pathname+location.search+'#'+params.toString()); }
+      catch (_) { /* Live view remains functional even without history API. */ }
+    }
+    present();
   }
   const gradesFrom = list => [...new Set(list.map(p => String(p.grade)))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
   const put = (id,text) => {const el=$(id);if(el)el.textContent=String(text);};
@@ -72,7 +90,7 @@
       ? ['DEMO MODE · SAMPLE DATA','These examples are fictional. No actual rankings or visitor comments are being published.']
       : live
         ? ['LIVE INSIGHTS · RANKINGS PRIVATE','Real, anonymous participation totals only. Organizers have not published project rankings.']
-        : ['PRIVATE LIVE RESULTS · FACULTY / STUDENTS','Actual aggregate audience ratings. This restricted screen is not a public result or official jury award.'];
+        : ['Curiosity Carnival','Trending Projects · Private live audience ratings by grade, not official jury results.'];
     put('modeTitle',message[0]);put('modeDetails',message[1]);put('modeSymbol',demo?'✧':live?'◉':'★');
     put('lastUpdated',demo?'Sample experience':data.updatedAt?'Updated '+new Date(data.updatedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'Read-only display');
     put('totalProjects',fmt(data.totalProjects ?? lastCatalogCount));
@@ -209,14 +227,12 @@
       $('leaderboard').scrollIntoView({behavior:'smooth',block:'start'});
     }
   }
-  $('presenterShowDemo').addEventListener('click',()=>{
-    if(!presenterVerified)return;
-    presenterView='DEMO';selectedGrade='all';setAuto(false);present();
-  });
-  $('presenterShowLive').addEventListener('click',()=>{
-    if(!presenterVerified)return;
-    presenterView='LIVE';selectedGrade='all';present();
-  });
+  $('presenterShowDemo').addEventListener('click',()=>setPresenterView('DEMO'));
+  $('presenterShowLive').addEventListener('click',()=>setPresenterView('LIVE'));
+  $('liveDemoButton').addEventListener('click',()=>setPresenterView('DEMO'));
+  $('liveRefreshButton').addEventListener('click',()=>{if(presenterVerified)refreshServer();});
+  $('liveBrightnessButton').addEventListener('click',()=>{if(presenterVerified)$('brightToggle').click();});
+  $('liveFullScreenButton').addEventListener('click',()=>{if(presenterVerified)$('screenToggle').click();});
   $('gradeFilter').addEventListener('change',e=>{
     selectedGrade=e.target.value;renderRankings(sourceData());
   });
