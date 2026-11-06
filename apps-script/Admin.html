@@ -150,7 +150,7 @@
           <select id="classFilter" aria-label="Filter by class"><option value="">All classes</option></select>
         </div>
         <div class="table-wrap" role="region" tabindex="0" aria-label="Scrollable project rankings">
-          <table><thead><tr><th>Rank</th><th>Project</th><th>Class / section</th><th>Votes</th><th>Average ★</th><th>Weighted ★</th><th>Reviews</th></tr></thead>
+          <table><thead><tr><th id="rankHeading">Overall rank</th><th>Project</th><th>Class / section</th><th>Votes</th><th>Average ★</th><th>Weighted ★</th><th>Reviews</th></tr></thead>
           <tbody id="rankingRows"></tbody></table>
         </div>
         <p id="rankingCount" class="help"></p>
@@ -352,9 +352,23 @@
         (!query || [p.project,p.grade,p.section].join(' ').toLocaleLowerCase().includes(query))
       );
       $('rankingRows').replaceChildren();
+      // Rank numbers in the Admin table follow the same scope as the board:
+      // global in All classes, grade-local when a class is selected. Compute
+      // grade positions across ALL rated projects before applying search, so
+      // searching for one project never deceptively promotes it to rank 1.
+      const gradePositions=Object.create(null);
+      const positionById=Object.create(null);
+      overview.projects.forEach(p=>{
+        if(Number(p.votes)<=0)return;
+        const gradeKey=String(p.grade);
+        gradePositions[gradeKey]=(gradePositions[gradeKey]||0)+1;
+        positionById[p.id]=gradePositions[gradeKey];
+      });
+      text($('rankHeading'),grade?'Grade rank':'Overall rank');
       matches.forEach(p => {
         const tr = node('tr');
-        [p.rank,p.project,'Class '+p.grade+' · '+p.section,p.votes,
+        const displayRank=Number(p.votes)>0?(grade?positionById[p.id]:p.rank):'—';
+        [displayRank,p.project,'Class '+p.grade+' · '+p.section,p.votes,
           p.votes ? stars(p.average) : '—',p.votes ? p.weighted.toFixed(3) : '—'].forEach(v => tr.appendChild(node('td','',v)));
         const td = node('td');
         const button = node('button','link-btn',p.votes ? 'View feedbacks ('+p.votes+')' : 'No reviews');
@@ -365,7 +379,9 @@
         tr.appendChild(td);
         $('rankingRows').appendChild(tr);
       });
-      text($('rankingCount'), matches.length+' project(s) shown · Sorted by weighted audience score');
+      text($('rankingCount'), matches.length+' project(s) shown · '+
+        (grade?'Grade '+grade+' ranking':'Overall ranking')+
+        ' · Unrated projects have no rank · Sorted by weighted audience score');
     }
     function renderOverview(data) {
       overview = data;
