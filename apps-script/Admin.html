@@ -215,42 +215,19 @@
         <p class="help" id="passesInfo">Recent passes shown without full access codes or hashes.</p>
       </section>
 
-      <details class="panel" id="publicDisplaySettings" style="margin-top:18px">
-        <summary style="cursor:pointer;font-weight:800;font-size:17px">Audience Display · publication controls</summary>
-        <p class="help">The separate Results page is a public read-only display. It starts in DEMO mode.
-          Never publish live rankings until an organizer explicitly approves it.</p>
-        <div class="notice" id="publicDisplayStatus">Current audience display: DEMO (no real results public).</div>
-        <div class="controls">
-          <div>
-            <label for="publicDisplayMode">Audience display mode</label>
-            <select id="publicDisplayMode">
-              <option value="DEMO">DEMO · Fictional samples only</option>
-              <option value="LIVE">LIVE · Participation totals only</option>
-              <option value="PUBLISHED">PUBLISHED · Grade-wise audience rankings</option>
-            </select>
-          </div>
-          <div>
-            <label for="publicDisplayReason">Organizer reason (8+ characters)</label>
-            <input id="publicDisplayReason" type="text" maxlength="200" placeholder="Why is this audience visibility appropriate?">
-          </div>
-        </div>
-        <div class="actions">
-          <button type="button" id="savePublicDisplayMode" class="muted-btn">Save public display mode</button>
-          <a href="https://drcharan287-sketch.github.io/science-fair-feedback/results.html"
-             target="_blank" rel="noopener" style="padding:11px 15px;color:#b6ecfb">Open audience display ↗</a>
-        </div>
-        <p id="publicDisplayMessage" class="help" role="status"></p>
-      </details>
-
       <details class="panel" id="presenterPanel" style="margin-top:18px">
-        <summary style="cursor:pointer;font-weight:800;font-size:17px">Owner Demonstration · same Voting interface, no saved votes</summary>
-        <p class="help">Use the existing VoiceVote Voting page on your own presentation device. The owner link lets you rehearse repeatedly, even if that browser previously voted. It never writes feedback, unlocks real voting, or changes rankings.</p>
+        <summary style="cursor:pointer;font-weight:800;font-size:17px">Faculty Presentation · Demo Voting and Private Live Results</summary>
+        <p class="help">Create one temporary faculty/student presenter session. It provides three links: a read-only presentation about the app, a private LIVE smart-board results dashboard, and the SAME Voting interface in no-save demo mode. None of these links is shown to QR visitors. The temporary session expires after two hours; only the owner can issue it.</p>
         <div class="actions">
           <button type="button" id="createPresenterLink">Create temporary owner demo link</button>
+          <a id="ownerResultsDemoLink" href="#" target="_blank" rel="noopener noreferrer" hidden
+             style="padding:11px 15px;color:#b6ecfb">Open Faculty Demo Screen ↗</a>
+          <a id="ownerResultsLiveLink" href="#" target="_blank" rel="noopener noreferrer" hidden
+             style="padding:11px 15px;color:#b6ecfb">Open Private Live Results ↗</a>
           <a id="ownerPresenterLink" href="#" target="_blank" rel="noopener noreferrer" hidden
-             style="padding:11px 15px;color:#b6ecfb">Open owner demonstration ↗</a>
+             style="padding:11px 15px;color:#b6ecfb">Open No-Save Voting Demo ↗</a>
         </div>
-        <p id="presenterMessage" class="help" role="status">Only an authenticated organizer can create this temporary link. It expires within two hours; keep it on the presentation device and don't share it with parents.</p>
+        <p id="presenterMessage" class="help" role="status">Sign in to issue restricted faculty/student presentation links. Keep them private; they expire after two hours and never allow parents to access live results through the public QR.</p>
       </details>
 
       <footer style="padding:25px 0;color:#aabfd1;font-size:12px">
@@ -314,15 +291,12 @@
         'legacyCount','excludedCount','rankingCount','reviewsTitle',
         'reviewsStatus','adminStatus','votingState','passesAvailable',
         'passesUsed','passesRevoked','passesInfo','passModeLabel',
-        'passModeHelp','passCopyStatus','auditAlert','publicDisplayStatus',
-        'publicDisplayMessage'].forEach(id => text($(id),'')); 
-      const ownerLink=$('ownerPresenterLink');
-      ownerLink.hidden=true;ownerLink.href='';
+        'passModeHelp','passCopyStatus','auditAlert'].forEach(id => text($(id),'')); 
+      ['ownerPresenterLink','ownerResultsDemoLink','ownerResultsLiveLink'].forEach(id=>{
+        $(id).hidden=true;$(id).href='';
+      });
       $('presenterPanel').open=false;
-      text($('presenterMessage'),'Sign in to create a temporary owner demo link.'); 
-      $('publicDisplayMode').value='DEMO';
-      $('publicDisplayReason').value='';
-      $('publicDisplaySettings').open=false;
+      text($('presenterMessage'),'Sign in to create temporary faculty presentation links.');
       $('auditAlert').hidden = true;
       $('issuedPassOutput').value = '';
       $('issuedPassPanel').hidden = true;
@@ -367,13 +341,6 @@
       text($('protectedCount'),data.protectedVotes);
       text($('legacyCount'),data.legacyVotes);
       text($('excludedCount'),data.excludedVotes);
-      const displayMode = ['DEMO','LIVE','PUBLISHED'].includes(data.publicResultsMode)
-        ? data.publicResultsMode : 'DEMO';
-      $('publicDisplayMode').value=displayMode;
-      text($('publicDisplayStatus'),'Current audience display: '+displayMode+
-        (displayMode==='DEMO'?' · Synthetic examples only; real rankings private.'
-          : displayMode==='LIVE'?' · Public anonymous totals; no rankings.'
-          :' · Grade-wise rankings are public.'));
       const pendingAuditCount = Number(data.auditPendingActions) || 0;
       $('auditAlert').hidden = pendingAuditCount === 0;
       text($('auditAlert'),pendingAuditCount
@@ -584,8 +551,9 @@
     $('refreshPasses').addEventListener('click',refreshPasses);
     $('createPresenterLink').addEventListener('click',()=>{
       $('createPresenterLink').disabled=true;
-      $('ownerPresenterLink').hidden=true;
-      $('ownerPresenterLink').href='';
+      ['ownerPresenterLink','ownerResultsDemoLink','ownerResultsLiveLink'].forEach(id=>{
+        $(id).hidden=true;$(id).href='';
+      });
       text($('presenterMessage'),'Creating a temporary no-save presenter session…');
       call('adminCreatePresenterSession',[key],result=>{
         $('createPresenterLink').disabled=false;
@@ -593,44 +561,22 @@
           text($('presenterMessage'),'Could not create a valid owner session. Try again.');
           return;
         }
-        // Fragment ticket is not transmitted to the GitHub Pages server.
-        $('ownerPresenterLink').href=
-          'https://drcharan287-sketch.github.io/science-fair-feedback/#presenter='+
-            encodeURIComponent(result.token);
-        $('ownerPresenterLink').hidden=false;
-        text($('presenterMessage'),'Owner demo ready for this device. Expires within two hours. Click the link to open the SAME Voting UI, without saving any votes.');
+        // Fragments are not transmitted to GitHub Pages. Do not send the
+        // owner password to any public page; only this expiring capability.
+        const base='https://drcharan287-sketch.github.io/science-fair-feedback/';
+        const ticket=encodeURIComponent(result.token);
+        $('ownerPresenterLink').href=base+'#presenter='+ticket;
+        $('ownerResultsDemoLink').href=base+'results.html#presenter='+ticket+'&view=demo';
+        $('ownerResultsLiveLink').href=base+'results.html#presenter='+ticket+'&view=live';
+        ['ownerPresenterLink','ownerResultsDemoLink','ownerResultsLiveLink'].forEach(id=>{
+          $(id).hidden=false;
+        });
+        text($('presenterMessage'),'Three private presenter links ready. The faculty Demo Screen explains the app; Private Live Results shows actual anonymous grade rankings on the board; the no-save Voting Demo rehearses feedback. All expire within two hours.');
       },err=>{
         $('createPresenterLink').disabled=false;
         text($('presenterMessage'),'Could not create owner demo: '+(err.message||String(err)));
       });
     });
-    $('savePublicDisplayMode').addEventListener('click',()=>{
-      const requested=$('publicDisplayMode').value;
-      const why=$('publicDisplayReason').value.trim();
-      if(!['DEMO','LIVE','PUBLISHED'].includes(requested)||why.length<8){
-        text($('publicDisplayMessage'),'Choose a mode and provide a reason of at least 8 characters.');
-        return;
-      }
-      const explicit=requested==='PUBLISHED'
-        ? 'PUBLISH ACTUAL grade-wise audience rankings publicly? This does NOT publish private comments.'
-        : requested==='LIVE'
-          ? 'Show REAL anonymous participation totals to the public? Rankings will remain private.'
-          : 'Return the public display to fictional DEMO mode?';
-      if(!confirm(explicit))return;
-      $('savePublicDisplayMode').disabled=true;
-      text($('publicDisplayMessage'),'Saving audited publication decision…');
-      call('adminSetPublicResultsMode',[key,requested,why],()=>{
-        $('savePublicDisplayMode').disabled=false;
-        $('publicDisplayReason').value='';
-        text($('publicDisplayMessage'),'Publication mode updated. Public viewers refresh automatically.');
-        refresh();
-      },err=>{
-        $('savePublicDisplayMode').disabled=false;
-        showError(err);
-        text($('publicDisplayMessage'),'Could not change publication: '+(err.message||String(err)));
-      });
-    });
-
     $('loginForm').addEventListener('submit',event=>{
       event.preventDefault();
       const candidate=$('adminKey').value.trim();
