@@ -59,3 +59,15 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;op
 .translation-output:empty{display:none}
 .translation-note{margin:11px 0 0!important;font-size:.75rem!important;color:#bddde9!important;line-height:1.6}
 @media(max-width:560px){.translation-panel{padding:16px 14px}.translation-heading h4{font-size:1.05rem}.translation-refresh{font-size:.76rem}.translation-output{font-size:.97rem}}
+/* The owner's local no-write acknowledgment stays readable on phone and board. */
+.owner-receipt{margin:24px auto 8px;max-width:740px;padding:clamp(24px,5vw,44px);
+  background:#1a385a;border:1px solid #76eafa66;border-radius:22px;text-align:center}
+.owner-receipt h3{font-size:clamp(1.5rem,4.7vw,2rem);line-height:1.3}
+.owner-receipt p{font-size:clamp(1rem,3.4vw,1.15rem);line-height:1.55}
+.owner-receipt-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:18px 0 0}
+.owner-receipt-actions button{min-height:54px;min-width:158px;padding:12px 20px;
+  border-radius:12px;font-size:1rem;font-weight:700}
+#presenterClose{background:#16799e;color:white;border:1px solid #76eafa77}
+@media(max-width:480px){.owner-receipt{padding:27px 18px}
+  .owner-receipt-actions{flex-direction:column}
+  .owner-receipt-actions button{width:100%;font-size:1.08rem;min-height:58px}}

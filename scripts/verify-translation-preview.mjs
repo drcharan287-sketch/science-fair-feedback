@@ -88,6 +88,8 @@ try{
 
   await open(false);
   const phrase='సైన్స్ ఫెయిర్ చాలా బాగుంది';
+  assert.equal(await page.locator('#language option').count(),23,
+    'Voting must offer the 22 scheduled languages plus English');
   await page.locator('#language').selectOption('te-IN');
   await page.locator('#startBtn').click();
   await page.evaluate(p=>{
@@ -120,6 +122,10 @@ try{
     translations['te-IN'],{timeout:15000});
 
   await page.locator('#language').selectOption('hi-IN');
+  assert.equal(await page.locator('#feedback').inputValue(),'',
+    'Changing from Telugu to Hindi must remove the old transcript');
+  assert.equal(await page.locator('#englishTranslationText').textContent(),'',
+    'No previous-language English preview can remain');
   await page.locator('#feedback').fill('यह प्रोजेक्ट बहुत अच्छा है');
   await page.waitForFunction(expected=>
     document.querySelector('#englishTranslationText')?.textContent===expected,
@@ -127,12 +133,16 @@ try{
   assert.equal(await page.locator('#englishTranslationPanel').isVisible(),true);
   for(const language of ['ta-IN','kn-IN']){
     await page.locator('#language').selectOption(language);
+    assert.equal(await page.locator('#feedback').inputValue(),'',
+      'Switching to '+language+' must clear previous-language feedback');
     await page.locator('#feedback').fill(language==='ta-IN'?'அருமையான அறிவியல் திட்டம்':'ಅದ್ಭುತ ವಿಜ್ಞಾನ ಯೋಜನೆ');
     await page.waitForFunction(expected=>
       document.querySelector('#englishTranslationText')?.textContent===expected,
       translations[language],{timeout:15000});
   }
   await page.locator('#language').selectOption('en-IN');
+  assert.equal(await page.locator('#feedback').inputValue(),'',
+    'Returning to English must clear non-English feedback');
   assert.equal(await page.locator('#englishTranslationPanel').isVisible(),false);
   assert.equal(await page.locator('#englishTranslationText').textContent(),'');
   assert.equal(savedPOSTs,0,'Parent preview never sends a save POST');
@@ -146,6 +156,11 @@ try{
   await page.waitForFunction(expected=>
     document.querySelector('#englishTranslationText')?.textContent===expected,
     translations['te-IN'],{timeout:15000});
+  await page.locator('#language').selectOption('hi-IN');
+  assert.equal(await page.locator('#feedback').inputValue(),'',
+    'Owner demo must clear the old Telugu transcript on language switch');
+  assert.equal(await page.locator('#englishTranslationText').textContent(),'',
+    'Owner demo must also clear its previous English preview');
   assert.equal(savedPOSTs,0,'Demo translation preview never saves a vote');
   assert.ok(previewPOSTs>=6,'Translation previews should be real isolated POST actions');
   assert.equal(unexpected,0,'No unexpected external requests');

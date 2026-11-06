@@ -13,6 +13,13 @@
 
 **Audience:** Results stays a separate, optimized 16:9 smart-board/phone page. It supports fullscreen, high-contrast bright-room mode, and grade-wise spotlight rotation. Results publication is independent of presenter demonstration and of real voting permissions.
 
+## 22 scheduled languages and visitor confirmation
+
+- The shared Parent Voting page and authenticated Owner Demonstration offer **all 22 languages in the Eighth Schedule of India's Constitution, plus English** (23 selections). Changing the Feedback Language **immediately clears the old-language transcript and any in-flight English preview**, preventing mislabelled multilingual submissions. Rating and project selection stay unchanged.
+- Visitors may type in any selected language. Speech-to-text relies on each device/browser's Web Speech implementation, which **does not guarantee recognition for all 22 languages**; on unsupported recognition or microphone failure, type instead. Google English translation is **best effort** and is not guaranteed for every language. The original text is always retained, with an explicit unavailable fallback when translation fails.
+- A successful real Google receipt uses a large, phone-friendly **Close** control, not a return-to-vote invitation. Browsers cannot always programmatically close a user-opened tab; in that case the receipt instructs visitors to close it manually. A failed save still has its explicit **Return to VoiceVote to review the error** path for the existing safe retry mechanism.
+- The owner's local no-write demonstration receipt provides **Close** and **Demonstrate Again**; neither casts a vote, clears a browser vote lock, or saves feedback.
+
 ## AI — truthful demonstration
 
 Speech-to-text uses the browser's native recognition API when supported and appropriate microphone permission is granted. Real submit translates supported non-English feedback into English in the Apps Script backend. **The owner demo and the parent Voting page now display a real English translation preview immediately below the editable transcript for Telugu, Hindi, Tamil and Kannada.** The preview calls the existing Google `LanguageApp.translate` service through a read-only `action=translatePreview` HTTPS POST using a hidden frame and a verified message response. Transcripts are never sent in a URL, and preview requests cannot save feedback or consume a vote. The preview refreshes after speech stops or typing pauses; it may fail if Google is unavailable, without blocking real feedback. English-only hides the preview. The submitted original text remains editable and authoritative; a **separate** translation is generated during a real save. Presenters can demonstrate actual translation without casting a test vote.
