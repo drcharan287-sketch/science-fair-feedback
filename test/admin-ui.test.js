@@ -182,3 +182,13 @@ test('faculty presenter session creates three private links and no public public
     'Old public results publication controls must be absent');
   assert.equal(a.elements.savePublicDisplayMode,undefined);
 });
+
+test('project rankings table scrolls vertically and horizontally with sticky headers',()=>{
+  const html=fs.readFileSync('apps-script/Admin.html','utf8');
+  assert.match(html, /#rankingsPanel \.table-wrap\s*\{[^}]*max-height:min\(65vh,640px\)/);
+  assert.match(html, /#rankingsPanel \.table-wrap\s*\{[^}]*overflow-x:auto;overflow-y:scroll/);
+  assert.match(html, /th\s*\{[^}]*position:sticky;top:0/);
+  assert.match(html, /class="table-wrap" role="region" tabindex="0" aria-label="Scrollable project rankings"/);
+  // The other Admin lists do not acquire a new restrictive max-height.
+  assert.match(html, /<section id="votersPanel"[^>]*>[\s\S]*?<div class="table-wrap">/);
+});
