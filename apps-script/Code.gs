@@ -62,6 +62,11 @@ function doPost(e) {
       return HtmlService.createHtmlOutput('<h1>VoiceVote POST probe failed</h1>');
     }
   }
+  if (params.action === 'translatePreview') {
+    // PREVIEW ONLY: never touch the Feedback sheet, visitor lock, or ranking.
+    // The browser sends text in a POST body, never a GET query string.
+    return voiceVoteTranslationPreview_(params);
+  }
   if (params.action !== 'save') {
     return HtmlService.createHtmlOutput('<h1>Unsupported request</h1>');
   }
@@ -70,6 +75,46 @@ function doPost(e) {
     return voiceVoteReceipt_({ success: false, message: 'Invalid submission ID.' });
   }
   return voiceVoteReceipt_(saveFeedback_(params));
+}
+
+/**
+ * Read-only English preview on the existing Voting page (and owner demo).
+ * An invisible form POST avoids CORS/GET-query exposure of feedback text;
+ * HtmlService posts a response to the GitHub Pages parent via postMessage.
+ * The response is not saved, audited, cached, or written to any sheet.
+ */
+function voiceVoteTranslationPreview_(params) {
+  const requestId = String(params.requestId || '').trim().toLowerCase();
+  const language = String(params.language || '').trim();
+  const feedback = String(params.feedback || '').trim();
+  const languages = {'te-IN':'te','hi-IN':'hi','ta-IN':'ta','kn-IN':'kn'};
+  const result = {type:'voicevote-translation-preview',requestId:requestId,success:false};
+  if (!/^[a-f0-9-]{36}$/.test(requestId) ||
+      !Object.prototype.hasOwnProperty.call(languages,language) ||
+      !feedback || feedback.length > 2000) {
+    result.message = 'English translation preview is unavailable for this request.';
+  } else {
+    try {
+      const translated = String(LanguageApp.translate(feedback,languages[language],'en') || '').trim();
+      if (!translated) throw new Error('Empty translation');
+      result.success = true;
+      result.translation = translated.slice(0,6000);
+    } catch (_) {
+      result.message = 'Could not translate now. You can still submit your original feedback.';
+    }
+  }
+  // Do NOT interpolate raw feedback directly into HTML. JSON is escaped for
+  // script-element and Unicode-syntax safety, preventing script injection.
+  const payload = JSON.stringify(result).replace(/</g,'\\u003c')
+    .replace(/>/g,'\\u003e').replace(/&/g,'\\u0026')
+    .replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
+  const page = '<!doctype html><html lang="en"><head><meta charset="utf-8"></head>' +
+    '<body><script>(function(){' +
+    'try{window.top.postMessage(' + payload +
+      ',"https://drcharan287-sketch.github.io");}catch(e){}' +
+    '})();<\/script></body></html>';
+  return HtmlService.createHtmlOutput(page)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 /** A top-level HTML receipt avoids browser-blocked cross-origin JSONP callbacks.
