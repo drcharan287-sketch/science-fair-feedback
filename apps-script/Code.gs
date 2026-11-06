@@ -114,6 +114,37 @@ function doPost(e) {
  * HtmlService posts a response to the GitHub Pages parent via postMessage.
  * The response is not saved, audited, cached, or written to any sheet.
  */
+
+/** Check script only, not language: a safety net for English-labeled Indian text. */
+function voiceVoteHasIndianScript_(value) {
+  return /[\u0600-\u06FF\u0900-\u0D7F\u1C50-\u1C7F\uA800-\uA82F\uABC0-\uABFF]/.test(String(value || ''));
+}
+/**
+ * Prefer the chosen source language; retry Google auto-detection if a language
+ * is unsupported or leaves Indian-script feedback entirely untranslated.
+ * Never silently invent an English translation.
+ */
+function voiceVoteTranslateEnglish_(feedback, language) {
+  const source = VOICEVOTE_FEEDBACK_LANGUAGE_CODES[language];
+  const indianScript = voiceVoteHasIndianScript_(feedback);
+  if (source === 'en' && !indianScript) {
+    return {available:true, attempted:false, translation:feedback};
+  }
+  const sources = source === 'en' ? [''] : [source, ''];
+  for (let i = 0; i < sources.length; i++) {
+    try {
+      const translated = String(LanguageApp.translate(feedback,sources[i],'en') || '').trim();
+      if (translated && !(indianScript && translated === feedback)) {
+        return {available:true, attempted:true, translation:translated};
+      }
+    } catch (_) {
+      // Some source language codes are unsupported; Google's documented
+      // empty source code retries with automatic language detection.
+    }
+  }
+  return {available:false, attempted:true, translation:''};
+}
+
 function voiceVoteTranslationPreview_(params) {
   const requestId = String(params.requestId || '').trim().toLowerCase();
   const language = String(params.language || '').trim();
@@ -121,15 +152,16 @@ function voiceVoteTranslationPreview_(params) {
   const languages = VOICEVOTE_FEEDBACK_LANGUAGE_CODES;
   const result = {type:'voicevote-translation-preview',requestId:requestId,success:false};
   if (!/^[a-f0-9-]{36}$/.test(requestId) ||
-      (!Object.prototype.hasOwnProperty.call(languages,language) || language === 'en-IN') ||
+      (!Object.prototype.hasOwnProperty.call(languages,language) ||
+       (language === 'en-IN' && !voiceVoteHasIndianScript_(feedback))) ||
       !feedback || feedback.length > 2000) {
     result.message = 'English translation preview is unavailable for this request.';
   } else {
     try {
-      const translated = String(LanguageApp.translate(feedback,languages[language],'en') || '').trim();
-      if (!translated) throw new Error('Empty translation');
+      const translated = voiceVoteTranslateEnglish_(feedback,language);
+      if (!translated.available) throw new Error('Translation unavailable');
       result.success = true;
-      result.translation = translated.slice(0,6000);
+      result.translation = translated.translation.slice(0,6000);
     } catch (_) {
       result.message = 'Could not translate now. You can still submit your original feedback.';
     }
@@ -321,17 +353,9 @@ function saveFeedback_(params) {
         'Device hash', 'Vote status', 'Visitor pass serial', 'Project ID'
       ];
       if (sheet.getLastRow() === 0) sheet.appendRow(headers);
-      const languages = VOICEVOTE_FEEDBACK_LANGUAGE_CODES;
-      let translation = feedback;
-      const sourceLanguage = Object.prototype.hasOwnProperty.call(languages, language)
-        ? languages[language] : '';
-      if (sourceLanguage !== 'en') {
-        try {
-          translation = LanguageApp.translate(feedback, sourceLanguage, 'en');
-        } catch (translationError) {
-          translation = 'Translation unavailable: ' + feedback;
-        }
-      }
+      const translated = voiceVoteTranslateEnglish_(feedback,language);
+      const translation = translated.available
+        ? translated.translation : 'Translation unavailable: ' + feedback;
       sheet.appendRow([
         new Date(), safeSheetText_(project), safeSheetText_(studentClass),
         safeSheetText_(section), safeSheetText_(feedback), rating,
