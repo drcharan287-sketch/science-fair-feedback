@@ -287,7 +287,6 @@ button:disabled, textarea:disabled, input:disabled {
 <div class="container">
   <nav class="vote-topnav" aria-label="VoiceVote navigation">
     <a class="votenav-brand" href="./"><span aria-hidden="true">◈</span> Voice<span>Vote</span></a>
-    <a class="votenav-results" href="./results.html">Explore the experience <span aria-hidden="true">↗</span></a>
   </nav>
 
   <div class="header">
@@ -296,7 +295,7 @@ button:disabled, textarea:disabled, input:disabled {
     <h2>AI-Powered Science Fair Feedback</h2>
     <p>Discover an exhibit. Speak in your language. Celebrate their creativity.</p>
     <div class="vote-capabilities" aria-label="VoiceVote capabilities">
-      <span>🎙 Speak or type</span><span>文 5 languages</span><span>★ Appreciate ideas</span>
+      <span>🎙 Speak or type</span><span>文 22 Indian languages + English</span><span>★ Appreciate ideas</span>
     </div>
     <details class="ai-explainer">
       <summary>How does VoiceVote use AI?</summary>
@@ -401,6 +400,7 @@ button:disabled, textarea:disabled, input:disabled {
     </div>
     <p id="englishTranslationStatus" class="translation-status" role="status" aria-live="polite">Finish speaking or typing to see the English translation.</p>
     <p id="englishTranslationText" class="translation-output" lang="en" aria-live="polite"></p>
+    <button type="button" id="openTranslationPageBtn" class="translation-fallback" hidden>Open English translation in a separate tab</button>
     <p class="translation-note">Preview only. Original feedback is preserved in its chosen language. English translation is attempted using Google where available; it may be unavailable for some languages. A real vote makes its own translation attempt when saved.</p>
   </section>
   </section>
@@ -478,6 +478,11 @@ let translationPending = null;
 let translationVersion = 0;
 let translationLastKey = '';
 let translationLastResult = '';
+// iOS Chrome also uses Apple's browser engine. Third-party HTML-service
+// iframes or language-specific Web Speech support may behave differently.
+// This flag is only for UI fallback; it is not used to identify visitors.
+const likelyIOS = /iPad|iPhone|iPod/i.test(String(navigator.userAgent || '')) ||
+  (navigator.platform === 'MacIntel' && Number(navigator.maxTouchPoints) > 1);
 
 function hasLocalVote() {
   try { return window.localStorage?.getItem(VOTED_STORAGE_KEY) === "1"; }
@@ -813,6 +818,7 @@ function invalidateTranslationPreview(message) {
   document.getElementById('englishTranslationStatus').textContent = message ||
     'Finish speaking or typing to see the English translation.';
   document.getElementById('refreshTranslationBtn').disabled = true;
+  document.getElementById('openTranslationPageBtn').hidden = true;
 }
 function scheduleEnglishTranslation(immediate) {
   translationVersion++;
@@ -825,6 +831,8 @@ function scheduleEnglishTranslation(immediate) {
   const status=document.getElementById('englishTranslationStatus');
   const output=document.getElementById('englishTranslationText');
   const refresh=document.getElementById('refreshTranslationBtn');
+  const separate=document.getElementById('openTranslationPageBtn');
+  separate.hidden = panel.hidden || !text || isRecording || isSubmitting || isVoteLocked() || !likelyIOS;
   if (panel.hidden) {
     status.textContent='';
     output.textContent='';
@@ -839,6 +847,7 @@ function scheduleEnglishTranslation(immediate) {
       !text?'Speak or type your feedback to see its English translation.':
         'Translation preview is unavailable while voting is locked or submitting.';
     refresh.disabled=true;
+    separate.hidden=true;
     return;
   }
   refresh.disabled=false;
@@ -888,7 +897,8 @@ function requestEnglishTranslation(language,text,key,version) {
   const timeout=setTimeout(function() {
     if (!translationPending || translationPending.id!==requestId) return;
     cleanupTranslationRequest();
-    status.textContent='English preview timed out. Retry or submit the original feedback.';
+    status.textContent='Inline translation did not load. Open it in a separate tab, or submit the original feedback.';
+    document.getElementById('openTranslationPageBtn').hidden=false;
   },20000);
   translationPending={id:requestId,version:version,key:key,
     frame:frame,form:form,timeout:timeout};
@@ -896,7 +906,8 @@ function requestEnglishTranslation(language,text,key,version) {
   try { form.submit(); }
   catch (_) {
     cleanupTranslationRequest();
-    status.textContent='Could not open English preview. Please retry.';
+    status.textContent='Could not open inline translation. Open it in a separate tab or type/edit the original.';
+    document.getElementById('openTranslationPageBtn').hidden=false;
   }
 }
 window.addEventListener('message',function(event) {
@@ -934,7 +945,8 @@ window.addEventListener('message',function(event) {
   } else {
     output.textContent='';
     status.textContent=typeof payload.message==='string' ? payload.message :
-      'English translation is temporarily unavailable. You can retry.';
+      'English translation is temporarily unavailable. Open it separately or retry.';
+    document.getElementById('openTranslationPageBtn').hidden=false;
   }
 });
 document.getElementById('feedback').addEventListener('input',function() {
@@ -950,6 +962,36 @@ document.getElementById('language').addEventListener('change',function() {
   feedbackBox.dir='auto';
   invalidateTranslationPreview('Speak or type fresh feedback in the newly selected language.');
   statusElement.textContent='Language changed. Previous feedback was cleared; speak or type again.';
+});
+document.getElementById('openTranslationPageBtn').addEventListener('click',function() {
+  // Explicit tap launches a TOP-LEVEL HTML result, bypassing third-party
+  // iframe/postMessage problems on iOS Chrome/Safari. This POST is preview-only
+  // and NEVER includes submissionId, deviceToken or a save action.
+  const language=document.getElementById('language').value;
+  const text=document.getElementById('feedback').value.trim();
+  if (language==='en-IN' || !text || isRecording || isSubmitting || isVoteLocked()) return;
+  let id;
+  try { id=secureSubmissionId(); } catch (_) {
+    document.getElementById('englishTranslationStatus').textContent=
+      'Cannot open a separate preview from this browser. You can still submit original feedback.';
+    return;
+  }
+  const form=document.createElement('form');
+  form.method='POST';form.action=SCRIPT_URL.trim();
+  form.target='_blank';form.style.display='none';
+  const fields={action:'translatePreview',view:'standalone',requestId:id,
+    language:language,feedback:text};
+  Object.keys(fields).forEach(function(name) {
+    const input=document.createElement('input');input.type='hidden';
+    input.name=name;input.value=fields[name];form.appendChild(input);
+  });
+  document.body.appendChild(form);
+  try { form.submit(); }
+  catch (_) {
+    document.getElementById('englishTranslationStatus').textContent=
+      'Separate translation could not be opened. Your original feedback is still editable.';
+  }
+  finally { form.remove(); }
 });
 document.getElementById('refreshTranslationBtn').addEventListener('click',function() {
   translationLastKey='';
@@ -967,7 +1009,9 @@ function startRecording() {
 
   recognition = new SpeechRecognition();
   recognition.lang = document.getElementById("language").value;
-  recognition.continuous = true;
+  // iOS WebKit may end recognition after a single utterance; use that stable
+  // lifecycle rather than requesting an unreliable continuous stream.
+  recognition.continuous = !likelyIOS;
   recognition.interimResults = true;
   // Web Speech often reports the ENTIRE recognition result list repeatedly.
   // A new final event can include a prior final result again. Never append
