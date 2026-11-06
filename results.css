@@ -271,3 +271,86 @@ body.bright .feedback-open-btn{color:#0e4965;background:#cdeef8}
   .project-feedback-close{font-size:.82rem;padding:8px;min-height:39px}
   .project-feedback-columns{grid-template-columns:1fr;gap:9px}
 }
+
+
+/* Event-day hierarchy: the private Live page title must outrank card headings. */
+.status-banner #modeTitle{
+  margin:0;font-size:clamp(1.3rem,2vw,1.9rem);font-weight:900;
+  line-height:1.08;letter-spacing:-.035em;color:var(--ink);
+}
+body[data-results-mode="PUBLISHED"] .status-banner #modeTitle{
+  font-size:clamp(2.15rem,3vw,3.25rem);font-weight:950;
+  line-height:1.08;letter-spacing:-.055em;color:#fff8dd;
+}
+body[data-results-mode="PUBLISHED"] .status-banner #modeDetails{
+  font-size:clamp(.92rem,1.05vw,1.12rem);color:#9eeefa;font-weight:620;
+  line-height:1.4;max-width:840px;
+}
+body[data-results-mode="PUBLISHED"] .status-banner{
+  background:linear-gradient(107deg,#174561,#193b5a 48%,#1a3058);
+  border-color:#76cbd8b5;box-shadow:0 12px 40px #03152c55;
+}
+.section-heading h2{
+  font-size:clamp(1.65rem,2.22vw,2.65rem);line-height:1.14;
+  color:var(--ink);font-weight:900;letter-spacing:-.05em;
+}
+.section-heading p:not(.kicker){color:var(--soft);line-height:1.55}
+.rankings-panel .kicker{color:#ffe094}
+.insights-panel .kicker{color:#85f0dc}
+.insights-panel .title-dot{color:#79edcf}
+.rankings-panel .section-heading h2{max-width:780px}
+.ranking-count{
+  margin:17px 0 0;padding:9px 14px;display:inline-flex;max-width:100%;
+  border-radius:999px;background:#17405f;color:#b8edff;
+  border:1px solid #7cd8eb55;font-size:.82rem;font-weight:790;letter-spacing:.01em;
+}
+.ranking-count:empty{display:none}
+.leaderboard-cards{gap:12px;margin-top:22px}
+.rank-card{padding:15px 18px;min-height:119px;gap:16px;transition:border-color .2s,background .2s}
+.rank-card.featured{background:linear-gradient(108deg,#35465c,#173b5a);border-color:#ffd27c88}
+.rank-card.rank-silver{border-color:#a7c4e75c}
+.rank-card.rank-bronze{border-color:#e6ae8a5c}
+.rank-main strong{font-size:clamp(1.05rem,1.35vw,1.36rem);font-weight:850;line-height:1.25}
+.rank-main span{font-size:.88rem}
+.rank-number{width:58px;height:58px;font-size:1.7rem;letter-spacing:-.06em}
+.rank-number.medal-gold{
+  color:#ffdb83;background:linear-gradient(135deg,#5d4d39,#3c4050);
+  border:1px solid #ffdc8b85;box-shadow:0 7px 24px #a4783230
+}
+.rank-number.medal-silver{
+  color:#e3f0ff;background:linear-gradient(135deg,#485f80,#293d60);
+  border:1px solid #c5dbfa87
+}
+.rank-number.medal-bronze{
+  color:#ffd0a9;background:linear-gradient(135deg,#5d443e,#3b4059);
+  border:1px solid #f2b98972
+}
+.rank-number.medal-standard{
+  color:#76eafa;background:linear-gradient(135deg,#1c5170,#13334e);
+  border:1px solid #73d9ef55
+}
+body[data-results-mode="PUBLISHED"] .page-shell{padding-bottom:92px}
+.presenter-bar{
+  left:auto;right:clamp(12px,2vw,28px);transform:none;
+  border-color:#75cae16c;box-shadow:0 16px 44px #010c2494
+}
+body.bright .ranking-count{background:#e6f5fc;color:#0b5267;border-color:#98ccdc}
+body.bright .rank-card.featured{background:linear-gradient(105deg,#fff6dc,#f0f8ff)}
+body.bright .rank-number.medal-gold{color:#60410c;background:#ffebbb;border-color:#c8a157}
+body.bright .rank-number.medal-silver{color:#2e4662;background:#dce9f5;border-color:#9bb3d2}
+body.bright .rank-number.medal-bronze{color:#764222;background:#f8dcc8;border-color:#cb996e}
+body.bright .rank-number.medal-standard{color:#075477;background:#d8f1fb;border-color:#8bc6da}
+body.bright[data-results-mode="PUBLISHED"] .status-banner{
+  background:linear-gradient(108deg,#f2fbff,#e0f2f8 58%,#e8effc);border-color:#8bbccc
+}
+body.bright[data-results-mode="PUBLISHED"] .status-banner #modeTitle{color:#10395b}
+body.bright[data-results-mode="PUBLISHED"] .status-banner #modeDetails{color:#17637b}
+body.bright .rankings-panel .kicker{color:#9a600b}
+body.bright .insights-panel .kicker,body.bright .insights-panel .title-dot{color:#087961}
+@media(max-width:760px){
+  body[data-results-mode="PUBLISHED"] .status-banner #modeTitle{font-size:clamp(2rem,7vw,2.6rem)}
+  .section-heading h2{font-size:clamp(1.55rem,5.5vw,2.1rem)}
+  .rank-card{min-height:0;padding:14px}
+  .rank-number{width:48px;height:48px;font-size:1.43rem}
+  .presenter-bar{right:10px;bottom:10px}
+}
