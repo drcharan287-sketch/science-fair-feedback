@@ -72,6 +72,13 @@ try{
   await page.waitForFunction(()=>!document.getElementById('studentClass').disabled);
   assert.equal(await page.locator('#voteGuardStatus').isVisible(),false);
   assert.equal(await page.locator('#presenterReceipt').isVisible(),false);
+  const voteType=await page.evaluate(()=>({
+    heading:parseFloat(getComputedStyle(document.querySelector('.carnival-heading')).fontSize),
+    editorial:parseFloat(getComputedStyle(document.querySelector('.header .logo')).fontSize),
+    subtitle:parseFloat(getComputedStyle(document.querySelector('.header h2')).fontSize)
+  }));
+  assert.ok(voteType.heading>voteType.editorial&&voteType.editorial>voteType.subtitle,
+    screen.label+' voting heading must exceed editorial line and subtitle: '+JSON.stringify(voteType));
   const view=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
   assert.ok(view.scroll<=view.width+2,screen.label+' overflow '+JSON.stringify(view));
   await page.locator('#studentClass').selectOption('9');
