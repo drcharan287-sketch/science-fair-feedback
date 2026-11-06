@@ -1,11 +1,20 @@
-/* VoiceVote audience experience.
-   No submission calls. Real rankings are shown ONLY if server mode=PUBLISHED.
-   Every DOM string from a server response is inserted with textContent. */
+/* VoiceVote PRIVATE faculty/student presentation screen.
+   No real data or even demo screen is shown until a temporary owner-issued
+   presenter ticket is validated by Apps Script on each refresh.
+   Anonymous publicResults API always responds DEMO. No vote submission.
+   All untrusted DOM strings use textContent, never innerHTML. */
 (() => {
   'use strict';
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxk-Ex6bd0l3V9fiUrPoCGVHNmkUAm_4yY7xlGLHWFRZBSn6lCo0Pw0vZ0C-vgyIC26/exec';
   const $ = id => document.getElementById(id);
-  const LANGUAGES = {'en-IN':'English','te-IN':'Telugu','hi-IN':'Hindi','ta-IN':'Tamil','kn-IN':'Kannada'};
+  const LANGUAGES = {
+    'en-IN':'English','as-IN':'Assamese','bn-IN':'Bengali','brx-IN':'Bodo',
+    'doi-IN':'Dogri','gu-IN':'Gujarati','hi-IN':'Hindi','kn-IN':'Kannada',
+    'ks-IN':'Kashmiri','gom-IN':'Konkani','mai-IN':'Maithili','ml-IN':'Malayalam',
+    'mni-Mtei-IN':'Manipuri','mr-IN':'Marathi','ne-IN':'Nepali','or-IN':'Odia',
+    'pa-IN':'Punjabi','sa-IN':'Sanskrit','sat-Olck-IN':'Santali','sd-IN':'Sindhi',
+    'ta-IN':'Tamil','te-IN':'Telugu','ur-IN':'Urdu'
+  };
   const DEMO_RANKINGS = Object.freeze([
     {id:'demo-01',grade:'3',section:'Sample Section A',project:'Future Green City',votes:94,weighted:4.71,rank:1},
     {id:'demo-02',grade:'3',section:'Sample Section B',project:'Amazing Nature Explorer',votes:82,weighted:4.62,rank:2},
@@ -14,8 +23,29 @@
     {id:'demo-05',grade:'9',section:'Sample Section E',project:'Future Mobility Project',votes:104,weighted:4.86,rank:1},
     {id:'demo-06',grade:'9',section:'Sample Section F',project:'AI for a Better Tomorrow',votes:96,weighted:4.69,rank:2}
   ]);
+  const launch = new URLSearchParams(String(window.location.hash || '').replace(/^#/,''));
+  const presenterToken = String(launch.get('presenter') || '');
+  let presenterVerified=false, presenterView=launch.get('view')==='live'?'LIVE':'DEMO';
   let mode='DEMO', current=null, selectedGrade='all', intervalId=null;
   let requestInFlight=false, sequence=0, lastCatalogCount=null;
+  function denyAccess(message) {
+    presenterVerified=false;current=null;mode='DEMO';selectedGrade='all';
+    if(intervalId){clearInterval(intervalId);intervalId=null;}
+    $('pageShell').hidden=true;
+    $('presenterBar').hidden=true;
+    $('presenterAccessGate').hidden=false;
+    put('presenterAccessMessage',message ||
+      'Access has expired. Create a new presenter link from the authenticated Admin Console.');
+  }
+  function present() {
+    if(!presenterVerified)return;
+    mode=presenterView==='LIVE'&&current?'PUBLISHED':'DEMO';
+    $('presenterShowDemo').setAttribute('aria-pressed',String(presenterView==='DEMO'));
+    $('presenterShowLive').setAttribute('aria-pressed',String(presenterView==='LIVE'));
+    $('presenterShowDemo').classList.toggle('active',presenterView==='DEMO');
+    $('presenterShowLive').classList.toggle('active',presenterView==='LIVE');
+    render();
+  }
   const gradesFrom = list => [...new Set(list.map(p => String(p.grade)))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
   const put = (id,text) => {const el=$(id);if(el)el.textContent=String(text);};
   const make = (tag,cls,txt) => {
@@ -42,7 +72,7 @@
       ? ['DEMO MODE · SAMPLE DATA','These examples are fictional. No actual rankings or visitor comments are being published.']
       : live
         ? ['LIVE INSIGHTS · RANKINGS PRIVATE','Real, anonymous participation totals only. Organizers have not published project rankings.']
-        : ['AUDIENCE RESULTS · ORGANIZER PUBLISHED','Grade-wise audience ratings are now public. These are not official jury awards.'];
+        : ['PRIVATE LIVE RESULTS · FACULTY / STUDENTS','Actual aggregate audience ratings. This restricted screen is not a public result or official jury award.'];
     put('modeTitle',message[0]);put('modeDetails',message[1]);put('modeSymbol',demo?'✧':live?'◉':'★');
     put('lastUpdated',demo?'Sample experience':data.updatedAt?'Updated '+new Date(data.updatedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):'Read-only display');
     put('totalProjects',fmt(data.totalProjects ?? lastCatalogCount));
@@ -52,10 +82,10 @@
     put('rankingsHeading',demo?'Ideas worth celebrating.':live?'Discoveries in motion.':'Audience favourites by grade.');
     put('rankingsSubheading',demo?'Illustrative project cards, not actual rankings.':
       live?'Project rankings remain private until the organizers approve publication.':
-        'Rated exhibits, ordered by the existing weighted audience score.');
+        'Private presenter view: rated exhibits ordered by the existing weighted audience score.');
     put('rankingNote',demo?'ALL SCORES AND REVIEWS SHOWN HERE ARE FICTIONAL. No winners are being announced.':
       live?'No leading projects are displayed during the fair. Audience activity is not a competition result.':
-        'Audience appreciation is not an official jury award. Scores account for rating and number of votes.');
+        'Private audience appreciation is not an official jury award. Scores account for rating and number of votes.');
     put('feedbackIntro','Feedback is recorded and translated automatically during a real submission; no student approval queue is needed.');
   }
   function renderGradeFilter(data) {
@@ -112,26 +142,30 @@
     renderMode(data);renderGradeFilter(data);renderRankings(data);renderLanguages(data);
   }
   function apply(payload) {
-    if(!payload||payload.success!==true||!['DEMO','LIVE','PUBLISHED'].includes(payload.mode)){
-      mode='DEMO';current=null;render();return;
+    if(!payload||payload.success!==true||payload.mode!=='PRESENTER_LIVE' ||
+       !Array.isArray(payload.rankings)){
+      denyAccess('Presenter authorization expired or unavailable. Open a fresh private link from the Admin Console.');
+      return;
     }
-    // Never rely on query parameters or browser storage for publishing.
-    if(payload.mode==='DEMO'){mode='DEMO';current=null;lastCatalogCount=Number(payload.totalProjects)||lastCatalogCount;}
-    else {mode=payload.mode;current=payload;}
-    render();
-  }
-  function loadSnapshotCount() {
-    return fetch('./projects.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(data=>{
-      if(data&&data.success&&Array.isArray(data.projects)){
-        lastCatalogCount=data.projects.length;
-        if(mode==='DEMO')render();
-      }
-    }).catch(()=>{});
+    presenterVerified=true;
+    // The HTML/JS shell remains hidden until the server verifies the
+    // capability. No real data is accepted from anonymous publicResults.
+    current=Object.assign({},payload,{mode:'PUBLISHED'});
+    lastCatalogCount=Number(payload.totalProjects)||lastCatalogCount;
+    $('presenterAccessGate').hidden=true;
+    $('pageShell').hidden=false;
+    $('presenterBar').hidden=false;
+    $('presenterVotingLink').href='./#presenter='+encodeURIComponent(presenterToken);
+    present();
   }
   function refreshServer() {
+    if(!/^[a-f0-9]{64}$/i.test(presenterToken)) {
+      denyAccess('This display is reserved for faculty and student presenters. Ask an organizer for a private presenter link.');
+      return;
+    }
     if(requestInFlight)return;
     requestInFlight=true;const seq=++sequence;
-    const cb='voiceVotePublicResults_'+seq,script=document.createElement('script');
+    const cb='voiceVotePresenterResults_'+seq,script=document.createElement('script');
     let done=false;
     const finish=()=>{
       if(done)return false;
@@ -140,10 +174,17 @@
       return true;
     };
     window[cb]=payload=>{if(!finish())return;apply(payload);};
-    script.onerror=()=>{if(!finish())return;if(mode==='DEMO')render();put('lastUpdated','Demo · live connection unavailable');};
-    const timer=setTimeout(()=>{if(!finish())return;if(mode==='DEMO')put('lastUpdated','Demo · live connection unavailable');},22000);
+    script.onerror=()=>{
+      if(!finish())return;
+      denyAccess('Private live results cannot be reached. Reconnect and reopen an authorized presenter link.');
+    };
+    const timer=setTimeout(()=>{
+      if(!finish())return;
+      denyAccess('Private results request timed out. Refresh with a valid presenter link.');
+    },22000);
     const url=new URL(SCRIPT_URL);
-    url.searchParams.set('action','publicResults');
+    url.searchParams.set('action','presenterResults');
+    url.searchParams.set('ticket',presenterToken);
     url.searchParams.set('callback',cb);
     url.searchParams.set('_',String(Date.now()));
     script.src=url.toString();document.head.appendChild(script);
@@ -168,6 +209,14 @@
       $('leaderboard').scrollIntoView({behavior:'smooth',block:'start'});
     }
   }
+  $('presenterShowDemo').addEventListener('click',()=>{
+    if(!presenterVerified)return;
+    presenterView='DEMO';selectedGrade='all';setAuto(false);present();
+  });
+  $('presenterShowLive').addEventListener('click',()=>{
+    if(!presenterVerified)return;
+    presenterView='LIVE';selectedGrade='all';present();
+  });
   $('gradeFilter').addEventListener('change',e=>{
     selectedGrade=e.target.value;renderRankings(sourceData());
   });
@@ -184,5 +233,8 @@
     }catch(_){put('lastUpdated','Full screen is unavailable on this device');}
   });
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshServer();});
-  render();loadSnapshotCount();refreshServer();setInterval(()=>{if(!document.hidden)refreshServer();},75000);
+  // Gated by default; no synthetic or real board shown to visitors.
+  denyAccess('Verifying private presenter access…');
+  refreshServer();
+  setInterval(()=>{if(!document.hidden && presenterToken)refreshServer();},45000);
 })();
