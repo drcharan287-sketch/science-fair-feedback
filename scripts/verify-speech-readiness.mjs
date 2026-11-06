@@ -117,7 +117,7 @@ try {
     }
 
     for (const [errorName, expected] of [
-      ['not-allowed', 'Microphone permission was denied'],
+      ['not-allowed', 'was blocked by the browser \\(not-allowed\\)'],
       ['no-speech', 'No speech detected'],
       ['network', 'Voice recognition could not connect']
     ]) {
