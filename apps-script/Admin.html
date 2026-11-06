@@ -42,6 +42,20 @@
     .metric span { color:var(--muted);font-size:12px }
     .controls { display:grid;grid-template-columns:minmax(160px,1fr) 180px;gap:10px;margin:12px 0 }
     .table-wrap { overflow:auto; border:1px solid #ffffff24;border-radius:12px }
+    /* Keep 407+ projects inside an independently scrollable rankings pane.
+       The existing horizontal scroll and sticky column headers remain. */
+    #rankingsPanel .table-wrap {
+      max-height:min(65vh,640px);
+      overflow-x:auto;overflow-y:scroll;
+      scrollbar-gutter:stable;scrollbar-width:thin;
+      scrollbar-color:#76dff2 #102946;
+    }
+    #rankingsPanel .table-wrap::-webkit-scrollbar { width:12px;height:12px }
+    #rankingsPanel .table-wrap::-webkit-scrollbar-track { background:#102946;border-radius:9px }
+    #rankingsPanel .table-wrap::-webkit-scrollbar-thumb {
+      background:#467f9e;border:2px solid #102946;border-radius:9px;
+    }
+    #rankingsPanel .table-wrap::-webkit-scrollbar-thumb:hover { background:#76dff2 }
     table { width:100%;border-collapse:collapse;min-width:670px }
     th,td { padding:12px 11px;border-bottom:1px solid #ffffff15;text-align:left;white-space:nowrap }
     th { background:#102946;color:#cbd5e1; font-size:12px;position:sticky;top:0 }
@@ -114,7 +128,7 @@
           <input id="rankSearch" type="search" placeholder="Search project, class or section" aria-label="Filter rankings">
           <select id="classFilter" aria-label="Filter by class"><option value="">All classes</option></select>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap" role="region" tabindex="0" aria-label="Scrollable project rankings">
           <table><thead><tr><th>Rank</th><th>Project</th><th>Class / section</th><th>Votes</th><th>Average ★</th><th>Weighted ★</th><th>Reviews</th></tr></thead>
           <tbody id="rankingRows"></tbody></table>
         </div>
