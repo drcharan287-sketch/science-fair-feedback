@@ -419,14 +419,14 @@ test('same-origin projects.json populates class and section without contacting G
   const seen = [];
   const a = app(async (url, options) => {
     seen.push({ url, options });
-    return { ok: true, json: async () => ({ success: true, projects: [
+    return { ok: true, json: async () => ({ success: true, catalogVersion: '2026-11-06-aa7f4dd3-424', projects: [
       {grade:'6', section:'Heidelberg', project:'XenoChat'},
       {grade:'9', section:'Keats', project:'VoiceVote'}
     ] }) };
   });
   await tick();
   assert.equal(seen.length, 1);
-  assert.equal(seen[0].url, './projects.json');
+  assert.equal(seen[0].url, './projects.json?roster=2026-11-06-aa7f4dd3-424');
   assert.equal(seen[0].options.credentials, 'same-origin');
   assert.equal(a.scripts.length, 0);
   assert.deepEqual(a.elements.studentClass.options.map(o => o.value), ['', '6', '9']);
@@ -435,6 +435,28 @@ test('same-origin projects.json populates class and section without contacting G
   a.elements.section.value = 'Heidelberg'; a.elements.section.dispatchEvent(new a.context.Event('change'));
   assert.deepEqual(a.elements.project.options.map(o => o.value), ['', 'XenoChat']);
   assert.equal(a.elements.catalogStatus.textContent, '1 project(s) available');
+});
+
+
+test('stale published 407-project snapshot is rejected and live Google catalog is loaded',async()=>{
+  const a=app(async()=>({ok:true,json:async()=>({
+    success:true,catalogVersion:'legacy-roster-407',
+    projects:[{grade:'6',section:'Heidelberg',project:'XenoChat',id:'LEG-6-HEIDELBERG-XENOCHAT'}]
+  })}));
+  await tick();
+  assert.equal(a.scripts.length,1,'Snapshot version mismatch must request Google catalog');
+  const {url}=respond(a,{success:true,projects:[
+    {grade:'6',section:'Heidelberg',project:'Xeno Chat App',id:'VVP-VI_HEIDELBERG-G5-S1'},
+    {grade:'9',section:'Keats',project:'VoiceVote App',id:'VVP-IX_KEATS-G7-S1'}
+  ]});
+  await tick();
+  assert.equal(url.searchParams.get('action'),'catalog');
+  a.elements.studentClass.value='6';
+  a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value='Heidelberg';
+  a.elements.section.dispatchEvent(new a.context.Event('change'));
+  assert.deepEqual(a.elements.project.options.map(x=>x.value),['','Xeno Chat App']);
+  assert.equal(a.elements.project.options.some(x=>x.value==='XenoChat'),false);
 });
 
 test('snapshot unavailable falls back to real Google JSONP catalog', async () => {
