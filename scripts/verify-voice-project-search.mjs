@@ -40,6 +40,8 @@ try {
     await page.goto(site,{waitUntil:'domcontentloaded',timeout:30000});
     await page.waitForFunction(()=>!document.getElementById('projectSearchVoiceBtn')?.disabled,
       null,{timeout:25000});
+    assert.equal(await page.locator('#oneTimeVoteNotice').isVisible(),true,
+      'One-time vote warning must remain visible on phone and desktop');
     assert.equal(await page.locator('#projectSearchVoiceBtn').getAttribute('aria-label'),
       'Speak a project name');
     await page.locator('#feedback').fill('Parent draft that must not change');
