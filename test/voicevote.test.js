@@ -632,9 +632,106 @@ test('unsupported speech recognition offers manual entry without blocking voting
   assert.match(a.elements.status.textContent,/type your feedback instead/);
   assert.equal(a.elements.feedback.disabled,false);
   assert.equal(a.elements.submitBtn.disabled,false);
-  assert.match(fs.readFileSync('index.html','utf8'),/textarea id="feedback" maxlength="2000"/);
+  assert.match(fs.readFileSync('index.html','utf8'),/textarea id="feedback" maxlength="4000"/);
 });
 
+
+test('long typed feedback supports 3,500 characters, counts input and saves in the isolated backend',async()=>{
+  const a=app();const original='This scientific exhibit demonstrates energy efficiency. '.repeat(70);
+  assert.ok(original.length>2000&&original.length<4000);
+  const b=backend([['Class/Grade','Section','Project Name','Active','Project ID'],
+    ['9','Keats','VoiceVote App','TRUE','VVP-EVENT-TEST-ID']]);
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote App',id:'VVP-EVENT-TEST-ID'}]});
+  await tick();
+  a.elements.studentClass.value='9';a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value='Keats';a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value='VoiceVote App';
+  a.elements.language.value='te-IN';
+  a.elements.feedback.value=original;
+  a.elements.feedback.dispatchEvent(new a.context.Event('input'));
+  assert.match(a.elements.feedbackLength.textContent,/3,\d{3} \/ 4,000/);
+  assert.equal(a.elements.feedbackLimitNotice.hidden,true);
+  a.stars[4].dispatchEvent(new a.context.Event('click'));
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,1);
+  const fields=Object.fromEntries(a.forms[0].children.map(x=>[x.name,x.value]));
+  assert.equal(fields.feedback.length,original.length);
+  const receipt=b.context.doPost({parameter:fields});
+  assert.match(receipt.html,/Feedback saved/i);
+  assert.equal(b.writes[1][4],original);
+  assert.equal(b.writes[1][7],'te:en:'+original);
+  assert.equal(b.writes.length,2);
+});
+
+test('over-limit text is refused before creating a POST or pending browser vote lock',async()=>{
+  const a=app();respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  a.elements.studentClass.value='9';a.elements.studentClass.dispatchEvent(new a.context.Event('change'));
+  a.elements.section.value='Keats';a.elements.section.dispatchEvent(new a.context.Event('change'));
+  a.elements.project.value='VoiceVote';a.stars[4].dispatchEvent(new a.context.Event('click'));
+  a.elements.feedback.value='x'.repeat(4001); // scripted speech can bypass native maxlength
+  a.elements.feedback.dispatchEvent(new a.context.Event('input'));
+  assert.match(a.elements.feedbackLimitNotice.textContent,/Shorten/);
+  assert.match(a.elements.feedbackLength.textContent,/4,001 \/ 4,000/);
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,0);
+  assert.equal(a.stored.has('voicevote_pending_v1'),false);
+  assert.match(a.elements.status.textContent,/exceeds the 4,000-character limit/);
+  a.elements.feedback.value='x'.repeat(4000);
+  a.elements.feedback.dispatchEvent(new a.context.Event('input'));
+  assert.match(a.elements.feedbackLimitNotice.textContent,/Maximum length reached/);
+  a.context.submitFeedback();
+  assert.equal(a.forms.length,1,'Exactly at limit is accepted by browser');
+});
+
+test('long speech is capped without losing the editor and recording stops with explicit warning',async()=>{
+  const a=app();respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'VoiceVote'}]});
+  await tick();
+  let recognition;
+  a.context.webkitSpeechRecognition=class {
+    constructor(){recognition=this;}start(){}stop(){this.stopRequested=true;}
+  };
+  a.context.startRecording();
+  recognition.onresult({results:[{0:{transcript:'a'.repeat(2500)},isFinal:true}]});
+  assert.equal(a.elements.feedback.value.length,2500);
+  assert.equal(recognition.stopRequested,undefined);
+  recognition.onresult({results:[
+    {0:{transcript:'a'.repeat(2500)},isFinal:true},
+    {0:{transcript:'b'.repeat(1800)},isFinal:true}
+  ]});
+  assert.equal(recognition.stopRequested,true);
+  assert.equal(a.elements.feedback.value.length,4000);
+  assert.match(a.elements.status.textContent,/Recording is stopping; some last words may not have been captured/);
+  recognition.onend();
+  assert.equal(a.elements.feedback.disabled,false,'Review and edit remain available');
+  assert.equal(a.elements.submitBtn.disabled,false);
+  assert.match(a.elements.status.textContent,/limit was reached/);
+  assert.equal(a.elements.feedbackLength.textContent,'4,000 / 4,000');
+  assert.equal(a.forms.length,0,'No vote is sent by speech');
+});
+
+test('backend rejects 4,001 characters and accepts exactly 4,000 for save and translation preview',()=>{
+  const b=backend([['Class/Grade','Section','Project Name','Active'],
+    ['9','Keats','VoiceVote','TRUE']]);
+  const id='123e4567-e89b-42d3-a456-426614174000';
+  const base={action:'save',studentClass:'9',section:'Keats',project:'VoiceVote',
+    rating:'5',language:'hi-IN',submissionId:id,deviceToken:id};
+  const over=b.context.doPost({parameter:{...base,feedback:'x'.repeat(4001)}});
+  assert.match(over.html,/Feedback not confirmed/);
+  assert.equal(b.writes.length,0);
+  const valid=b.context.doPost({parameter:{...base,feedback:'x'.repeat(4000)}});
+  assert.match(valid.html,/Thank you! Feedback saved/);
+  assert.equal(b.writes[1][4].length,4000);
+  const preview=b.context.doPost({parameter:{
+    action:'translatePreview',language:'hi-IN',requestId:id,feedback:'x'.repeat(4000)
+  }});
+  assert.match(preview.html,/"success":true/);
+  const refused=b.context.doPost({parameter:{
+    action:'translatePreview',language:'hi-IN',requestId:id,feedback:'x'.repeat(4001)
+  }});
+  assert.match(refused.html,/"success":false/);
+  assert.equal(b.writes.length,2,'English preview never adds a vote');
+});
 
 test('known-offline submission remains editable and does not create a pending vote', async () => {
   const a=app();
@@ -943,7 +1040,7 @@ test('read-only translation backend validates Telugu/Hindi/Tamil/Kannada, escape
   for(const wrong of [
     {language:'en-IN',feedback:'hello',requestId:id},
     {language:'hi-IN',feedback:'hello',requestId:'wrong'},
-    {language:'te-IN',feedback:'a'.repeat(2001),requestId:id}
+    {language:'te-IN',feedback:'a'.repeat(4001),requestId:id}
   ]){
     const reply=b.context.doPost({parameter:{action:'translatePreview',...wrong}});
     assert.match(reply.html,/"success":false/);
