@@ -390,7 +390,12 @@ button:disabled, textarea:disabled, input:disabled {
   <p class="search-help" id="recordingHelp">Speak in your selected language, then tap Stop and review or edit the transcript. If iPhone voice recognition cannot start for this language, tap Your Feedback and use keyboard Dictation (if available) or type. English translation can still work without Start.</p>
 
   <label for="feedback">Your Feedback</label>
-  <textarea id="feedback" maxlength="2000" dir="auto" lang="en-IN" placeholder="Speak or type your feedback here..."></textarea>
+  <textarea id="feedback" maxlength="4000" rows="7" dir="auto" lang="en-IN" aria-describedby="feedbackLimitHint feedbackLength" placeholder="Speak or type your feedback here..."></textarea>
+  <div class="feedback-length-row">
+    <p id="feedbackLimitHint">Longer feedback welcome · up to 4,000 characters, including spaces. Scroll inside the box to review.</p>
+    <output id="feedbackLength" for="feedback">0 / 4,000</output>
+  </div>
+  <p id="feedbackLimitNotice" class="feedback-limit-notice" role="status" aria-live="polite" hidden></p>
   <section id="englishTranslationPanel" class="translation-panel" aria-label="English translation preview" hidden>
     <div class="translation-heading">
       <div>
@@ -468,7 +473,35 @@ const VISITOR_PASSES_ENABLED = false;
 
 // Keep voice state available when the initial receipt lockout is rendered.
 let rating = 0;
+const FEEDBACK_MAX_LENGTH = 4000;
 let recognition = null;
+let voiceFeedbackLimitReached = false;
+function updateFeedbackLength() {
+  const feedbackBox=document.getElementById('feedback');
+  const used=feedbackBox.value.length;
+  document.getElementById('feedbackLength').textContent =
+    used.toLocaleString('en-IN') + ' / ' + FEEDBACK_MAX_LENGTH.toLocaleString('en-IN');
+  const notice=document.getElementById('feedbackLimitNotice');
+  const remaining=FEEDBACK_MAX_LENGTH-used;
+  if(remaining<0){
+    notice.textContent='Your feedback is longer than the allowed 4,000 characters. Shorten it before submitting.';
+  } else if(remaining===0){
+    notice.textContent='Maximum length reached. Review the transcript; remove words before adding more.';
+  } else if(remaining<=400){
+    notice.textContent=remaining+' characters remaining.';
+  } else {
+    notice.textContent='';
+  }
+  notice.hidden=!notice.textContent;
+  return used;
+}
+function clipSpokenFeedback(text) {
+  if(text.length<=FEEDBACK_MAX_LENGTH) return text;
+  let clipped=text.slice(0,FEEDBACK_MAX_LENGTH);
+  // Do not leave a lone UTF-16 high surrogate on an emoji boundary.
+  if(/[\uD800-\uDBFF]$/.test(clipped))clipped=clipped.slice(0,-1);
+  return clipped;
+}
 let isRecording = false;
 let isSubmitting = false;
 let voiceErrorShown = false;
@@ -865,10 +898,11 @@ function scheduleEnglishTranslation(immediate) {
     translationLastResult='';
     return;
   }
-  if (!text || isRecording || isSubmitting || isVoteLocked()) {
+  if (!text || text.length>FEEDBACK_MAX_LENGTH || isRecording || isSubmitting || isVoteLocked()) {
     output.textContent='';
     status.textContent=isRecording?'Listening… Translation follows when you stop.':
       !text?'Speak or type your feedback to see its English translation.':
+      text.length>FEEDBACK_MAX_LENGTH?'Shorten your feedback to 4,000 characters for translation.':
         'Translation preview is unavailable while voting is locked or submitting.';
     refresh.disabled=true;
     separate.hidden=true;
@@ -974,14 +1008,17 @@ window.addEventListener('message',function(event) {
   }
 });
 document.getElementById('feedback').addEventListener('input',function() {
+  updateFeedbackLength();
   scheduleEnglishTranslation(false);
 });
+updateFeedbackLength();
 document.getElementById('language').addEventListener('change',function() {
   // The old text belongs to the previous language. Never submit it under a
   // different language or translate a stale in-flight preview as the new one.
   // Both public visitors and verified owner demos use this same change handler.
   const feedbackBox=document.getElementById('feedback');
   feedbackBox.value='';
+  updateFeedbackLength();
   feedbackBox.lang=this.value;
   feedbackBox.dir='auto';
   invalidateTranslationPreview('Speak or type fresh feedback in the newly selected language.');
@@ -1042,14 +1079,33 @@ function startRecording() {
   // every event to a growing buffer: rebuild from results by stable index.
   const speechBase = document.getElementById("feedback").value.trim();
   voiceErrorShown = false;
+  voiceFeedbackLimitReached = false;
+  if(speechBase.length>=FEEDBACK_MAX_LENGTH){
+    statusElement.textContent='Feedback is at the 4,000-character limit. Edit or shorten it before recording more.';
+    updateFeedbackLength();
+    recognition=null;
+    return;
+  }
   invalidateTranslationPreview('Listening… English translation follows when you stop.');
 
   recognition.onresult = function(event) {
     // Recompute from the complete result list; even a re-emitted resultIndex
     // cannot append the same words two or three times.
     const spoken=mergeSpeechRecognitionResults(event.results);
-    document.getElementById("feedback").value =
-      [speechBase,spoken].filter(Boolean).join(' ');
+    const combined=[speechBase,spoken].filter(Boolean).join(' ');
+    const feedbackBox=document.getElementById('feedback');
+    feedbackBox.value=clipSpokenFeedback(combined);
+    updateFeedbackLength();
+    if(combined.length>=FEEDBACK_MAX_LENGTH && !voiceFeedbackLimitReached){
+      voiceFeedbackLimitReached=true;
+      statusElement.textContent='The 4,000-character voice feedback limit was reached. Recording is stopping; some last words may not have been captured. Review and edit your feedback before submitting.';
+      if(recognition && isRecording){
+        try{recognition.stop();}catch(_){
+          isRecording=false;
+          syncVoteStatus();
+        }
+      }
+    }
   };
 
   recognition.onerror = function(event) {
@@ -1079,7 +1135,7 @@ function startRecording() {
     isRecording = false;
     recognition = null;
     syncVoteStatus();
-    if (!isSubmitting && !voiceErrorShown) {
+    if (!isSubmitting && !voiceErrorShown && !voiceFeedbackLimitReached) {
       statusElement.textContent = "Recording stopped. Review or edit your transcript before submitting.";
     }
     scheduleEnglishTranslation();
@@ -1150,6 +1206,7 @@ document.getElementById('presenterTryAgain').addEventListener('click',function()
   if (!presenterVerified) return;
   rating=0;
   document.getElementById('feedback').value='';
+  updateFeedbackLength();
   invalidateTranslationPreview('Speak or type feedback to see an English translation.');
   document.querySelectorAll('.star').forEach(function(star) {
     star.classList.remove('active');
@@ -1193,6 +1250,12 @@ function submitFeedback() {
   }
   if (!data.studentClass || !data.section || !data.project || !data.feedback || !data.rating) {
     statusElement.textContent = 'Please choose a class, section and project, enter feedback, and select a star rating.';
+    return;
+  }
+  if(data.feedback.length>FEEDBACK_MAX_LENGTH){
+    updateFeedbackLength();
+    statusElement.textContent='Feedback exceeds the 4,000-character limit. Shorten it before submitting; nothing was sent.';
+    document.getElementById('feedback').focus();
     return;
   }
   // Authenticated owner presenter uses THIS SAME FORM and UI, but the

@@ -5,6 +5,9 @@
  * Replace the placeholder with the ID of your own spreadsheet before deployment.
  */
 const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID';
+// Consistent with public Voting maxlength and speech cutoff.
+// The server enforces this even if a browser bypasses the textarea attribute.
+const VOICEVOTE_FEEDBACK_MAX_LENGTH = 4000;
 // India's 22 Eighth Schedule languages, plus English for visitors.
 // Translation-service codes do not guarantee browser speech or Google coverage;
 // when a translation is unavailable the original is preserved in Feedback.
@@ -154,7 +157,7 @@ function voiceVoteTranslationPreview_(params) {
   if (!/^[a-f0-9-]{36}$/.test(requestId) ||
       (!Object.prototype.hasOwnProperty.call(languages,language) ||
        (language === 'en-IN' && !voiceVoteHasIndianScript_(feedback))) ||
-      !feedback || feedback.length > 2000) {
+      !feedback || feedback.length > VOICEVOTE_FEEDBACK_MAX_LENGTH) {
     result.message = 'English translation preview is unavailable for this request.';
   } else {
     try {
@@ -279,7 +282,7 @@ function saveFeedback_(params) {
     const uuid = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
     if (!project || !studentClass || !section || !feedback ||
         !Number.isInteger(rating) || rating < 1 || rating > 5 ||
-        feedback.length > 2000 || project.length > 200) {
+        feedback.length > VOICEVOTE_FEEDBACK_MAX_LENGTH || project.length > 200) {
       throw new Error('Missing, invalid or excessively long feedback details.');
     }
     if (!uuid.test(submissionId) || !uuid.test(deviceToken)) {
