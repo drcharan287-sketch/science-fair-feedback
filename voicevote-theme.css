@@ -140,6 +140,9 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;op
 
 /* VV-33: optional one-utterance project-name search, beside the existing
    live-roster quick-find. No changes to the voting microphone or POST. */
+/* Strong, readable one-time-vote reminder immediately before Quick Find controls. */
+.step-section .project-choice-warning{display:flex;align-items:flex-start;gap:11px;margin:11px 0 15px;padding:14px 15px;border:2px solid #ffbd38;border-radius:13px;background:#ffe7a3;color:#352000;font-size:clamp(.84rem,1.9vw,.97rem);font-weight:850;line-height:1.5;letter-spacing:.015em;box-shadow:0 8px 20px #00000038}
+.project-choice-warning-icon{flex:none;color:#663c00;font-size:1.35rem;line-height:1.15}
 .project-search-entry{display:flex;align-items:flex-start;gap:11px}
 .project-search-entry .search-box{flex:1;min-width:0}
 .project-search-entry .search-box #projectSearch{min-height:58px}
