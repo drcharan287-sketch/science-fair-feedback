@@ -15,6 +15,18 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(site, {waitUntil: 'domcontentloaded', timeout: 30000});
   await page.locator('#projectSearch').waitFor({state: 'visible'});
+  const warning=page.locator('#oneTimeVoteNotice');
+  assert.equal(await warning.isVisible(),true,'One-time voting reminder must be visible before project search');
+  const warningText=(await warning.innerText()).trim().replace(/\s+/g,' ');
+  assert.equal(warningText,warningText.toUpperCase(),'Warning message must be ALL CAPS');
+  assert.match(warningText,/YOU CAN SUBMIT FEEDBACK ONLY ONCE FOR THE SCIENCE FAIR/);
+  assert.match(warningText,/CHOOSE THE BEST PROJECT CAREFULLY/);
+  const warningColors=await warning.evaluate(el=>{
+    const cs=getComputedStyle(el);
+    return {background:cs.backgroundColor,foreground:cs.color};
+  });
+  assert.deepEqual(warningColors,{background:'rgb(255, 231, 163)',foreground:'rgb(53, 32, 0)'},
+    'Warning needs the contrasting amber background and dark readable text');
   assert.equal(await page.locator('#projectSearchVoiceBtn').count(),1,
     'Optional voice Quick Find must be published next to typing search');
   await page.waitForFunction(() => {
