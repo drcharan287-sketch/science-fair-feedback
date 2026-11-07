@@ -22,7 +22,7 @@ function app(fetchProjects, search = '', stored = new Map(), hash = '', userAgen
     dispatchEvent(event) { for (const fn of this.listeners[event.type] || []) fn.call(this, event); }
     remove() { this.removed = true; }
   }
-  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn', 'stopBtn', 'projectSearch', 'projectSearchResults', 'projectSearchStatus', 'projectSearchSelected', 'visitorPass', 'newVisitorBtn', 'visitorPassFeature', 'networkStatus', 'presenterBanner', 'presenterReceipt',
+  const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn', 'stopBtn', 'projectSearch', 'projectSearchResults', 'projectSearchStatus', 'projectSearchSelected', 'projectSearchVoiceBtn', 'projectSearchVoiceBtnText', 'projectSearchVoiceStatus', 'visitorPass', 'newVisitorBtn', 'visitorPassFeature', 'networkStatus', 'presenterBanner', 'presenterReceipt',
     'presenterReceiptProject', 'presenterReceiptStars', 'presenterReceiptFeedback',
     'presenterTryAgain', 'presenterClose', 'feedbackLength', 'feedbackLimitHint', 'feedbackLimitNotice', 'englishTranslationPanel', 'englishTranslationStatus',
     'englishTranslationText', 'refreshTranslationBtn', 'openTranslationPageBtn'].map(id => [id, new Element()]));
@@ -237,6 +237,125 @@ test('quick-find gives useful feedback for zero matches and limits suggestions t
   a.elements.projectSearch.dispatchEvent(new a.context.Event('input'));
   assert.equal(a.elements.projectSearchResults.hidden, true);
   assert.match(a.elements.projectSearchStatus.textContent, /No active projects match/);
+});
+
+test('one-utterance voice Quick Find reuses catalog matches without selecting, translating or voting',async()=>{
+  const a=app();
+  respond(a,{success:true,projects:[
+    {grade:'9',section:'Keats',project:'Xeno Chat App',id:'VVP-9-XENO'},
+    {grade:'6',section:'Heidelberg',project:'Xeno Chat App',id:'VVP-6-XENO'},
+    {grade:'9',section:'Keats',project:'Volcano',id:'VVP-9-VOLCANO'}]});
+  await tick();
+  assert.equal(a.elements.projectSearchVoiceBtn.disabled,false);
+  let instance;
+  a.context.SpeechRecognition=class{
+    constructor(){instance=this;}
+    start(){this.started=true;}
+    stop(){this.stopRequested=true;}
+  };
+  const previousText=a.elements.feedback.value='Draft feedback must be untouched';
+  const previousLang=a.elements.language.value='te-IN';
+  a.elements.projectSearchVoiceBtn.click();
+  assert.equal(instance.started,true);
+  assert.equal(instance.lang,'en-IN','Official project names use English recognition independently of feedback language');
+  assert.equal(instance.continuous,false);
+  assert.equal(instance.interimResults,true);
+  assert.equal(a.elements.projectSearchVoiceBtnText.textContent,'Stop');
+  assert.equal(a.elements.startBtn.disabled,true,'Feedback mic must not run concurrently');
+  assert.equal(a.elements.submitBtn.disabled,true,'Do not submit during voice project lookup');
+  instance.onresult({results:[{0:{transcript:'Xeno Chat App'},isFinal:true}]});
+  assert.equal(a.elements.projectSearch.value,'Xeno Chat App');
+  assert.equal(a.elements.projectSearchResults.children.length,2,'Duplicates need visible disambiguation');
+  assert.equal(a.elements.studentClass.value,'','Speech alone must never select a possibly wrong project');
+  assert.equal(a.elements.feedback.value,previousText,'Never replace feedback transcript');
+  assert.equal(a.elements.language.value,previousLang);
+  assert.equal(a.forms.length,0);
+  instance.onend();
+  assert.equal(a.elements.startBtn.disabled,false);
+  assert.equal(a.elements.projectSearchVoiceBtnText.textContent,'Speak');
+  a.elements.projectSearchResults.children[1].click();
+  assert.equal(a.elements.studentClass.value,'9');
+  assert.equal(a.elements.section.value,'Keats');
+  assert.equal(a.elements.project.value,'Xeno Chat App');
+  assert.equal(a.forms.length,0,'Selecting a project does not submit a vote');
+  assert.equal(a.elements.feedback.value,previousText);
+});
+
+test('project voice search Stop button, mic errors and unsupported browser preserve manual search',async()=>{
+  const a=app();
+  respond(a,{success:true,projects:[{grade:'9',section:'Keats',project:'Solar Car'}]});
+  await tick();
+  a.elements.projectSearchVoiceBtn.click();
+  assert.match(a.elements.projectSearchVoiceStatus.textContent,/not supported/i);
+  assert.equal(a.elements.projectSearch.disabled,false);
+  let speech;
+  a.context.webkitSpeechRecognition=class{
+    constructor(){speech=this;}start(){}stop(){this.stopped=true;}
+  };
+  a.elements.projectSearchVoiceBtn.click();
+  assert.equal(a.elements.projectSearchVoiceBtnText.textContent,'Stop');
+  a.elements.projectSearchVoiceBtn.click();
+  assert.equal(speech.stopped,true);
+  assert.equal(a.elements.projectSearchVoiceBtnText.textContent,'Finishing…');
+  speech.onresult({results:[{0:{transcript:'Solar Car'},isFinal:true}]});
+  speech.onend();
+  assert.equal(a.elements.projectSearch.value,'Solar Car');
+  assert.equal(a.elements.projectSearchResults.children.length,1);
+  a.elements.projectSearchVoiceBtn.click();
+  speech.onerror({error:'not-allowed'});
+  speech.onend();
+  assert.match(a.elements.projectSearchVoiceStatus.textContent,/permission or browser speech service was blocked/i);
+  assert.equal(a.elements.projectSearchVoiceBtn.disabled,false);
+  assert.equal(a.elements.projectSearch.disabled,false);
+  a.elements.projectSearch.value='Sol';
+  a.elements.projectSearch.dispatchEvent(new a.context.Event('input'));
+  assert.equal(a.elements.projectSearchResults.children.length,1);
+  assert.equal(a.forms.length,0);
+});
+
+test('typed changes cancel the pending voice callback and cannot be overwritten',async()=>{
+  const a=app();
+  respond(a,{success:true,projects:[
+    {grade:'9',section:'Keats',project:'Fire Detector'},
+    {grade:'9',section:'Keats',project:'Solar Car'}]});
+  await tick();
+  let speech;
+  a.context.SpeechRecognition=class{
+    constructor(){speech=this;}start(){}stop(){this.stopped=true;}abort(){this.aborted=true;}
+  };
+  a.elements.projectSearchVoiceBtn.click();
+  a.elements.projectSearch.value='Solar';
+  a.elements.projectSearch.dispatchEvent(new a.context.Event('input'));
+  assert.equal(speech.aborted,true);
+  speech.onresult({results:[{0:{transcript:'Fire Detector'},isFinal:true}]});
+  speech.onend();
+  assert.equal(a.elements.projectSearch.value,'Solar','Late speech must not overwrite fresh manual search');
+  assert.equal(a.elements.projectSearchResults.children.length,1);
+  assert.match(a.elements.projectSearchResults.children[0].textContent,/Solar Car/);
+});
+
+test('voice Quick Find remains disabled for pending and confirmed votes and while feedback mic is running',async()=>{
+  const pending=app(null,'',new Map([['voicevote_pending_v1','1']]));
+  respond(pending,{success:true,projects:[{grade:'9',section:'Keats',project:'Solar Car'}]});
+  await tick();
+  assert.equal(pending.elements.projectSearchVoiceBtn.disabled,true);
+  pending.context.startProjectSearchVoice();
+  assert.equal(pending.elements.projectSearchVoiceStatus.textContent,'');
+  const voted=app(null,'',new Map([['voicevote_voted_v1','1']]));
+  respond(voted,{success:true,projects:[{grade:'9',section:'Keats',project:'Solar Car'}]});
+  await tick();
+  assert.equal(voted.elements.projectSearchVoiceBtn.disabled,true);
+  const active=app();
+  respond(active,{success:true,projects:[{grade:'9',section:'Keats',project:'Solar Car'}]});
+  await tick();
+  let mic;
+  active.context.SpeechRecognition=class{constructor(){mic=this;}start(){}stop(){}};
+  active.context.startRecording();
+  assert.equal(active.elements.projectSearchVoiceBtn.disabled,true);
+  active.context.startProjectSearchVoice();
+  assert.equal(active.elements.projectSearchVoiceStatus.textContent,'');
+  mic.onend();
+  assert.equal(active.elements.projectSearchVoiceBtn.disabled,false);
 });
 
 test('after a submission attempt the whole form stays locked when the QR is reopened', async () => {
