@@ -181,6 +181,31 @@ test('moderation excludes a vote without deleting it and keeps an action log',()
   assert.equal(d.acceptedVotes,2);
 });
 
+test('pause controls reject unauthorized changes, preserve audit, and remain idempotent',()=>{
+  const a=setup(),existing=JSON.stringify(a.feedbackRows);
+  assert.throws(()=>a.context.adminSetVotingOpen('invalid',false,'Pause for morning ceremony'),/denied/);
+  assert.throws(()=>a.context.adminSetVotingOpen(DEMO_KEY,'false','Pause for morning ceremony'),/valid voting state/);
+  assert.throws(()=>a.context.adminSetVotingOpen(DEMO_KEY,false,'short'),/valid voting state/);
+  assert.equal(a.context.adminGetOverview(DEMO_KEY).votingOpen,true);
+  const first=a.context.adminSetVotingOpen(DEMO_KEY,false,'Pause for school presentation');
+  assert.equal(first.votingOpen,false);assert.equal(first.changed,true);
+  const repeated=a.context.adminSetVotingOpen(DEMO_KEY,false,'Still paused for presentation');
+  assert.equal(repeated.changed,false,'Repeated pause must not duplicate journal writes');
+  assert.equal(a.sheets['Admin Action Log'].rows.length,2);
+  assert.equal(a.sheets['Admin Action Log'].rows[1][1],'PAUSE_VOTING');
+  assert.equal(a.sheets['Admin Action Log'].rows[1][5],'APPLIED');
+  assert.equal(JSON.stringify(a.feedbackRows),existing,'Pausing may not modify earlier records');
+  const resumed=a.context.adminSetVotingOpen(DEMO_KEY,true,'Resume approved science fair voting');
+  assert.equal(resumed.votingOpen,true);
+  assert.equal(resumed.changed,true);
+  const idempotent=a.context.adminSetVotingOpen(DEMO_KEY,true,'Still resumed for visitors');
+  assert.equal(idempotent.changed,false);
+  assert.equal(a.sheets['Admin Action Log'].rows.length,3);
+  assert.equal(a.sheets['Admin Action Log'].rows[2][1],'RESUME_VOTING');
+  assert.equal(a.sheets['Admin Action Log'].rows[2][5],'APPLIED');
+  assert.equal(JSON.stringify(a.feedbackRows),existing);
+});
+
 test('organizer can pause and resume ALL new votes without changing old feedback',()=>{
   const a=setup();
   const base={
