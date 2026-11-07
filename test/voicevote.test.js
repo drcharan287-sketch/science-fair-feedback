@@ -636,8 +636,8 @@ test('unsupported speech recognition offers manual entry without blocking voting
 });
 
 
-test('long typed feedback supports 3,500 characters, counts input and saves in the isolated backend',async()=>{
-  const a=app();const original='This scientific exhibit demonstrates energy efficiency. '.repeat(60);
+test('long typed feedback supports over 3,000 characters, counts input and saves in the isolated backend',async()=>{
+  const a=app();const original='This scientific exhibit demonstrates energy efficiency. '.repeat(60).trim();
   assert.ok(original.length>2000&&original.length<4000);
   const b=backend([['Class/Grade','Section','Project Name','Active','Project ID'],
     ['9','Keats','VoiceVote App','TRUE','VVP-EVENT-TEST-ID']]);
