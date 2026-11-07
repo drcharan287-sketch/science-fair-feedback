@@ -330,3 +330,38 @@ test('sign-out closes project confirmation without dispatching any pending edit'
   assert.equal(a.requests.length,before,'Stale confirmation must not mutate after logout');
   assert.equal(a.elements.managerConfirmProject.textContent,'');
 });
+
+
+test('Admin Pause/Resume controls call only private audited RPCs and update visible states',()=>{
+  const a=harness();a.login(overview());
+  assert.equal(a.elements.pauseBtn.disabled,false);
+  assert.equal(a.elements.resumeBtn.disabled,true);
+  const before=a.requests.length;
+  a.dispatch('pauseBtn');
+  assert.equal(a.requests.length,before+1);
+  const pause=a.requests.at(-1);
+  assert.equal(pause.name,'adminSetVotingOpen');
+  assert.equal(pause.args[1],false);
+  assert.ok(pause.args[0].length>20,'Existing private admin key must be included');
+  assert.ok(pause.args[2].length>=8,'Organizer reason required');
+  assert.match(a.elements.adminStatus.textContent,/Saving voting control/);
+  pause.success({votingOpen:false,changed:true});
+  const pausedOverview=a.requests.at(-1);
+  assert.equal(pausedOverview.name,'adminGetOverview');
+  pausedOverview.success({...overview(),votingOpen:false});
+  assert.match(a.elements.votingState.textContent,/Voting is PAUSED/i);
+  assert.equal(a.elements.pauseBtn.disabled,true);
+  assert.equal(a.elements.resumeBtn.disabled,false);
+  a.dispatch('resumeBtn');
+  const resume=a.requests.at(-1);
+  assert.equal(resume.name,'adminSetVotingOpen');
+  assert.equal(resume.args[1],true);
+  resume.success({votingOpen:true,changed:true});
+  const resumedOverview=a.requests.at(-1);
+  resumedOverview.success({...overview(),votingOpen:true});
+  assert.match(a.elements.votingState.textContent,/Voting is OPEN/i);
+  assert.equal(a.elements.pauseBtn.disabled,false);
+  assert.equal(a.elements.resumeBtn.disabled,true);
+  assert.equal(a.requests.filter(r=>r.name==='adminChangeProject'||r.name==='doPost').length,0,
+    'No test project or real vote is created by this simulation');
+});
