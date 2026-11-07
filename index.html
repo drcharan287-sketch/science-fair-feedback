@@ -311,10 +311,18 @@ button:disabled, textarea:disabled, input:disabled {
   <section class="step-section step-choose" aria-labelledby="chooseHeading">
     <div class="step-topline"><span class="step-num">01</span><div><span class="step-caption">FIND YOUR EXHIBIT</span><h3 id="chooseHeading">Which project inspired you?</h3></div></div>
     <label for="projectSearch">Quick Find a Project</label>
-  <div class="search-box">
-    <input type="search" id="projectSearch" placeholder="Search projects by name…" autocomplete="off" aria-controls="projectSearchResults" aria-expanded="false" aria-describedby="projectSearchStatus" disabled>
-    <div id="projectSearchResults" class="search-results" role="group" aria-label="Matching science fair projects" hidden></div>
+  <div class="project-search-entry">
+    <div class="search-box">
+      <input type="search" id="projectSearch" placeholder="Search projects by name…" autocomplete="off" aria-controls="projectSearchResults" aria-expanded="false" aria-describedby="projectSearchStatus projectSearchVoiceStatus" disabled>
+      <div id="projectSearchResults" class="search-results" role="group" aria-label="Matching science fair projects" hidden></div>
+    </div>
+    <button type="button" id="projectSearchVoiceBtn" class="project-search-voice-btn" aria-label="Speak a project name" aria-pressed="false" aria-describedby="projectSearchVoiceHelp" disabled>
+      <span aria-hidden="true" class="project-search-mic-icon">🎙</span>
+      <span id="projectSearchVoiceBtnText">Speak</span>
+    </button>
   </div>
+  <p id="projectSearchVoiceHelp" class="search-help">Tap Speak and say the English project name, then choose a matching project. Typing always works.</p>
+  <p id="projectSearchVoiceStatus" class="project-search-voice-status" role="status" aria-live="polite" hidden></p>
   <p id="projectSearchStatus" class="search-help" role="status" aria-live="polite">Search by project name to auto-select its class and section, or use the dropdowns below.</p>
   <p id="projectSearchSelected" class="search-selected" aria-live="polite"></p>
 
@@ -476,6 +484,132 @@ let rating = 0;
 const FEEDBACK_MAX_LENGTH = 4000;
 let recognition = null;
 let voiceFeedbackLimitReached = false;
+let projectSearchRecognition = null;
+let projectSearchListening = false;
+let projectSearchStopping = false;
+let projectSearchVoiceHadError = false;
+let projectSearchHeardThisSession = false;
+let projectSearchVoiceGeneratedInput = false;
+
+function setVoiceSearchMessage(message) {
+  const status=document.getElementById('projectSearchVoiceStatus');
+  status.textContent=message;
+  status.hidden=!message;
+}
+
+function syncVoiceSearchButton() {
+  const button=document.getElementById('projectSearchVoiceBtn');
+  const label=document.getElementById('projectSearchVoiceBtnText');
+  if(!button || !label)return;
+  button.disabled=isVoteLocked() || !catalogReady || isRecording || isSubmitting ||
+    (projectSearchListening && projectSearchStopping);
+  button.setAttribute('aria-pressed',String(projectSearchListening));
+  button.classList.toggle('listening',projectSearchListening);
+  label.textContent=projectSearchStopping?'Finishing…':projectSearchListening?'Stop':'Speak';
+  button.setAttribute('aria-label',projectSearchListening?'Stop searching by voice':'Speak a project name');
+}
+
+function cancelProjectSearchVoice() {
+  const current=projectSearchRecognition;
+  if(!current)return;
+  projectSearchRecognition=null;
+  projectSearchListening=false;
+  projectSearchStopping=false;
+  try{
+    if(typeof current.abort==='function')current.abort();
+    else current.stop();
+  }catch(_){}
+  syncVoiceSearchButton();
+  syncVoteStatus();
+}
+
+function startProjectSearchVoice() {
+  if(projectSearchListening){
+    if(!projectSearchStopping && projectSearchRecognition){
+      projectSearchStopping=true;
+      setVoiceSearchMessage('Finishing project name recognition…');
+      syncVoiceSearchButton();
+      try{projectSearchRecognition.stop();}
+      catch(_){
+        cancelProjectSearchVoice();
+        setVoiceSearchMessage('Could not finish voice search. Type the project name instead.');
+      }
+    }
+    return;
+  }
+  if(isVoteLocked() || !catalogReady || isRecording || isSubmitting)return;
+  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    setVoiceSearchMessage('Project voice search is not supported in this browser. Please type at least 2 letters instead.');
+    return;
+  }
+  let instance;
+  try{
+    instance=new SpeechRecognition();
+    instance.lang='en-IN'; // The authoritative project titles are in English.
+    instance.continuous=false; // One short name, not a long feedback session.
+    instance.interimResults=true;
+    instance.maxAlternatives=1;
+    projectSearchVoiceHadError=false;
+    projectSearchHeardThisSession=false;
+    projectSearchRecognition=instance;
+    instance.onresult=function(event){
+      if(projectSearchRecognition!==instance || isVoteLocked())return;
+      const spoken=mergeSpeechRecognitionResults(event.results).trim();
+      if(!spoken)return;
+      projectSearchHeardThisSession=true;
+      // The existing catalog search performs matching, disambiguation and
+      // class/section selection. Speech does NOT auto-vote or select a guess.
+      const search=document.getElementById('projectSearch');
+      search.value=spoken;
+      projectSearchVoiceGeneratedInput=true;
+      try{search.dispatchEvent(new Event('input',{bubbles:true}));}
+      finally{projectSearchVoiceGeneratedInput=false;}
+      setVoiceSearchMessage('Heard: “'+spoken+'”. Choose the correct project from the results.');
+    };
+    instance.onerror=function(event){
+      if(projectSearchRecognition!==instance)return;
+      projectSearchVoiceHadError=true;
+      const code=String(event?.error||'unknown');
+      const details=(code==='not-allowed'||code==='service-not-allowed')
+        ? 'Microphone permission or browser speech service was blocked.'
+        : code==='no-speech'
+          ? 'No project name heard.'
+          : code==='language-not-supported'
+            ? 'English project-name recognition is unavailable in this browser.'
+            : code==='network'
+              ? 'Speech recognition could not connect.'
+              : 'Speech recognition could not start ('+code+').';
+      setVoiceSearchMessage(details+' Type the project name instead, or try Speak again.');
+      projectSearchListening=false;
+      projectSearchStopping=false;
+      projectSearchRecognition=null;
+      syncVoteStatus();
+    };
+    instance.onend=function(){
+      if(projectSearchRecognition!==instance)return;
+      projectSearchRecognition=null;
+      projectSearchListening=false;
+      projectSearchStopping=false;
+      if(!projectSearchVoiceHadError){
+        if(!projectSearchHeardThisSession)
+          setVoiceSearchMessage('No project name heard. Tap Speak again, or type at least 2 letters.');
+      }
+      syncVoteStatus();
+    };
+    instance.start();
+    projectSearchListening=true;
+    projectSearchStopping=false;
+    setVoiceSearchMessage('Listening for a project name… Speak clearly, then tap Stop.');
+    syncVoteStatus();
+  }catch(error){
+    projectSearchRecognition=null;
+    projectSearchListening=false;
+    projectSearchStopping=false;
+    setVoiceSearchMessage('Could not start project voice search. Please type the project name instead.');
+    syncVoteStatus();
+  }
+}
 function updateFeedbackLength() {
   const feedbackBox=document.getElementById('feedback');
   const used=feedbackBox.value.length;
@@ -597,17 +731,19 @@ function syncVoteStatus() {
   // Visually and functionally lock the entire form, not only Submit.
   // The original pre-token feedback rows cannot be linked to any browser.
   // Never submit interim speech as if it were the visitor's final feedback.
-  submitButton.disabled = locked || !catalogReady || isRecording || isSubmitting;
+  submitButton.disabled = locked || !catalogReady || isRecording || isSubmitting || projectSearchListening;
   const controls = ["language", "feedback", "startBtn", "stopBtn", "projectSearch"];
   controls.forEach(function(id) {
     const el = document.getElementById(id);
     if (!el) return;
-    if (id === "startBtn") el.disabled = locked || isRecording || isSubmitting;
+    if (id === "startBtn") el.disabled = locked || isRecording || isSubmitting || projectSearchListening;
     else if (id === "stopBtn") el.disabled = locked || !isRecording;
     else if (id === "language" || id === "feedback") el.disabled = locked || isRecording;
-    else el.disabled = locked || !catalogReady;
+    else el.disabled = locked || !catalogReady || isRecording || isSubmitting;
   });
+  syncVoiceSearchButton();
   if (locked) {
+    if(projectSearchRecognition)cancelProjectSearchVoice();
     [classSelect, sectionSelect, projectSelect].forEach(function(el) { el.disabled = true; });
     document.querySelectorAll(".star").forEach(function(star) { star.disabled = true; });
     const results = document.getElementById("projectSearchResults");
@@ -657,6 +793,18 @@ const statusElement = document.getElementById("status");
 const catalogStatus = document.getElementById("catalogStatus");
 const retryCatalogBtn = document.getElementById("retryCatalogBtn");
 const visitorPassInput = document.getElementById("visitorPass");
+document.getElementById('projectSearchVoiceBtn').addEventListener('click',startProjectSearchVoice);
+document.getElementById('projectSearch').addEventListener('input',function(){
+  // Manual typing wins over a still-running speech recognition response.
+  if(projectSearchRecognition && !projectSearchVoiceGeneratedInput){
+    cancelProjectSearchVoice();
+    setVoiceSearchMessage('Voice search stopped. Continue typing and choose a result.');
+  }
+});
+document.getElementById('projectSearchResults').addEventListener('click',function(event){
+  // Choosing a suggestion also terminates any concurrent recognition.
+  if(event.target?.closest?.('button') && projectSearchRecognition)cancelProjectSearchVoice();
+});
 const newVisitorBtn = document.getElementById("newVisitorBtn");
 const visitorPassFeature = document.getElementById("visitorPassFeature");
 if (visitorPassFeature) {
@@ -696,6 +844,7 @@ retryCatalogBtn.addEventListener("click", function() {
     return;
   }
   if (isSubmitting || isRecording) return;
+  if(projectSearchRecognition)cancelProjectSearchVoice();
   retryCatalogBtn.disabled = true;
   selectedCatalogController.refreshCatalog().then(function() {
     retryCatalogBtn.disabled = false;
@@ -1061,6 +1210,10 @@ document.getElementById('refreshTranslationBtn').addEventListener('click',functi
 });
 
 function startRecording() {
+  if(projectSearchListening){
+    statusElement.textContent='Finish project voice search before recording your feedback.';
+    return;
+  }
   if (isRecording || isSubmitting || isVoteLocked()) return;
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -1218,6 +1371,10 @@ document.getElementById('presenterTryAgain').addEventListener('click',function()
 });
 function submitFeedback() {
   if (isSubmitting) return;
+  if(projectSearchListening){
+    statusElement.textContent='Finish project voice search and choose a matching project before submitting.';
+    return;
+  }
   if (isRecording) {
     statusElement.textContent = "Tap Stop and wait for speech recognition to finish before submitting.";
     return;

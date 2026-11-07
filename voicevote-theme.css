@@ -137,3 +137,34 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;op
   .header .logo{font-size:clamp(1.45rem,5.5vw,1.85rem)}
   .header h2{font-size:clamp(.98rem,3.8vw,1.12rem)}
 }
+
+/* VV-33: optional one-utterance project-name search, beside the existing
+   live-roster quick-find. No changes to the voting microphone or POST. */
+.project-search-entry{display:flex;align-items:flex-start;gap:11px}
+.project-search-entry .search-box{flex:1;min-width:0}
+.project-search-entry .search-box #projectSearch{min-height:58px}
+.step-section .project-search-voice-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-width:111px;min-height:58px;flex-shrink:0;
+  margin:0;padding:10px 13px;
+  border:1px solid #79e5f4aa;border-radius:14px;
+  background:linear-gradient(120deg,#0a719c,#216ba1);
+  color:#f4fdff;font-weight:850;font-size:.88rem;cursor:pointer;
+}
+.step-section .project-search-voice-btn:not(:disabled):hover{background:linear-gradient(120deg,#0a8eaa,#2b8fc1)}
+.step-section .project-search-voice-btn.listening{
+  background:linear-gradient(110deg,#924858,#5c365b);
+  border-color:#ffd6ba;box-shadow:0 0 0 3px #ffb6a027;
+}
+.step-section .project-search-voice-btn:focus-visible{outline:3px solid #ffe39e;outline-offset:3px}
+.step-section .project-search-voice-btn:disabled{opacity:.52;cursor:not-allowed}
+.project-search-mic-icon{font-size:1.2rem;line-height:1}
+.step-section .project-search-voice-status{
+  padding:9px 12px;margin:9px 0 2px;border:1px solid #65cdd28f;
+  background:#153e57;border-radius:10px;color:#d7faff;
+  font-size:.84rem;font-weight:750;line-height:1.5;
+}
+@media(max-width:430px){
+  .project-search-entry{gap:8px}
+  .step-section .project-search-voice-btn{min-width:91px;min-height:58px;padding:9px 8px;font-size:.81rem}
+}

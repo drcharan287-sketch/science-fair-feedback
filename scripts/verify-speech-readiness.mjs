@@ -91,6 +91,30 @@ try {
     assert.ok(width.document <= width.viewport + 2,
       profile.label + ': horizontal scrolling detected: ' + JSON.stringify(width));
 
+    // Quick Find voice input is a separate, single-utterance recognizer.
+    // It fills the preexisting live catalog search but never auto-selects or votes.
+    assert.equal(await page.locator('#projectSearchVoiceBtn').isEnabled(),true);
+    await page.locator('#projectSearchVoiceBtn').click();
+    const projectSpeech=await page.evaluate(()=>({
+      lang:window.__vvRecognizer?.lang,continuous:window.__vvRecognizer?.continuous
+    }));
+    assert.equal(projectSpeech.lang,'en-IN');
+    assert.equal(projectSpeech.continuous,false);
+    assert.equal(await page.locator('#startBtn').isDisabled(),true,
+      'Project and feedback microphones may not overlap');
+    await page.evaluate(()=>window.__vvRecognizer.onresult({
+      results:[{0:{transcript:'Xeno Chat App'},isFinal:true}]
+    }));
+    assert.equal(await page.locator('#projectSearch').inputValue(),'Xeno Chat App');
+    assert.equal(await page.locator('#projectSearchResults button').count(),1);
+    assert.equal(await page.locator('#studentClass').inputValue(),'');
+    await page.evaluate(()=>window.__vvRecognizer.onend());
+    await page.locator('#projectSearchResults button').first().click();
+    assert.equal(await page.locator('#studentClass').inputValue(),'6');
+    assert.equal(await page.locator('#project').inputValue(),'Xeno Chat App');
+    assert.equal(await page.locator('#feedback').inputValue(),'');
+    assert.equal(await page.locator('#startBtn').isEnabled(),true);
+
     for (const [language, phrase] of languages) {
       await page.locator('#feedback').fill('');
       await page.locator('#language').selectOption(language);
