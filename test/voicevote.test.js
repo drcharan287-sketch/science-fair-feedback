@@ -24,7 +24,7 @@ function app(fetchProjects, search = '', stored = new Map(), hash = '', userAgen
   }
   const elements = Object.fromEntries(['studentClass', 'section', 'project', 'catalogStatus', 'retryCatalogBtn', 'submitBtn', 'status', 'language', 'feedback', 'voteGuardStatus', 'startBtn', 'stopBtn', 'projectSearch', 'projectSearchResults', 'projectSearchStatus', 'projectSearchSelected', 'visitorPass', 'newVisitorBtn', 'visitorPassFeature', 'networkStatus', 'presenterBanner', 'presenterReceipt',
     'presenterReceiptProject', 'presenterReceiptStars', 'presenterReceiptFeedback',
-    'presenterTryAgain', 'presenterClose', 'englishTranslationPanel', 'englishTranslationStatus',
+    'presenterTryAgain', 'presenterClose', 'feedbackLength', 'feedbackLimitHint', 'feedbackLimitNotice', 'englishTranslationPanel', 'englishTranslationStatus',
     'englishTranslationText', 'refreshTranslationBtn', 'openTranslationPageBtn'].map(id => [id, new Element()]));
   elements.language.value = 'hi-IN';
   elements.submitBtn.disabled = true;
