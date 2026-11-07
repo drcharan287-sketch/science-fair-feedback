@@ -1,0 +1,41 @@
+name: One-time offline VoiceVote backup
+on:
+  push:
+    branches:
+      - backup/voicevote-offline-2026-11-07
+
+permissions:
+  contents: read
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository with complete history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build verified source and git-history backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p backup-work
+          SOURCE_SHA=18bd6ef85804650a6b62a48747cf8dc10516b3ec
+          git cat-file -e "${SOURCE_SHA}^{commit}"
+          git archive --format=zip --prefix="science-fair-feedback/" --output=backup-work/VoiceVote_Source_MAIN.zip "$SOURCE_SHA"
+          git bundle create backup-work/VoiceVote_Git_History.bundle --all
+          git bundle verify backup-work/VoiceVote_Git_History.bundle
+          printf 'Repository: drcharan287-sketch/science-fair-feedback\nBranch: main\nSnapshot SHA: %s\nCaptured: 2026-11-07 (IST event day)\n\nVoiceVote_Source_MAIN.zip: all files tracked at the exact main commit, including source, admin scripts, tests, docs and QR artwork.\nVoiceVote_Git_History.bundle: offline Git bundle for historical restoration (complete fetched Git refs/history).\nNo live private Google Sheets, Apps Script properties, production feedback, or credentials are part of this repository backup.\n\nTo restore: unzip VoiceVote_Source_MAIN.zip. For Git history use git clone VoiceVote_Git_History.bundle restored-repo.\n' "$SOURCE_SHA" > backup-work/README_BACKUP.txt
+          (cd backup-work && sha256sum VoiceVote_Source_MAIN.zip VoiceVote_Git_History.bundle > SHA256SUMS.txt)
+          (cd backup-work && zip -q -9 -r "../VoiceVote_GitHub_Full_Backup_2026-11-07.zip" .)
+          unzip -t VoiceVote_GitHub_Full_Backup_2026-11-07.zip
+          echo "Git snapshot verification: $(git ls-tree -r --name-only "$SOURCE_SHA" | wc -l) tracked files"
+      - name: Upload complete offline backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoiceVote_GitHub_Full_Backup_2026-11-07
+          path: VoiceVote_GitHub_Full_Backup_2026-11-07.zip
+          if-no-files-found: error
+          retention-days: 7
