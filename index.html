@@ -488,6 +488,7 @@ let projectSearchRecognition = null;
 let projectSearchListening = false;
 let projectSearchStopping = false;
 let projectSearchVoiceHadError = false;
+let projectSearchHeardThisSession = false;
 let projectSearchVoiceGeneratedInput = false;
 
 function setVoiceSearchMessage(message) {
@@ -550,11 +551,13 @@ function startProjectSearchVoice() {
     instance.interimResults=true;
     instance.maxAlternatives=1;
     projectSearchVoiceHadError=false;
+    projectSearchHeardThisSession=false;
     projectSearchRecognition=instance;
     instance.onresult=function(event){
       if(projectSearchRecognition!==instance || isVoteLocked())return;
       const spoken=mergeSpeechRecognitionResults(event.results).trim();
       if(!spoken)return;
+      projectSearchHeardThisSession=true;
       // The existing catalog search performs matching, disambiguation and
       // class/section selection. Speech does NOT auto-vote or select a guess.
       const search=document.getElementById('projectSearch');
@@ -589,7 +592,7 @@ function startProjectSearchVoice() {
       projectSearchListening=false;
       projectSearchStopping=false;
       if(!projectSearchVoiceHadError){
-        if(document.getElementById('projectSearch').value.trim().length<2)
+        if(!projectSearchHeardThisSession)
           setVoiceSearchMessage('No project name heard. Tap Speak again, or type at least 2 letters.');
       }
       syncVoteStatus();
@@ -797,6 +800,10 @@ document.getElementById('projectSearch').addEventListener('input',function(){
     cancelProjectSearchVoice();
     setVoiceSearchMessage('Voice search stopped. Continue typing and choose a result.');
   }
+});
+document.getElementById('projectSearchResults').addEventListener('click',function(event){
+  // Choosing a suggestion also terminates any concurrent recognition.
+  if(event.target?.closest?.('button') && projectSearchRecognition)cancelProjectSearchVoice();
 });
 const newVisitorBtn = document.getElementById("newVisitorBtn");
 const visitorPassFeature = document.getElementById("visitorPassFeature");
