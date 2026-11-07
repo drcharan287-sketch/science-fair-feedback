@@ -15,6 +15,8 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(site, {waitUntil: 'domcontentloaded', timeout: 30000});
   await page.locator('#projectSearch').waitFor({state: 'visible'});
+  assert.equal(await page.locator('#projectSearchVoiceBtn').count(),1,
+    'Optional voice Quick Find must be published next to typing search');
   await page.waitForFunction(() => {
     const search = document.getElementById('projectSearch');
     return search && !search.disabled;
@@ -47,7 +49,7 @@ try {
     return status && !status.hidden;
   },null,{timeout:15000});
   for (const selector of ['#submitBtn','#studentClass','#section','#project',
-    '#projectSearch','#feedback','#language','#startBtn','#stopBtn','.star[data-value="5"]']) {
+    '#projectSearch','#projectSearchVoiceBtn','#feedback','#language','#startBtn','#stopBtn','.star[data-value="5"]']) {
     assert.equal(await page.locator(selector).isDisabled(), true, selector+' must be locked');
   }
   assert.match(await page.locator('#voteGuardStatus').innerText(), /submission|voting is paused/i);
@@ -66,7 +68,7 @@ try {
     return status && !status.hidden && /already submitted|already been recorded/i.test(status.textContent);
   },null,{timeout:15000});
   for(const selector of ['#submitBtn','#studentClass','#section','#project',
-    '#projectSearch','#feedback','#language','#startBtn','#stopBtn','.star[data-value="5"]']) {
+    '#projectSearch','#projectSearchVoiceBtn','#feedback','#language','#startBtn','#stopBtn','.star[data-value="5"]']) {
     assert.equal(await page.locator(selector).isDisabled(), true, selector+' must remain locked');
   }
   // Management deferred visitor passes. They must not be accessible in the
