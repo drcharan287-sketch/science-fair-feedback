@@ -37,6 +37,7 @@ jobs:
           node --check scripts/verify-owner-demo.mjs
           node --check scripts/verify-admin-manager-ui.mjs
           node --check scripts/verify-long-feedback-ui.mjs
+          node --check scripts/verify-voice-project-search.mjs
           node --check scripts/verify-live-project-manager.mjs
           node --check scripts/verify-translation-preview.mjs
           node --check scripts/verify-live-translation-preview.mjs
@@ -51,6 +52,7 @@ jobs:
           node scripts/verify-owner-demo.mjs
           node scripts/verify-admin-manager-ui.mjs
           node scripts/verify-long-feedback-ui.mjs
+          node scripts/verify-voice-project-search.mjs
           node scripts/verify-results-ui.mjs
           node scripts/verify-translation-preview.mjs
           node scripts/verify-ios-translation-fallback.mjs
