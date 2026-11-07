@@ -29,7 +29,14 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;op
 .step-section .buttons{display:flex;gap:12px;margin:17px 0 7px}.step-section button.record,.step-section button.stop{font-size:.99rem;font-weight:900;border-radius:15px;min-height:59px;border:1px solid #7dddeb50;box-shadow:0 10px 24px #05132855}
 .step-section button.record{background:linear-gradient(100deg,#0abbd6,#217ab5);color:#fff}.step-section button.record:not(:disabled):hover{background:linear-gradient(100deg,#11d1e6,#368fcf)}
 .step-section button.stop{background:#253e60;color:#e4f0fd}.step-section button.stop:not(:disabled):hover{background:#385778}
-.step-section textarea{min-height:165px;resize:vertical;line-height:1.6}.step-section textarea:disabled{opacity:.73}.step-section #recordingHelp{color:#c5dcf4;font-size:.83rem}
+/* Keep longer typed or spoken transcripts in an independently scrollable editor. */
+.step-section #feedback{height:clamp(165px,28vh,235px);min-height:165px;max-height:290px;resize:vertical;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.step-section textarea:disabled{opacity:.73}
+.feedback-length-row{display:flex;align-items:start;justify-content:space-between;gap:14px;margin-top:7px}
+.feedback-length-row #feedbackLimitHint{margin:0;color:#b9d4e5;font-size:.78rem;line-height:1.55}
+.feedback-length-row #feedbackLength{color:#9ce9f7;font-size:.78rem;font-weight:850;white-space:nowrap;font-variant-numeric:tabular-nums}
+.feedback-limit-notice{margin:8px 0 0;font-size:.8rem;line-height:1.5;color:#ffe3a5;font-weight:750}
+@media(max-width:480px){.feedback-length-row{flex-wrap:wrap;gap:3px 12px}.step-section #feedback{height:190px;max-height:265px}}.step-section #recordingHelp{color:#c5dcf4;font-size:.83rem}
 .step-section .stars{display:flex;justify-content:space-between;gap:3px;align-items:center;background:#0d2540;border:1px solid #466787;border-radius:17px;margin-top:12px;padding:10px 13px}
 .step-section button.star{color:#67819f;font-size:clamp(2.55rem,8vw,3.45rem);min-width:45px;min-height:53px;padding:0;line-height:1;transition:color .18s,transform .18s}.step-section button.star.active{color:#ffd980;filter:drop-shadow(0 2px 11px #ffd98045)}.step-section button.star:not(:disabled):hover{color:#ffe79c;transform:scale(1.1)}.step-section button.star:focus-visible{outline-color:#81eefa;border-radius:10px}
 .step-section button.submit{width:100%;min-height:61px;margin-top:24px;border:1px solid #d3fff799;border-radius:15px;color:#06263b;background:linear-gradient(110deg,#76eaf5,#9ae9ff 60%,#bddbff);font-size:1.02rem;box-shadow:0 17px 35px #1fbbd634;font-weight:900;letter-spacing:.005em}
